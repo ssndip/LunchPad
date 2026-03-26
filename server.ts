@@ -266,7 +266,8 @@ async function startServer() {
       if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}. Please register it in the Admin panel.` });
 
       const menu = getMenu();
-      const selectedItems = menu.filter(m => itemIds.includes(m.id));
+      const itemIdSet = new Set(itemIds);
+      const selectedItems = menu.filter(m => itemIdSet.has(m.id));
       if (selectedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
 
       const total = selectedItems.reduce((sum, i) => sum + i.price, 0);
