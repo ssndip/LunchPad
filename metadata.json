@@ -1,0 +1,5 @@
+{
+  "name": "Lunch Ordering System",
+  "description": "Daily lunch menu management and kiosk ordering with RFID authentication.",
+  "requestFramePermissions": []
+}
