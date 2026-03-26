@@ -37,7 +37,7 @@ COPY --from=build-stage /app/src/types.ts ./src/types.ts
 RUN mkdir -p /app/data && chown node:node /app/data
 
 # Expose the application port
-EXPOSE 3000
+EXPOSE 3003
 
 # Start the application
 CMD ["npm", "start"]

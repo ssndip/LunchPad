@@ -77,8 +77,8 @@ const seedCards = () => {
   const count = db.prepare("SELECT COUNT(*) as count FROM cards").get() as { count: number };
   if (count.count === 0) {
     const initialCards = [
-      { rfid: "1234567890", ownerName: "Test User", balance: 50.00 },
-      { rfid: "0987654321", ownerName: "Admin User", balance: 100.00 }
+      { rfid: "1234567890", ownerName: "Test User", balance: 0 },
+      { rfid: "0987654321", ownerName: "Admin User", balance: 0 }
     ];
     const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated) VALUES (?, ?, ?, ?)");
     initialCards.forEach(card => insert.run(card.rfid, card.ownerName, card.balance, new Date().toISOString()));
@@ -166,6 +166,7 @@ async function startServer() {
         return res.status(400).json({ error: "RFID and ownerName are required" });
       }
       const now = new Date().toISOString();
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       db.prepare(`
         INSERT INTO cards (rfid, ownerName, balance, lastUpdated)
         VALUES (?, ?, ?, ?)
@@ -173,7 +174,7 @@ async function startServer() {
           ownerName = excluded.ownerName,
           balance = excluded.balance,
           lastUpdated = excluded.lastUpdated
-      `).run(rfid.trim(), ownerName, balance || 0, now);
+      `).run(cleanRfid, ownerName, balance || 0, now);
       
       const updated = getCards();
       broadcast({ type: "CARDS_UPDATE", data: updated });
@@ -248,6 +249,32 @@ async function startServer() {
     }
   });
 
+  // Reset all balances (monthly clear)
+  app.post("/api/cards/reset-all", (req, res) => {
+    try {
+      db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
+      const updated = getCards();
+      broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Reset Error]", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Reset all balances (monthly clear)
+  app.post("/api/cards/reset-all", (req, res) => {
+    try {
+      db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
+      const updated = getCards();
+      broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Reset Error]", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Order Processing
   app.post("/api/v1/order", (req, res) => {
     try {
@@ -270,12 +297,6 @@ async function startServer() {
       if (selectedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
 
       const total = selectedItems.reduce((sum, i) => sum + i.price, 0);
-      if (card.balance < total) {
-        return res.status(403).json({ 
-          error: `Insufficient balance. Card: ${card.balance.toFixed(2)}€, Order: ${total.toFixed(2)}€. Please top up.` 
-        });
-      }
-
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const orderId = `ORD-${Date.now()}`;
@@ -292,8 +313,8 @@ async function startServer() {
       };
 
       db.transaction(() => {
-        // Update balance
-        db.prepare("UPDATE cards SET balance = balance - ?, lastUpdated = ? WHERE rfid = ?")
+        // Update balance (accumulate owed amount)
+        db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
           .run(total, now.toISOString(), card.rfid);
         
         // Save order
@@ -382,7 +403,7 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3003;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
   });

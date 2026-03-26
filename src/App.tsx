@@ -291,6 +291,15 @@ const App: React.FC = () => {
     }
   };
 
+  const resetAllBalances = async () => {
+    if (!confirm('Are you sure you want to reset ALL monthly balances to 0? This should usually be done at the end of the month.')) return;
+    try {
+      await fetch('/api/cards/reset-all', { method: 'POST' });
+    } catch (err) {
+      console.error('Failed to reset balances', err);
+    }
+  };
+
   const updateCards = async (updatedCards: Card[]) => {
     try {
       await fetch('/api/cards/update', {
@@ -456,24 +465,51 @@ const App: React.FC = () => {
                   {items.filter(item => item.available).map((item) => (
                     <motion.div
                       key={item.id}
-                      whileTap={{ backgroundColor: "#f3f4f6" }}
+                      layout
+                      initial={false}
+                      animate={{ 
+                        backgroundColor: selectedItems.find(i => i.id === item.id) ? "#000000" : "#ffffff",
+                        color: selectedItems.find(i => i.id === item.id) ? "#ffffff" : "#404040",
+                        scale: selectedItems.find(i => i.id === item.id) ? 1.02 : 1,
+                      }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => toggleItem(item)}
-                      className={`cursor-pointer group flex justify-between items-center px-3 py-1.5 transition-all duration-75 ${
+                      className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-300 relative rounded-lg mb-1 overflow-hidden ${
                         selectedItems.find(i => i.id === item.id) 
-                          ? 'bg-neutral-900 text-white' 
-                          : 'hover:bg-neutral-50'
+                          ? 'shadow-xl z-10' 
+                          : 'hover:bg-neutral-50 border border-transparent hover:border-neutral-200'
                       }`}
                     >
-                      <div className="flex-1 min-w-0 pr-2">
-                        <span className={`text-[13px] font-medium block truncate ${selectedItems.find(i => i.id === item.id) ? 'text-white' : 'text-neutral-700'}`}>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <AnimatePresence mode="wait">
+                          {selectedItems.find(i => i.id === item.id) && (
+                            <motion.div
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0, opacity: 0 }}
+                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <span className={`text-[15px] font-bold block truncate`}>
                           {item.name}
                         </span>
                       </div>
-                      <div className="shrink-0">
-                        <span className={`text-[11px] font-bold font-mono ${selectedItems.find(i => i.id === item.id) ? 'text-white' : 'text-neutral-900'}`}>
-                          {item.price.toFixed(2)}
+                      <div className="shrink-0 ml-4">
+                        <span className={`text-[13px] font-black font-mono`}>
+                          €{item.price.toFixed(2)}
                         </span>
                       </div>
+
+                      {/* Animated selection bar highlight */}
+                      {selectedItems.find(i => i.id === item.id) && (
+                        <motion.div 
+                          layoutId="active-pill"
+                          className="absolute left-0 top-0 bottom-0 w-1 bg-white"
+                        />
+                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -491,12 +527,13 @@ const App: React.FC = () => {
             >
               <div className="bg-white rounded-3xl shadow-2xl border border-neutral-200 p-4 flex flex-col md:flex-row items-center gap-4">
                 <div className="flex-1">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-0.5">
-                    {selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'} selected • €{totalPrice.toFixed(2)}
-                  </p>
-                  <h4 className="text-lg font-bold text-neutral-900 truncate">
-                    {selectedItems.map(i => i.name).join(', ')}
-                  </h4>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-0.5">Order Total</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-neutral-900 tracking-tighter">€{totalPrice.toFixed(2)}</span>
+                    <span className="text-sm font-bold text-neutral-400 uppercase tracking-widest">
+                      ({selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'})
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -539,15 +576,17 @@ const App: React.FC = () => {
                               setRfid('');
                               return;
                             }
-
                             setLastScanned(cleanRfid);
-                            const card = cards.find(c => 
-                              c.rfid.trim().toLowerCase() === cleanRfid
-                            );
+                            const card = cards.find(c => {
+                              const cardRfid = c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+                              return cardRfid === cleanRfid;
+                            });
 
                             if (card) {
+                              console.log(`[Kiosk] Found card for RFID: ${cleanRfid}`, card);
                               handleOrder(cleanRfid);
                             } else {
+                              console.warn(`[Kiosk] RFID ${cleanRfid} not found in cards list:`, cards.map(c => c.rfid));
                               setError(`Unregistered Card: ${cleanRfid}`);
                               setTimeout(() => setError(null), 5000);
                               setRfid('');
@@ -585,8 +624,8 @@ const App: React.FC = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="absolute -top-12 left-0 bg-white px-3 py-1 rounded-xl border border-neutral-200 shadow-sm whitespace-nowrap"
                       >
-                        <p className="text-[10px] font-bold text-neutral-900">Owner: {cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase())?.ownerName}</p>
-                        <p className="text-[10px] font-mono text-neutral-500">Balance: €{cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase())?.balance.toFixed(2)}</p>
+                        <p className="text-[10px] font-bold text-neutral-900">Owner: {cards.find(c => c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase() === rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase())?.ownerName}</p>
+                        <p className="text-[10px] font-mono text-neutral-500">Owed: €{cards.find(c => c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase() === rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase())?.balance.toFixed(2)}</p>
                       </motion.div>
                     )}
                   </div>
@@ -996,9 +1035,15 @@ const App: React.FC = () => {
                 <div className="flex justify-between items-end mb-12">
                   <div>
                     <h1 className="text-4xl font-bold text-neutral-900 mb-2">Card Management</h1>
-                    <p className="text-neutral-500">Manage RFID cards and owner names</p>
+                    <p className="text-neutral-500">Track accumulated costs per cardholder. Reset manually each month.</p>
                   </div>
                   <div className="flex gap-4">
+                    <button 
+                      onClick={resetAllBalances}
+                      className="flex items-center gap-2 px-6 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all"
+                    >
+                      <Trash2 className="w-5 h-5" /> Reset Monthly Balances
+                    </button>
                     <button 
                       onClick={() => setIsPasteCardsModalOpen(true)}
                       className="flex items-center gap-2 px-6 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all"
@@ -1057,7 +1102,7 @@ const App: React.FC = () => {
                           <tr className="border-bottom border-neutral-100">
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">RFID</th>
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">Owner Name</th>
-                            <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">Balance</th>
+                            <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">Owed</th>
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">Actions</th>
                           </tr>
                         </thead>

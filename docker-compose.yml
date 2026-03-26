@@ -1,0 +1,12 @@
+services:
+  lunchpad:
+    build: .
+    container_name: lunchpad-container
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./data:/app/data
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
