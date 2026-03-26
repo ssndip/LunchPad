@@ -389,6 +389,10 @@ const App: React.FC = () => {
       return acc;
     }, {} as Record<string, MenuItem[]>);
 
+    const matchedCard = rfid ? cards.find(c =>
+      c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase()
+    ) : undefined;
+
     if (!kioskOpen) {
       return (
         <div className="h-screen bg-neutral-100 flex items-center justify-center p-8">
@@ -555,7 +559,7 @@ const App: React.FC = () => {
                           }
                         }}
                         className={`w-full pl-9 pr-10 py-2 bg-neutral-100 rounded-xl border-none focus:outline-none transition-all font-mono text-sm ${
-                          rfid && !cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase()) 
+                          rfid && !matchedCard
                             ? 'ring-4 ring-red-500 bg-red-50' 
                             : 'focus:ring-4 focus:ring-neutral-900'
                         }`}
@@ -570,7 +574,7 @@ const App: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    {rfid && !cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase()) && (
+                    {rfid && !matchedCard && (
                       <motion.p 
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -579,20 +583,20 @@ const App: React.FC = () => {
                         Unregistered Card
                       </motion.p>
                     )}
-                    {cards.find(c => c.rfid === rfid) && (
+                    {matchedCard && (
                       <motion.div 
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="absolute -top-12 left-0 bg-white px-3 py-1 rounded-xl border border-neutral-200 shadow-sm whitespace-nowrap"
                       >
-                        <p className="text-[10px] font-bold text-neutral-900">Owner: {cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase())?.ownerName}</p>
-                        <p className="text-[10px] font-mono text-neutral-500">Balance: €{cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase())?.balance.toFixed(2)}</p>
+                        <p className="text-[10px] font-bold text-neutral-900">Owner: {matchedCard.ownerName}</p>
+                        <p className="text-[10px] font-mono text-neutral-500">Balance: €{matchedCard.balance.toFixed(2)}</p>
                       </motion.div>
                     )}
                   </div>
                   <button
                     onClick={handleOrder}
-                    disabled={!rfid || !cards.find(c => c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase())}
+                    disabled={!rfid || !matchedCard}
                     className="px-6 py-2 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                   >
                     Order <ChevronRight className="w-4 h-4" />
