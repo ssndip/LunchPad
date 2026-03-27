@@ -96,7 +96,7 @@ seedMenu();
 seedCards();
 
 // --- Server Setup ---
-async function startServer() {
+export async function startServer() {
   const app = express();
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
@@ -420,13 +420,13 @@ async function startServer() {
   });
 
   // --- Static Files & Vite ---
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.NODE_ENV === "production") {
     const distPath = path.join(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
@@ -438,7 +438,9 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error("[Fatal Error]", err);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch(err => {
+    console.error("[Fatal Error]", err);
+    process.exit(1);
+  });
+}
