@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -16,7 +17,7 @@ const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
-const dbPath = path.join(DB_DIR, 'lunchpad.db');
+const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
 console.log(`[DB] Initializing database at: ${dbPath}`);
 const db = new Database(dbPath);
 
@@ -56,6 +57,11 @@ db.exec(`
   );
 `);
 
+export const getMenu = (database: Database.Database) => {
+  const items = database.prepare("SELECT * FROM menu").all() as any[];
+  return items.map(i => ({ ...i, available: i.available === 1 }));
+};
+
 // --- Initial Data ---
 const seedMenu = () => {
   const count = db.prepare("SELECT COUNT(*) as count FROM menu").get() as { count: number };
@@ -90,12 +96,25 @@ seedMenu();
 seedCards();
 
 // --- Server Setup ---
-async function startServer() {
+export async function startServer() {
   const app = express();
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
 
-  app.use(cors());
+  const allowedOrigins = [
+    process.env.APP_URL,
+    `http://localhost:${process.env.PORT || 3003}`
+  ].filter(Boolean) as string[];
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
+  }));
   app.use(express.json());
 
   let kioskOpen = true;
@@ -110,11 +129,6 @@ async function startServer() {
     });
   };
 
-  const getMenu = () => {
-    const items = db.prepare("SELECT * FROM menu").all() as any[];
-    return items.map(i => ({ ...i, available: i.available === 1 }));
-  };
-
   const getCards = () => {
     return db.prepare("SELECT * FROM cards").all();
   };
@@ -126,12 +140,26 @@ async function startServer() {
 
   // --- API Routes ---
 
+  const ADMIN_PIN = process.env.ADMIN_PIN;
+  if (!ADMIN_PIN) {
+    console.warn("⚠️ WARNING: ADMIN_PIN environment variable is not set. Admin API endpoints will reject all requests!");
+  }
+
+  const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const pin = req.headers['x-admin-pin'] || req.query.pin;
+    if (!ADMIN_PIN || pin !== ADMIN_PIN) {
+      return res.status(401).json({ error: "Unauthorized: Invalid or missing PIN" });
+    }
+    next();
+  };
+
+
   // Health check
   app.get("/ping", (req, res) => res.send("pong"));
 
   // Kiosk Status
   app.get("/api/status", (req, res) => res.json({ kioskOpen }));
-  app.post("/api/status", (req, res) => {
+  app.post("/api/status", requireAuth, (req, res) => {
     kioskOpen = !!req.body.open;
     broadcast({ type: "STATUS_UPDATE", data: { kioskOpen } });
     res.json({ success: true, kioskOpen });
@@ -139,26 +167,49 @@ async function startServer() {
 
   // Menu Management
   app.get("/api/menu", (req, res) => res.json(getMenu()));
-  app.post("/api/menu", (req, res) => {
-    const items = req.body;
-    db.transaction(() => {
-      db.prepare("DELETE FROM menu").run();
-      const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
-      items.forEach((i: any) => insert.run(i.id, i.name, i.description, i.price, i.available ? 1 : 0, i.category));
-    })();
-    const updated = getMenu();
-    broadcast({ type: "MENU_UPDATE", data: updated });
-    res.json({ success: true, menu: updated });
+  app.post("/api/menu", requireAuth, (req, res) => {
+    try {
+      const items = req.body;
+      db.transaction(() => {
+        db.prepare("DELETE FROM menu").run();
+        const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
+        items.forEach((i: any) => insert.run(i.id, i.name, i.description, i.price, i.available ? 1 : 0, i.category));
+      })();
+      const updated = getMenu(db);
+      broadcast({ type: "MENU_UPDATE", data: updated });
+      res.json({ success: true, menu: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Card Management
-  app.get("/api/cards", (req, res) => res.json(getCards()));
+  app.get("/api/cards", requireAuth, (req, res) => res.json(getCards()));
 
   // Add/Update single card
-  app.post("/api/cards", (req, res) => {
-    const { rfid, ownerName, balance } = req.body;
-    if (!rfid || !ownerName) {
-      return res.status(400).json({ error: "RFID and ownerName are required" });
+  app.post("/api/cards", requireAuth, (req, res) => {
+    try {
+      const { rfid, ownerName, balance } = req.body;
+      if (!rfid || !ownerName) {
+        return res.status(400).json({ error: "RFID and ownerName are required" });
+      }
+      const now = new Date().toISOString();
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, lastUpdated)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(rfid) DO UPDATE SET
+          ownerName = excluded.ownerName,
+          balance = excluded.balance,
+          lastUpdated = excluded.lastUpdated
+      `).run(cleanRfid, ownerName, balance || 0, now);
+      
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Add Error]", err);
+      res.status(500).json({ error: err.message });
     }
     const now = new Date().toISOString();
     const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
@@ -177,10 +228,30 @@ async function startServer() {
   });
 
   // Batch add cards
-  app.post("/api/cards/batch", (req, res) => {
-    const cards = req.body;
-    if (!Array.isArray(cards)) {
-      return res.status(400).json({ error: "Expected an array of cards" });
+  app.post("/api/cards/batch", requireAuth, (req, res) => {
+    try {
+      const cards = req.body;
+      if (!Array.isArray(cards)) {
+        return res.status(400).json({ error: "Expected an array of cards" });
+      }
+      const now = new Date().toISOString();
+      db.transaction(() => {
+        const insert = db.prepare(`
+          INSERT INTO cards (rfid, ownerName, balance, lastUpdated)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(rfid) DO UPDATE SET
+            ownerName = excluded.ownerName,
+            balance = excluded.balance,
+            lastUpdated = excluded.lastUpdated
+        `);
+        cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
+      })();
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Batch Error]", err);
+      res.status(500).json({ error: err.message });
     }
     const now = new Date().toISOString();
     db.transaction(() => {
@@ -200,19 +271,51 @@ async function startServer() {
   });
 
   // Delete card
-  app.delete("/api/cards/:rfid", (req, res) => {
-    const { rfid } = req.params;
-    db.prepare("DELETE FROM cards WHERE rfid = ?").run(rfid);
-    const updated = getCards();
-    broadcast({ type: "CARDS_UPDATE", data: updated });
-    res.json({ success: true, cards: updated });
+  app.delete("/api/cards/:rfid", requireAuth, (req, res) => {
+    try {
+      const { rfid } = req.params;
+      db.prepare("DELETE FROM cards WHERE rfid = ?").run(rfid);
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Delete Error]", err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Update all cards (bulk update/replace)
-  app.post("/api/cards/update", (req, res) => {
-    const cards = req.body;
-    if (!Array.isArray(cards)) {
-      return res.status(400).json({ error: "Expected an array of cards" });
+  app.post("/api/cards/update", requireAuth, (req, res) => {
+    try {
+      const cards = req.body;
+      if (!Array.isArray(cards)) {
+        return res.status(400).json({ error: "Expected an array of cards" });
+      }
+      db.transaction(() => {
+        db.prepare("DELETE FROM cards").run();
+        const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated) VALUES (?, ?, ?, ?)");
+        const now = new Date().toISOString();
+        cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
+      })();
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Update Error]", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Reset all balances (monthly clear)
+  app.post("/api/cards/reset-all", requireAuth, (req, res) => {
+    try {
+      db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Reset Error]", err);
+      res.status(500).json({ error: err.message });
     }
     db.transaction(() => {
       db.prepare("DELETE FROM cards").run();
@@ -226,18 +329,83 @@ async function startServer() {
   });
 
   // Reset all balances (monthly clear)
-  app.post("/api/cards/reset-all", (req, res) => {
-    db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
-    const updated = getCards();
-    broadcast({ type: "CARDS_UPDATE", data: updated });
-    res.json({ success: true, cards: updated });
+  app.post("/api/cards/reset-all", requireAuth, (req, res) => {
+    try {
+      db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
+      const updated = getCards();
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Reset Error]", err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Order Processing
   app.post("/api/v1/order", (req, res) => {
-    const { rfid, itemIds } = req.body;
-    if (!rfid || !itemIds || !Array.isArray(itemIds)) {
-      return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+    try {
+      const { rfid, itemIds } = req.body;
+      if (!rfid || !itemIds || !Array.isArray(itemIds)) {
+        return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+      }
+      if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
+
+      // Match frontend cleaning logic: trim, remove non-printable, lowercase
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      console.log(`[Order] Processing RFID: "${cleanRfid}" (original: "${rfid}")`);
+      
+      // Robust lookup
+      const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
+      if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}. Please register it in the Admin panel.` });
+
+      const menu = getMenu(db);
+      const itemIdSet = new Set(itemIds);
+      const selectedItems = menu.filter(m => itemIdSet.has(m.id));
+      if (selectedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
+
+      const total = selectedItems.reduce((sum, i) => sum + i.price, 0);
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const orderId = `ORD-${Date.now()}`;
+
+      const newOrder = {
+        id: orderId,
+        rfid: card.rfid, // Use the one from DB for consistency
+        ownerName: card.ownerName,
+        items: selectedItems,
+        totalPrice: total,
+        timestamp: now.toISOString(),
+        date: dateStr,
+        status: "completed"
+      };
+
+      db.transaction(() => {
+        // Update balance (accumulate owed amount)
+        db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
+          .run(total, now.toISOString(), card.rfid);
+        
+        // Save order
+        db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+          .run(orderId, card.rfid, card.ownerName, JSON.stringify(selectedItems), total, now.toISOString(), dateStr, "completed");
+
+        // Update summary
+        const summary = db.prepare("SELECT * FROM daily_summaries WHERE date = ?").get(dateStr) as any;
+        if (!summary) {
+          db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount) VALUES (?, ?, ?)")
+            .run(dateStr, total, 1);
+        } else {
+          db.prepare("UPDATE daily_summaries SET totalSales = totalSales + ?, orderCount = orderCount + 1 WHERE date = ?")
+            .run(total, dateStr);
+        }
+      })();
+
+      broadcast({ type: "NEW_ORDER", data: newOrder });
+      // broadcast({ type: "CARDS_UPDATE", data: getCards() });
+      res.json({ success: true, order: newOrder });
+
+    } catch (err: any) {
+      console.error("[Order Error]", err);
+      res.status(500).json({ error: err.message });
     }
     if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
 
@@ -296,22 +464,26 @@ async function startServer() {
   });
 
   // History & Summaries
-  app.get("/api/orders", (req, res) => res.json(getOrders()));
-  app.post("/api/orders/reset", (req, res) => {
-    db.transaction(() => {
-      db.prepare("DELETE FROM orders").run();
-      db.prepare("DELETE FROM daily_summaries").run();
-    })();
-    broadcast({ type: "INITIAL_STATE", menu: getMenu(), orders: [], kioskOpen, cards: getCards() });
-    res.json({ success: true });
+  app.get("/api/orders", requireAuth, (req, res) => res.json(getOrders()));
+  app.post("/api/orders/reset", requireAuth, (req, res) => {
+    try {
+      db.transaction(() => {
+        db.prepare("DELETE FROM orders").run();
+        db.prepare("DELETE FROM daily_summaries").run();
+      })();
+      broadcast({ type: "INITIAL_STATE", menu: getMenu(), orders: [], kioskOpen, cards: [] });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
-  app.get("/api/summaries", (req, res) => {
+  app.get("/api/summaries", requireAuth, (req, res) => {
     const summaries = db.prepare("SELECT * FROM daily_summaries ORDER BY date DESC LIMIT 30").all();
     res.json(summaries);
   });
 
-  app.get("/api/history", (req, res) => {
+  app.get("/api/history", requireAuth, (req, res) => {
     const { startDate, endDate, rfid, ownerName } = req.query;
     let sql = "SELECT * FROM orders WHERE 1=1";
     const params: any[] = [];
@@ -332,39 +504,35 @@ async function startServer() {
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
       menu: getMenu(),
-      orders: getOrders(),
+      orders: [], // Removed for security, fetch via API
       kioskOpen,
-      cards: getCards()
+      cards: [] // Removed for security, fetch via API
     }));
     ws.on("close", () => console.log("[WS] Client disconnected"));
   });
 
   // --- Static Files & Vite ---
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.NODE_ENV === "production") {
     const distPath = path.join(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  // Global Error Handler
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error("[API Error]", err);
-    res.status(500).json({ error: err.message || "Internal Server Error" });
-  });
-
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003;
-  server.listen(PORT, "0.0.0.0", () => {
+  const PORT = process.env.PORT || 3003;
+  server.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer().catch(err => {
-  console.error("[Fatal Error]", err);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch(err => {
+    console.error("[Fatal Error]", err);
+    process.exit(1);
+  });
+}
