@@ -695,8 +695,14 @@ const App: React.FC = () => {
     return acc;
   }, {} as Record<number, AggregatedItem>);
 
-  const totalRevenue = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.total, 0);
-  const totalItemsSold = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.count, 0);
+  const { totalRevenue, totalItemsSold } = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce(
+    (acc, item) => {
+      acc.totalRevenue += item.total;
+      acc.totalItemsSold += item.count;
+      return acc;
+    },
+    { totalRevenue: 0, totalItemsSold: 0 }
+  );
 
   return (
     <div className="min-h-screen bg-neutral-100 flex">
