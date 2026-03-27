@@ -392,25 +392,34 @@ async function startServer() {
   });
 
   // --- Static Files & Vite ---
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.NODE_ENV === "production") {
     const distPath = path.join(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = process.env.PORT || 3003;
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003;
+
+  if (process.env.NODE_ENV !== "test") {
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+    });
+  }
+
+  return app;
+}
+
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch(err => {
+    console.error("[Fatal Error]", err);
+    process.exit(1);
   });
 }
 
-startServer().catch(err => {
-  console.error("[Fatal Error]", err);
-  process.exit(1);
-});
+export { startServer, db };
