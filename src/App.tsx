@@ -42,7 +42,7 @@ const App: React.FC = () => {
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      ws.current = new WebSocket(`${protocol}//${host}`);
+      ws.current = new WebSocket(`${protocol}//${host}/api/ws`);
 
       ws.current.onopen = () => {
         console.log('WebSocket Connected');
