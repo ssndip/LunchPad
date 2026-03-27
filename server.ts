@@ -57,6 +57,11 @@ db.exec(`
   );
 `);
 
+export const getMenu = (database: Database.Database) => {
+  const items = database.prepare("SELECT * FROM menu").all() as any[];
+  return items.map(i => ({ ...i, available: i.available === 1 }));
+};
+
 // --- Initial Data ---
 const seedMenu = () => {
   const count = db.prepare("SELECT COUNT(*) as count FROM menu").get() as { count: number };
@@ -124,11 +129,6 @@ async function startServer() {
     });
   };
 
-  const getMenu = () => {
-    const items = db.prepare("SELECT * FROM menu").all() as any[];
-    return items.map(i => ({ ...i, available: i.available === 1 }));
-  };
-
   const getCards = () => {
     return db.prepare("SELECT * FROM cards").all();
   };
@@ -175,7 +175,7 @@ async function startServer() {
         const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
         items.forEach((i: any) => insert.run(i.id, i.name, i.description, i.price, i.available ? 1 : 0, i.category));
       })();
-      const updated = getMenu();
+      const updated = getMenu(db);
       broadcast({ type: "MENU_UPDATE", data: updated });
       res.json({ success: true, menu: updated });
     } catch (err: any) {
@@ -320,7 +320,7 @@ async function startServer() {
       const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
       if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}. Please register it in the Admin panel.` });
 
-      const menu = getMenu();
+      const menu = getMenu(db);
       const itemIdSet = new Set(itemIds);
       const selectedItems = menu.filter(m => itemIdSet.has(m.id));
       if (selectedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
