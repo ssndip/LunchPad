@@ -385,8 +385,7 @@ async function startServer() {
       type: "INITIAL_STATE",
       menu: getMenu(),
       orders: getOrders(),
-      kioskOpen,
-      cards: getCards()
+      kioskOpen
     }));
     ws.on("close", () => console.log("[WS] Client disconnected"));
   });
@@ -404,7 +403,7 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = process.env.PORT || 3003;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
   });
