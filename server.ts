@@ -95,7 +95,20 @@ async function startServer() {
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
 
-  app.use(cors());
+  const allowedOrigins = [
+    process.env.APP_URL,
+    `http://localhost:${process.env.PORT || 3003}`
+  ].filter(Boolean) as string[];
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
+  }));
   app.use(express.json());
 
   let kioskOpen = true;
@@ -404,7 +417,7 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = process.env.PORT || 3003;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
   });
