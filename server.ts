@@ -16,7 +16,7 @@ const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
-const dbPath = path.join(DB_DIR, 'lunchpad.db');
+const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
 console.log(`[DB] Initializing database at: ${dbPath}`);
 const db = new Database(dbPath);
 
@@ -404,13 +404,18 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = process.env.PORT || 3003;
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
-  });
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3003;
+  if (process.env.NODE_ENV !== "test") {
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+    });
+  }
+
+  return app;
 }
 
-startServer().catch(err => {
+export const appPromise = startServer().catch(err => {
   console.error("[Fatal Error]", err);
   process.exit(1);
+  throw err;
 });
