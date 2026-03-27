@@ -676,28 +676,6 @@ const App: React.FC = () => {
   );
 }
 
-  // Aggregate orders for Manager View
-  interface AggregatedItem {
-    name: string;
-    count: number;
-    total: number;
-    category: string;
-  }
-
-  const aggregatedOrders = orders.reduce((acc, order) => {
-    order.items.forEach(item => {
-      if (!acc[item.id]) {
-        acc[item.id] = { name: item.name, count: 0, total: 0, category: item.category };
-      }
-      acc[item.id].count += 1;
-      acc[item.id].total += item.price;
-    });
-    return acc;
-  }, {} as Record<number, AggregatedItem>);
-
-  const totalRevenue = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.total, 0);
-  const totalItemsSold = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.count, 0);
-
   return (
     <div className="min-h-screen bg-neutral-100 flex">
         {/* Sidebar */}
