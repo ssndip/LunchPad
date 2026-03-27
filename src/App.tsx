@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [kioskOpen, setKioskOpen] = useState(true);
+  const [adminPin, setAdminPin] = useState<string>("");
   
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -55,9 +56,9 @@ const App: React.FC = () => {
           case 'INITIAL_STATE':
             console.log('Received INITIAL_STATE. Cards:', message.cards?.length);
             setMenu(message.menu);
-            setOrders(message.orders);
+            if (message.orders?.length > 0) setOrders(message.orders);
             setKioskOpen(message.kioskOpen);
-            setCards(message.cards || []);
+            if (message.cards?.length > 0) setCards(message.cards);
             break;
           case 'MENU_UPDATE':
             setMenu(message.data);
@@ -120,7 +121,7 @@ const App: React.FC = () => {
   const fetchHistory = async () => {
     try {
       const params = new URLSearchParams(filters);
-      const response = await fetch(`/api/history?${params}`);
+      const response = await fetch(`/api/history?${params}`, { headers: { 'x-admin-pin': adminPin } });
       const data = await response.json();
       setHistory(data);
     } catch (err) {
@@ -130,7 +131,7 @@ const App: React.FC = () => {
 
   const fetchSummaries = async () => {
     try {
-      const response = await fetch('/api/summaries');
+      const response = await fetch('/api/summaries', { headers: { 'x-admin-pin': adminPin } });
       const data = await response.json();
       setSummaries(data);
     } catch (err) {
@@ -237,7 +238,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch('/api/cards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
         body: JSON.stringify(newCard),
       });
       if (response.ok) {
@@ -252,7 +253,7 @@ const App: React.FC = () => {
 
   const removeCard = async (rfid: string) => {
     try {
-      await fetch(`/api/cards/${rfid}`, { method: 'DELETE' });
+      await fetch(`/api/cards/${rfid}`, { method: 'DELETE', headers: { 'x-admin-pin': adminPin } });
     } catch (err) {
       console.error('Failed to remove card', err);
     }
@@ -280,7 +281,7 @@ const App: React.FC = () => {
       try {
         await fetch('/api/cards/batch', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
           body: JSON.stringify(newCards),
         });
         setIsPasteCardsModalOpen(false);
@@ -294,7 +295,7 @@ const App: React.FC = () => {
   const resetAllBalances = async () => {
     if (!confirm('Are you sure you want to reset ALL monthly balances to 0? This should usually be done at the end of the month.')) return;
     try {
-      await fetch('/api/cards/reset-all', { method: 'POST' });
+      await fetch('/api/cards/reset-all', { method: 'POST', headers: { 'x-admin-pin': adminPin } });
     } catch (err) {
       console.error('Failed to reset balances', err);
     }
@@ -304,7 +305,7 @@ const App: React.FC = () => {
     try {
       await fetch('/api/cards/update', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
         body: JSON.stringify(updatedCards),
       });
     } catch (err) {
@@ -371,7 +372,7 @@ const App: React.FC = () => {
     try {
       await fetch('/api/status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
         body: JSON.stringify({ open }),
       });
     } catch (err) {
@@ -383,7 +384,7 @@ const App: React.FC = () => {
     try {
       await fetch('/api/menu', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
         body: JSON.stringify(newMenu),
       });
     } catch (err) {
@@ -398,9 +399,7 @@ const App: React.FC = () => {
       return acc;
     }, {} as Record<string, MenuItem[]>);
 
-    const matchedCard = rfid ? cards.find(c =>
-      c.rfid.trim().toLowerCase() === rfid.trim().toLowerCase()
-    ) : undefined;
+    const matchedCard = rfid ? true : undefined; // Optimistic match for Kiosk since cards aren't leaked to client anymore
 
     if (!kioskOpen) {
       return (
@@ -581,20 +580,7 @@ const App: React.FC = () => {
                               return;
                             }
                             setLastScanned(cleanRfid);
-                            const card = cards.find(c => {
-                              const cardRfid = c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
-                              return cardRfid === cleanRfid;
-                            });
-
-                            if (card) {
-                              console.log(`[Kiosk] Found card for RFID: ${cleanRfid}`, card);
-                              handleOrder(cleanRfid);
-                            } else {
-                              console.warn(`[Kiosk] RFID ${cleanRfid} not found in cards list:`, cards.map(c => c.rfid));
-                              setError(`Unregistered Card: ${cleanRfid}`);
-                              setTimeout(() => setError(null), 5000);
-                              setRfid('');
-                            }
+                            handleOrder(cleanRfid); // Let backend validate
                           }
                         }}
                         className={`w-full pl-9 pr-10 py-2 bg-neutral-100 rounded-xl border-none focus:outline-none transition-all font-mono text-sm ${
@@ -622,16 +608,7 @@ const App: React.FC = () => {
                         Unregistered Card
                       </motion.p>
                     )}
-                    {matchedCard && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="absolute -top-12 left-0 bg-white px-3 py-1 rounded-xl border border-neutral-200 shadow-sm whitespace-nowrap"
-                      >
-                        <p className="text-[10px] font-bold text-neutral-900">Owner: {cards.find(c => c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase() === rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase())?.ownerName}</p>
-                        <p className="text-[10px] font-mono text-neutral-500">Owed: €{cards.find(c => c.rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase() === rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase())?.balance.toFixed(2)}</p>
-                      </motion.div>
-                    )}
+
                   </div>
                   <button
                     onClick={handleOrder}
@@ -675,6 +652,70 @@ const App: React.FC = () => {
     </div>
   );
 }
+
+
+  if (view === 'manager' && !adminPin) {
+    return (
+      <div className="h-screen bg-neutral-100 flex items-center justify-center p-8">
+        <div className="bg-white p-12 rounded-[40px] shadow-2xl text-center max-w-lg">
+          <h1 className="text-4xl font-black text-neutral-900 mb-4 uppercase tracking-tighter">Admin Login</h1>
+          <p className="text-neutral-500 mb-6">Enter your Admin PIN to proceed</p>
+          <input
+            type="password"
+            placeholder="****"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const pin = (e.currentTarget as HTMLInputElement).value;
+                if (pin) {
+                  setAdminPin(pin);
+                  // Trigger a fetch to cards to verify pin
+                  Promise.all([
+                    fetch('/api/cards', { headers: { 'x-admin-pin': pin } }),
+                    fetch('/api/orders', { headers: { 'x-admin-pin': pin } })
+                  ]).then(async ([cardsRes, ordersRes]) => {
+                    if (!cardsRes.ok || !ordersRes.ok) {
+                      setAdminPin('');
+                      alert('Invalid PIN');
+                    } else {
+                      const [cardsData, ordersData] = await Promise.all([cardsRes.json(), ordersRes.json()]);
+                      setCards(cardsData);
+                      setOrders(ordersData);
+                    }
+                  })
+                    .catch(() => { setAdminPin(''); alert('Network error'); });
+                }
+              }
+            }}
+            className="w-full px-4 py-4 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-center text-2xl mb-6 tracking-[0.5em]"
+            autoFocus
+          />
+          <button onClick={() => { setView('kiosk'); setAdminPin(''); }} className="text-neutral-500 hover:text-neutral-900 transition-colors font-bold uppercase tracking-widest text-xs">Return to Kiosk</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Aggregate orders for Manager View
+  interface AggregatedItem {
+    name: string;
+    count: number;
+    total: number;
+    category: string;
+  }
+
+  const aggregatedOrders = orders.reduce((acc, order) => {
+    order.items.forEach(item => {
+      if (!acc[item.id]) {
+        acc[item.id] = { name: item.name, count: 0, total: 0, category: item.category };
+      }
+      acc[item.id].count += 1;
+      acc[item.id].total += item.price;
+    });
+    return acc;
+  }, {} as Record<number, AggregatedItem>);
+
+  const totalRevenue = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.total, 0);
+  const totalItemsSold = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce((sum, item) => sum + item.count, 0);
 
   return (
     <div className="min-h-screen bg-neutral-100 flex">
