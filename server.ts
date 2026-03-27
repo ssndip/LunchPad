@@ -211,6 +211,20 @@ export async function startServer() {
       console.error("[Card Add Error]", err);
       res.status(500).json({ error: err.message });
     }
+    const now = new Date().toISOString();
+    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    db.prepare(`
+      INSERT INTO cards (rfid, ownerName, balance, lastUpdated)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(rfid) DO UPDATE SET
+        ownerName = excluded.ownerName,
+        balance = excluded.balance,
+        lastUpdated = excluded.lastUpdated
+    `).run(cleanRfid, ownerName, balance || 0, now);
+
+    const updated = getCards();
+    broadcast({ type: "CARDS_UPDATE", data: updated });
+    res.json({ success: true, cards: updated });
   });
 
   // Batch add cards
@@ -239,6 +253,21 @@ export async function startServer() {
       console.error("[Card Batch Error]", err);
       res.status(500).json({ error: err.message });
     }
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      const insert = db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, lastUpdated)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(rfid) DO UPDATE SET
+          ownerName = excluded.ownerName,
+          balance = excluded.balance,
+          lastUpdated = excluded.lastUpdated
+      `);
+      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
+    })();
+    const updated = getCards();
+    broadcast({ type: "CARDS_UPDATE", data: updated });
+    res.json({ success: true, cards: updated });
   });
 
   // Delete card
@@ -288,6 +317,15 @@ export async function startServer() {
       console.error("[Card Reset Error]", err);
       res.status(500).json({ error: err.message });
     }
+    db.transaction(() => {
+      db.prepare("DELETE FROM cards").run();
+      const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated) VALUES (?, ?, ?, ?)");
+      const now = new Date().toISOString();
+      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
+    })();
+    const updated = getCards();
+    broadcast({ type: "CARDS_UPDATE", data: updated });
+    res.json({ success: true, cards: updated });
   });
 
   // Reset all balances (monthly clear)
@@ -369,6 +407,60 @@ export async function startServer() {
       console.error("[Order Error]", err);
       res.status(500).json({ error: err.message });
     }
+    if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
+
+    // Match frontend cleaning logic: trim, remove non-printable, lowercase
+    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    console.log(`[Order] Processing RFID: "${cleanRfid}" (original: "${rfid}")`);
+
+    // Robust lookup
+    const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
+    if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}. Please register it in the Admin panel.` });
+
+    const menu = getMenu();
+    const itemIdSet = new Set(itemIds);
+    const selectedItems = menu.filter(m => itemIdSet.has(m.id));
+    if (selectedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
+
+    const total = selectedItems.reduce((sum, i) => sum + i.price, 0);
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const orderId = `ORD-${Date.now()}`;
+
+    const newOrder = {
+      id: orderId,
+      rfid: card.rfid, // Use the one from DB for consistency
+      ownerName: card.ownerName,
+      items: selectedItems,
+      totalPrice: total,
+      timestamp: now.toISOString(),
+      date: dateStr,
+      status: "completed"
+    };
+
+    db.transaction(() => {
+      // Update balance (accumulate owed amount)
+      db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
+        .run(total, now.toISOString(), card.rfid);
+
+      // Save order
+      db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .run(orderId, card.rfid, card.ownerName, JSON.stringify(selectedItems), total, now.toISOString(), dateStr, "completed");
+
+      // Update summary
+      const summary = db.prepare("SELECT * FROM daily_summaries WHERE date = ?").get(dateStr) as any;
+      if (!summary) {
+        db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount) VALUES (?, ?, ?)")
+          .run(dateStr, total, 1);
+      } else {
+        db.prepare("UPDATE daily_summaries SET totalSales = totalSales + ?, orderCount = orderCount + 1 WHERE date = ?")
+          .run(total, dateStr);
+      }
+    })();
+
+    broadcast({ type: "NEW_ORDER", data: newOrder });
+    broadcast({ type: "CARDS_UPDATE", data: getCards() });
+    res.json({ success: true, order: newOrder });
   });
 
   // History & Summaries
