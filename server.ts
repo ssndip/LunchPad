@@ -93,7 +93,7 @@ seedCards();
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  const wss = new WebSocketServer({ server, path: "/api/ws" });
+  const wss = new WebSocketServer({ server });
 
   app.use(cors());
   app.use(express.json());
@@ -372,7 +372,7 @@ async function startServer() {
   // --- Static Files & Vite ---
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: { server } },
+      server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
