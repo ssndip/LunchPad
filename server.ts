@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -139,12 +140,26 @@ async function startServer() {
 
   // --- API Routes ---
 
+  const ADMIN_PIN = process.env.ADMIN_PIN;
+  if (!ADMIN_PIN) {
+    console.warn("⚠️ WARNING: ADMIN_PIN environment variable is not set. Admin API endpoints will reject all requests!");
+  }
+
+  const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const pin = req.headers['x-admin-pin'] || req.query.pin;
+    if (!ADMIN_PIN || pin !== ADMIN_PIN) {
+      return res.status(401).json({ error: "Unauthorized: Invalid or missing PIN" });
+    }
+    next();
+  };
+
+
   // Health check
   app.get("/ping", (req, res) => res.send("pong"));
 
   // Kiosk Status
   app.get("/api/status", (req, res) => res.json({ kioskOpen }));
-  app.post("/api/status", (req, res) => {
+  app.post("/api/status", requireAuth, (req, res) => {
     kioskOpen = !!req.body.open;
     broadcast({ type: "STATUS_UPDATE", data: { kioskOpen } });
     res.json({ success: true, kioskOpen });
@@ -152,7 +167,7 @@ async function startServer() {
 
   // Menu Management
   app.get("/api/menu", (req, res) => res.json(getMenu()));
-  app.post("/api/menu", (req, res) => {
+  app.post("/api/menu", requireAuth, (req, res) => {
     try {
       const items = req.body;
       db.transaction(() => {
@@ -169,10 +184,10 @@ async function startServer() {
   });
 
   // Card Management
-  app.get("/api/cards", (req, res) => res.json(getCards()));
+  app.get("/api/cards", requireAuth, (req, res) => res.json(getCards()));
 
   // Add/Update single card
-  app.post("/api/cards", (req, res) => {
+  app.post("/api/cards", requireAuth, (req, res) => {
     try {
       const { rfid, ownerName, balance } = req.body;
       if (!rfid || !ownerName) {
@@ -190,7 +205,7 @@ async function startServer() {
       `).run(cleanRfid, ownerName, balance || 0, now);
       
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Add Error]", err);
@@ -199,7 +214,7 @@ async function startServer() {
   });
 
   // Batch add cards
-  app.post("/api/cards/batch", (req, res) => {
+  app.post("/api/cards/batch", requireAuth, (req, res) => {
     try {
       const cards = req.body;
       if (!Array.isArray(cards)) {
@@ -218,7 +233,7 @@ async function startServer() {
         cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
       })();
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Batch Error]", err);
@@ -227,12 +242,12 @@ async function startServer() {
   });
 
   // Delete card
-  app.delete("/api/cards/:rfid", (req, res) => {
+  app.delete("/api/cards/:rfid", requireAuth, (req, res) => {
     try {
       const { rfid } = req.params;
       db.prepare("DELETE FROM cards WHERE rfid = ?").run(rfid);
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Delete Error]", err);
@@ -241,7 +256,7 @@ async function startServer() {
   });
 
   // Update all cards (bulk update/replace)
-  app.post("/api/cards/update", (req, res) => {
+  app.post("/api/cards/update", requireAuth, (req, res) => {
     try {
       const cards = req.body;
       if (!Array.isArray(cards)) {
@@ -254,7 +269,7 @@ async function startServer() {
         cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now));
       })();
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Update Error]", err);
@@ -263,11 +278,11 @@ async function startServer() {
   });
 
   // Reset all balances (monthly clear)
-  app.post("/api/cards/reset-all", (req, res) => {
+  app.post("/api/cards/reset-all", requireAuth, (req, res) => {
     try {
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset Error]", err);
@@ -276,11 +291,11 @@ async function startServer() {
   });
 
   // Reset all balances (monthly clear)
-  app.post("/api/cards/reset-all", (req, res) => {
+  app.post("/api/cards/reset-all", requireAuth, (req, res) => {
     try {
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      // broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset Error]", err);
@@ -347,7 +362,7 @@ async function startServer() {
       })();
 
       broadcast({ type: "NEW_ORDER", data: newOrder });
-      broadcast({ type: "CARDS_UPDATE", data: getCards() });
+      // broadcast({ type: "CARDS_UPDATE", data: getCards() });
       res.json({ success: true, order: newOrder });
 
     } catch (err: any) {
@@ -357,26 +372,26 @@ async function startServer() {
   });
 
   // History & Summaries
-  app.get("/api/orders", (req, res) => res.json(getOrders()));
-  app.post("/api/orders/reset", (req, res) => {
+  app.get("/api/orders", requireAuth, (req, res) => res.json(getOrders()));
+  app.post("/api/orders/reset", requireAuth, (req, res) => {
     try {
       db.transaction(() => {
         db.prepare("DELETE FROM orders").run();
         db.prepare("DELETE FROM daily_summaries").run();
       })();
-      broadcast({ type: "INITIAL_STATE", menu: getMenu(), orders: [], kioskOpen, cards: getCards() });
+      broadcast({ type: "INITIAL_STATE", menu: getMenu(), orders: [], kioskOpen, cards: [] });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/summaries", (req, res) => {
+  app.get("/api/summaries", requireAuth, (req, res) => {
     const summaries = db.prepare("SELECT * FROM daily_summaries ORDER BY date DESC LIMIT 30").all();
     res.json(summaries);
   });
 
-  app.get("/api/history", (req, res) => {
+  app.get("/api/history", requireAuth, (req, res) => {
     const { startDate, endDate, rfid, ownerName } = req.query;
     let sql = "SELECT * FROM orders WHERE 1=1";
     const params: any[] = [];
@@ -397,9 +412,9 @@ async function startServer() {
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
       menu: getMenu(),
-      orders: getOrders(),
+      orders: [], // Removed for security, fetch via API
       kioskOpen,
-      cards: getCards()
+      cards: [] // Removed for security, fetch via API
     }));
     ws.on("close", () => console.log("[WS] Client disconnected"));
   });
@@ -417,8 +432,8 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3003;
-  server.listen(PORT, "0.0.0.0", () => {
+  const PORT = process.env.PORT || 3003;
+  server.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
   });
 }
