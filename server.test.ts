@@ -1,55 +1,56 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import request from 'supertest';
-import { startServer } from './server.js';
-import express from 'express';
+import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+import Database from 'better-sqlite3';
+import { getMenu } from './server';
 
-describe('/api/v1/order API', () => {
-  let app: express.Express;
-  let server: any;
+describe('getMenu', () => {
+  let db: Database.Database;
 
-  beforeAll(async () => {
-    // Set environment to test so we don't start the vite server
-    process.env.NODE_ENV = 'test';
-    // Use an arbitrary available port for testing
-    process.env.PORT = '0';
-    const result = await startServer();
-    app = result.app;
-    server = result.server;
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS menu (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        price REAL,
+        available INTEGER,
+        category TEXT
+      );
+    `);
   });
 
-  afterAll(() => {
-    if (server) {
-      server.close();
-    }
+  afterEach(() => {
+    db.close();
   });
 
-  it('should return 400 when an empty itemIds array is provided', async () => {
-    const response = await request(app)
-      .post('/api/v1/order')
-      .send({
-        rfid: '1234567890', // Valid seeded RFID
-        itemIds: []         // Empty array
-      })
-      .expect('Content-Type', /json/)
-      .expect(400);
+  test('maps available 1 to true and 0 to false', () => {
+    const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
+    insert.run(1, "Available Item", "Desc", 1.5, 1, "Category 1");
+    insert.run(2, "Unavailable Item", "Desc", 2.0, 0, "Category 2");
 
-    expect(response.body).toEqual({
-      error: 'No valid items selected'
+    const result = getMenu(db);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({
+      id: 1,
+      name: "Available Item",
+      description: "Desc",
+      price: 1.5,
+      available: true,
+      category: "Category 1"
+    });
+    expect(result[1]).toEqual({
+      id: 2,
+      name: "Unavailable Item",
+      description: "Desc",
+      price: 2.0,
+      available: false,
+      category: "Category 2"
     });
   });
 
-  it('should return 400 when an array with non-existent itemIds is provided', async () => {
-    const response = await request(app)
-      .post('/api/v1/order')
-      .send({
-        rfid: '1234567890', // Valid seeded RFID
-        itemIds: [9999, 10000] // Non-existent IDs
-      })
-      .expect('Content-Type', /json/)
-      .expect(400);
-
-    expect(response.body).toEqual({
-      error: 'No valid items selected'
-    });
+  test('returns an empty array when there are no items', () => {
+    const result = getMenu(db);
+    expect(result).toEqual([]);
   });
 });
