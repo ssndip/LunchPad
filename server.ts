@@ -491,7 +491,13 @@ export async function startServer() {
     if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
     if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
     if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
-    if (ownerName) { sql += " AND ownerName LIKE ?"; params.push(`%${ownerName}%`); }
+    if (ownerName) {
+      // Security enhancement: Prevent LIKE pattern injection by escaping %, _, and \
+      // This prevents users from circumventing search constraints or causing expensive DB operations
+      const escapedOwnerName = String(ownerName).replace(/([%_\\])/g, '\\$1');
+      sql += " AND ownerName LIKE ? ESCAPE '\\'";
+      params.push(`%${escapedOwnerName}%`);
+    }
 
     sql += " ORDER BY timestamp DESC LIMIT 100";
     const orders = db.prepare(sql).all(...params) as any[];
