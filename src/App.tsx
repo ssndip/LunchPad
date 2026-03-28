@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Utensils, 
   Settings, 
@@ -703,25 +703,31 @@ const App: React.FC = () => {
     category: string;
   }
 
-  const aggregatedOrders = orders.reduce((acc, order) => {
-    order.items.forEach(item => {
-      if (!acc[item.id]) {
-        acc[item.id] = { name: item.name, count: 0, total: 0, category: item.category };
-      }
-      acc[item.id].count += 1;
-      acc[item.id].total += item.price;
-    });
-    return acc;
-  }, {} as Record<number, AggregatedItem>);
-
-  const { totalRevenue, totalItemsSold } = (Object.values(aggregatedOrders) as AggregatedItem[]).reduce(
-    (acc, item) => {
-      acc.totalRevenue += item.total;
-      acc.totalItemsSold += item.count;
+  // ⚡ Bolt: Memoize expensive O(orders * items_per_order) calculation
+  // Prevents re-running this nested loop on every render (e.g. typing in search inputs or WebSocket updates)
+  const { aggregatedOrders, totalRevenue, totalItemsSold } = useMemo(() => {
+    const aggOrders = orders.reduce((acc, order) => {
+      order.items.forEach(item => {
+        if (!acc[item.id]) {
+          acc[item.id] = { name: item.name, count: 0, total: 0, category: item.category };
+        }
+        acc[item.id].count += 1;
+        acc[item.id].total += item.price;
+      });
       return acc;
-    },
-    { totalRevenue: 0, totalItemsSold: 0 }
-  );
+    }, {} as Record<number, AggregatedItem>);
+
+    const totals = (Object.values(aggOrders) as AggregatedItem[]).reduce(
+      (acc, item) => {
+        acc.totalRevenue += item.total;
+        acc.totalItemsSold += item.count;
+        return acc;
+      },
+      { totalRevenue: 0, totalItemsSold: 0 }
+    );
+
+    return { aggregatedOrders: aggOrders, totalRevenue: totals.totalRevenue, totalItemsSold: totals.totalItemsSold };
+  }, [orders]);
 
   return (
     <div className="min-h-screen bg-neutral-100 flex">
