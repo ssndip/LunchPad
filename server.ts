@@ -57,7 +57,7 @@ db.exec(`
   );
 `);
 
-export const getMenu = (database: Database.Database) => {
+export const getMenu = (database: Database.Database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
   return items.map(i => ({ ...i, available: i.available === 1 }));
 };

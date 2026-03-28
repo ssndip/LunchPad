@@ -443,6 +443,7 @@ const App: React.FC = () => {
             </div>
             <button 
               onClick={() => setView('manager')}
+              aria-label="Settings"
               className="group p-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
               aria-label="Manager Settings"
               title="Manager Settings"
@@ -544,6 +545,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <button 
                     onClick={() => setSelectedItems([])}
+                    aria-label="Clear order"
                     className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                     aria-label="Clear order items"
                     title="Clear order items"
@@ -597,6 +599,7 @@ const App: React.FC = () => {
                         <button 
                           tabIndex={-1}
                           onClick={() => setRfid('')}
+                          aria-label="Clear scanned card"
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
                           aria-label="Clear RFID input"
                           title="Clear RFID input"
@@ -921,6 +924,7 @@ const App: React.FC = () => {
                           <td className="p-6">
                             <button 
                               onClick={() => removeItem(item.id)}
+                              aria-label="Remove item"
                               className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                               aria-label={`Remove ${item.name}`}
                               title={`Remove ${item.name}`}
@@ -1165,6 +1169,7 @@ const App: React.FC = () => {
                               <td className="p-6 text-right">
                                 <button 
                                   onClick={() => removeCard(card.rfid)}
+                                  aria-label="Remove card"
                                   className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                                   aria-label={`Remove card for ${card.ownerName}`}
                                   title={`Remove card for ${card.ownerName}`}
