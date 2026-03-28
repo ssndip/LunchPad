@@ -57,7 +57,7 @@ db.exec(`
   );
 `);
 
-export const getMenu = (database: Database.Database) => {
+export const getMenu = (database: Database.Database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
   return items.map(i => ({ ...i, available: i.available === 1 }));
 };
@@ -492,10 +492,8 @@ export async function startServer() {
     if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
     if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
     if (ownerName) {
-      // Security enhancement: Prevent LIKE pattern injection by escaping %, _, and \
-      // This prevents users from circumventing search constraints or causing expensive DB operations
-      const escapedOwnerName = String(ownerName).replace(/([%_\\])/g, '\\$1');
       sql += " AND ownerName LIKE ? ESCAPE '\\'";
+      const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
       params.push(`%${escapedOwnerName}%`);
     }
 
