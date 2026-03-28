@@ -1,0 +1,5 @@
+## 2024-05-14 - Fix LIKE pattern injection in API
+
+**Vulnerability:** A LIKE pattern injection vulnerability was found in the `ownerName` query parameter of the `/api/history` endpoint in `server.ts`. User input was passed directly into a LIKE clause with surrounding `%` wildcards without escaping special characters like `%` and `_`.
+**Learning:** When using user-provided input in SQL `LIKE` clauses, it is crucial to escape special characters (`%`, `_`, and the escape character itself) to prevent 'LIKE pattern injection', which allows users to manipulate the query logic, bypass intended filters, and potentially access unauthorized data or cause denial-of-service via resource exhaustion.
+**Prevention:** Always escape special characters (`%`, `_`, and the escape character itself) in user input and include an explicit `ESCAPE` clause in the query when using `LIKE`.

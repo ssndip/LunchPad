@@ -491,7 +491,11 @@ export async function startServer() {
     if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
     if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
     if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
-    if (ownerName) { sql += " AND ownerName LIKE ?"; params.push(`%${ownerName}%`); }
+    if (ownerName) {
+      sql += " AND ownerName LIKE ? ESCAPE '\\'";
+      const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
+      params.push(`%${escapedOwnerName}%`);
+    }
 
     sql += " ORDER BY timestamp DESC LIMIT 100";
     const orders = db.prepare(sql).all(...params) as any[];
