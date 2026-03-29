@@ -428,14 +428,59 @@ const App: React.FC = () => {
 
   const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
 
+  // --- Manager Aggregation Hooks (Moved to top to fix Error #310) ---
+  interface AggregatedItem {
+    name: string;
+    count: number;
+    total: number;
+    category: string;
+  }
+
+  // ⚡ Bolt: Memoize expensive O(orders * items_per_order) calculation
+  const { aggregatedOrders, totalRevenue, totalItemsSold } = useMemo(() => {
+    if (!Array.isArray(orders)) {
+      return { aggregatedOrders: {}, totalRevenue: 0, totalItemsSold: 0 };
+    }
+
+    const aggOrders = orders.reduce((acc, order) => {
+      if (!order || !Array.isArray(order.items)) return acc;
+      order.items.forEach(item => {
+        if (!item || !item.id) return;
+        if (!acc[item.id]) {
+          acc[item.id] = { 
+            name: item.name || 'Unknown Item', 
+            count: 0, 
+            total: 0, 
+            category: item.category || 'Uncategorized' 
+          };
+        }
+        acc[item.id].count += 1;
+        acc[item.id].total += (Number(item.price) || 0);
+      });
+      return acc;
+    }, {} as Record<number, AggregatedItem>);
+
+    const totals = (Object.values(aggOrders) as AggregatedItem[]).reduce(
+      (acc, item) => {
+        acc.totalRevenue += item.total;
+        acc.totalItemsSold += item.count;
+        return acc;
+      },
+      { totalRevenue: 0, totalItemsSold: 0 }
+    );
+
+    return { aggregatedOrders: aggOrders, totalRevenue: totals.totalRevenue, totalItemsSold: totals.totalItemsSold };
+  }, [orders]);
+
   useEffect(() => {
     if (view === 'kiosk' && kioskOpen && selectedItems.length > 0) {
       rfidInputRef.current?.focus();
     }
   }, [view, kioskOpen, selectedItems.length]);
 
-  const handleOrder = async (rfidOverride?: string) => {
-    let activeRfid = rfidOverride || rfid;
+  const handleOrder = async (rfidOverride?: string | React.MouseEvent) => {
+    // If called via onClick, rfidOverride is the event object. Ignore it.
+    let activeRfid = (typeof rfidOverride === 'string') ? rfidOverride : rfid;
     
     // Test mode bypass: if no RFID scanned and Test Mode is ON, use TEST-ADMIN
     if ((!activeRfid || activeRfid.trim() === '') && testModeEnabled) {
@@ -560,9 +605,7 @@ const App: React.FC = () => {
             </div>
             <button 
               onClick={() => setView('manager')}
-              aria-label="Settings"
               className="group p-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
-              aria-label="Manager Settings"
               title="Manager Settings"
             >
               <Settings className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 transition-colors" />
@@ -692,9 +735,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <button 
                     onClick={() => setSelectedItems([])}
-                    aria-label="Clear order"
                     className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
-                    aria-label="Clear order items"
                     title="Clear order items"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -746,9 +787,7 @@ const App: React.FC = () => {
                         <button 
                           tabIndex={-1}
                           onClick={() => setRfid('')}
-                          aria-label="Clear scanned card"
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
-                          aria-label="Clear RFID input"
                           title="Clear RFID input"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -767,7 +806,7 @@ const App: React.FC = () => {
 
                   </div>
                   <button
-                    onClick={handleOrder}
+                    onClick={() => handleOrder()}
                     disabled={isScanning || (selectedItems.length === 0) || (!testModeEnabled && (!rfid || !matchedCard))}
                     className="px-6 py-2 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                   >
@@ -838,9 +877,15 @@ const App: React.FC = () => {
                       setAdminPin('');
                       alert('Invalid PIN');
                     } else {
+                    try {
                       const [cardsData, ordersData] = await Promise.all([cardsRes.json(), ordersRes.json()]);
-                      setCards(cardsData);
-                      setOrders(ordersData);
+                      if (Array.isArray(cardsData)) setCards(cardsData);
+                      if (Array.isArray(ordersData)) setOrders(ordersData);
+                    } catch (parseErr) {
+                      console.error('Failed to parse admin data', parseErr);
+                      setAdminPin('');
+                      alert('Failed to load admin data. Check server logs.');
+                    }
                     }
                   })
                     .catch(() => { setAdminPin(''); alert('Network error'); });
@@ -856,39 +901,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Aggregate orders for Manager View
-  interface AggregatedItem {
-    name: string;
-    count: number;
-    total: number;
-    category: string;
-  }
 
-  // ⚡ Bolt: Memoize expensive O(orders * items_per_order) calculation
-  // Prevents re-running this nested loop on every render (e.g. typing in search inputs or WebSocket updates)
-  const { aggregatedOrders, totalRevenue, totalItemsSold } = useMemo(() => {
-    const aggOrders = orders.reduce((acc, order) => {
-      order.items.forEach(item => {
-        if (!acc[item.id]) {
-          acc[item.id] = { name: item.name, count: 0, total: 0, category: item.category };
-        }
-        acc[item.id].count += 1;
-        acc[item.id].total += item.price;
-      });
-      return acc;
-    }, {} as Record<number, AggregatedItem>);
-
-    const totals = (Object.values(aggOrders) as AggregatedItem[]).reduce(
-      (acc, item) => {
-        acc.totalRevenue += item.total;
-        acc.totalItemsSold += item.count;
-        return acc;
-      },
-      { totalRevenue: 0, totalItemsSold: 0 }
-    );
-
-    return { aggregatedOrders: aggOrders, totalRevenue: totals.totalRevenue, totalItemsSold: totals.totalItemsSold };
-  }, [orders]);
 
   return (
     <div className="min-h-screen bg-neutral-100 flex">
@@ -1045,12 +1058,12 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {editingMenu.map((item) => (
+                      {Array.isArray(editingMenu) && editingMenu.map((item) => (
                         <tr key={item.id} className="hover:bg-neutral-50 transition-colors">
                           <td className="p-6">
                             <input
                               type="text"
-                              value={item.category}
+                              value={item.category || ''}
                               onChange={(e) => updateItem(item.id, 'category', e.target.value)}
                               className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0"
                             />
@@ -1058,17 +1071,17 @@ const App: React.FC = () => {
                           <td className="p-6">
                             <input
                               type="text"
-                              value={item.name}
+                              value={item.name || ''}
                               onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                               className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0"
                             />
                           </td>
                           <td className="p-6">
                             <div className="flex items-center gap-1">
-                              <span className="text-neutral-400">$</span>
+                              <span className="text-neutral-400">€</span>
                               <input
                                 type="number"
-                                value={item.price}
+                                value={item.price || 0}
                                 onChange={(e) => updateItem(item.id, 'price', parseFloat(e.target.value))}
                                 className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0"
                               />
@@ -1089,9 +1102,7 @@ const App: React.FC = () => {
                           <td className="p-6">
                             <button 
                               onClick={() => removeItem(item.id)}
-                              aria-label="Remove item"
                               className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
-                              aria-label={`Remove ${item.name}`}
                               title={`Remove ${item.name}`}
                             >
                               <Trash2 className="w-5 h-5" />
@@ -1122,7 +1133,7 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {summaries.map((summary) => (
+                      {Array.isArray(summaries) && summaries.map((summary) => (
                         <React.Fragment key={summary.date}>
                           <tr 
                             onClick={() => {
@@ -1136,16 +1147,16 @@ const App: React.FC = () => {
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${expandedDate === summary.date ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400 group-hover:text-neutral-900 group-hover:bg-neutral-200'}`}>
                                   <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedDate === summary.date ? 'rotate-90' : ''}`} />
                                 </div>
-                                <span className="tracking-tight">{summary.date}</span>
+                                <span className="tracking-tight">{summary.date || 'Unknown Date'}</span>
                               </div>
                             </td>
                             <td className="p-6 text-center">
                               <span className="px-4 py-1.5 bg-neutral-100 rounded-full font-mono font-bold text-neutral-900 group-hover:bg-neutral-200 transition-colors">
-                                {summary.orderCount}
+                                {Number(summary.orderCount) || 0}
                               </span>
                             </td>
                             <td className="p-6 text-right font-mono font-bold text-neutral-900">
-                              €{summary.totalSales.toFixed(2)}
+                              €{(Number(summary.totalSales) || 0).toFixed(2)}
                             </td>
                           </tr>
                           {expandedDate === summary.date && (
@@ -1181,19 +1192,19 @@ const App: React.FC = () => {
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-neutral-50">
-                                        {dailyDetails.map((item, idx) => (
+                                        {Array.isArray(dailyDetails) && dailyDetails.map((item, idx) => (
                                           <tr key={idx} className="hover:bg-neutral-50 transition-colors">
                                             <td className="p-5">
-                                              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category}</p>
-                                              <p className="font-bold text-neutral-900 text-base">{item.name}</p>
+                                              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category || 'Uncategorized'}</p>
+                                              <p className="font-bold text-neutral-900 text-base">{item.name || 'Unknown Item'}</p>
                                             </td>
                                             <td className="p-5 text-center">
                                               <span className="bg-neutral-100 px-3 py-1 rounded-lg font-mono font-black text-neutral-900">
-                                                {item.quantity}
+                                                {Number(item.quantity) || 0}
                                               </span>
                                             </td>
-                                            <td className="p-5 text-right font-mono text-neutral-500">€{item.price.toFixed(2)}</td>
-                                            <td className="p-5 text-right font-mono font-bold text-neutral-900">€{item.total.toFixed(2)}</td>
+                                            <td className="p-5 text-right font-mono text-neutral-500">€{(Number(item.price) || 0).toFixed(2)}</td>
+                                            <td className="p-5 text-right font-mono font-bold text-neutral-900">€{(Number(item.total) || 0).toFixed(2)}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -1283,25 +1294,27 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
-                      {history.map((order) => (
+                      {Array.isArray(history) && history.map((order) => (
                         <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
                           <td className="p-6">
                             <p className="font-bold text-neutral-900">{new Date(order.timestamp).toLocaleDateString()}</p>
                             <p className="text-[10px] text-neutral-400 font-mono">{new Date(order.timestamp).toLocaleTimeString()}</p>
                           </td>
                           <td className="p-6">
-                            <p className="font-bold text-neutral-900">{order.ownerName}</p>
-                            <p className="text-[10px] text-neutral-400 font-mono">{order.rfid}</p>
+                            <p className="font-bold text-neutral-900">{order.ownerName || 'Unknown User'}</p>
+                            <p className="text-[10px] text-neutral-400 font-mono">{order.rfid || 'N/A'}</p>
                           </td>
                           <td className="p-6">
-                            <p className="text-xs text-neutral-600">{order.items.map(i => i.name).join(', ')}</p>
+                            <p className="text-xs text-neutral-600">
+                              {Array.isArray(order.items) ? order.items.map(i => i.name).join(', ') : 'No items'}
+                            </p>
                           </td>
                           <td className="p-6 text-right font-mono font-bold text-neutral-900">
-                            €{order.totalPrice.toFixed(2)}
+                            €{(Number(order.totalPrice) || 0).toFixed(2)}
                           </td>
                         </tr>
                       ))}
-                      {history.length === 0 && (
+                      {(!Array.isArray(history) || history.length === 0) && (
                         <tr>
                           <td colSpan={4} className="p-12 text-center text-neutral-400 italic">
                             No orders found matching filters.
@@ -1470,16 +1483,16 @@ const App: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
-                          {cards.map((card) => (
+                          {Array.isArray(cards) && cards.map((card) => (
                             <tr key={card.rfid} className="hover:bg-neutral-50 transition-colors">
                               <td className="p-6 font-mono text-sm text-neutral-600">{card.rfid}</td>
-                              <td className="p-6 font-bold text-neutral-900">{card.ownerName}</td>
+                              <td className="p-6 font-bold text-neutral-900">{card.ownerName || 'N/A'}</td>
                               <td className="p-6 text-right">
                                 <div className="flex items-center justify-end gap-1">
                                   <span className="text-neutral-400">€</span>
                                   <input 
                                     type="number"
-                                    value={card.balance}
+                                    value={Number(card.balance) || 0}
                                     onChange={(e) => {
                                       const updated = cards.map(c => c.rfid === card.rfid ? { ...c, balance: parseFloat(e.target.value) } : c);
                                       updateCards(updated);
@@ -1491,9 +1504,7 @@ const App: React.FC = () => {
                               <td className="p-6 text-right">
                                 <button 
                                   onClick={() => removeCard(card.rfid)}
-                                  aria-label="Remove card"
                                   className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
-                                  aria-label={`Remove card for ${card.ownerName}`}
                                   title={`Remove card for ${card.ownerName}`}
                                 >
                                   <Trash2 className="w-5 h-5" />
@@ -1501,9 +1512,9 @@ const App: React.FC = () => {
                               </td>
                             </tr>
                           ))}
-                          {cards.length === 0 && (
+                          {(!Array.isArray(cards) || cards.length === 0) && (
                             <tr>
-                              <td colSpan={3} className="p-12 text-center text-neutral-400 italic">
+                              <td colSpan={4} className="p-12 text-center text-neutral-400 italic">
                                 No cards registered yet.
                               </td>
                             </tr>

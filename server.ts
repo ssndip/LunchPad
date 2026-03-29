@@ -227,8 +227,21 @@ export async function startServer() {
   };
 
   const getOrders = (limit = 50) => {
-    const orders = db.prepare("SELECT * FROM orders ORDER BY timestamp DESC LIMIT ?").all(limit) as any[];
-    return orders.map(o => ({ ...o, items: JSON.parse(o.items) }));
+    try {
+      const orders = db.prepare("SELECT * FROM orders ORDER BY timestamp DESC LIMIT ?").all(limit) as any[];
+      return orders.map(o => {
+        let items = [];
+        try {
+          items = o.items ? JSON.parse(o.items) : [];
+        } catch (e) {
+          console.error(`[DB Error] Failed to parse items for order ${o.id}`, e);
+        }
+        return { ...o, items: Array.isArray(items) ? items : [] };
+      });
+    } catch (err) {
+      console.error("[DB Error] getOrders failed", err);
+      return [];
+    }
   };
 
   // --- API Routes ---
@@ -543,14 +556,29 @@ export async function startServer() {
       const itemMap: Record<string, { name: string, quantity: number, total: number, price: number, category: string }> = {};
       
       orders.forEach(order => {
-        const items = JSON.parse(order.items);
-        items.forEach((item: any) => {
-          if (!itemMap[item.name]) {
-            itemMap[item.name] = { name: item.name, quantity: 0, total: 0, price: item.price, category: item.category };
-          }
-          itemMap[item.name].quantity += 1;
-          itemMap[item.name].total += item.price;
-        });
+        let items = [];
+        try {
+          items = order.items ? JSON.parse(order.items) : [];
+        } catch (e) {
+          console.error("[DB Error] Failed to parse summary items", e);
+        }
+
+        if (Array.isArray(items)) {
+          items.forEach((item: any) => {
+            if (!item || !item.name) return;
+            if (!itemMap[item.name]) {
+              itemMap[item.name] = { 
+                name: item.name, 
+                quantity: 0, 
+                total: 0, 
+                price: Number(item.price) || 0, 
+                category: item.category || 'Uncategorized' 
+              };
+            }
+            itemMap[item.name].quantity += 1;
+            itemMap[item.name].total += (Number(item.price) || 0);
+          });
+        }
       });
       
       res.json(Object.values(itemMap).sort((a, b) => b.total - a.total));
@@ -574,8 +602,30 @@ export async function startServer() {
     }
 
     sql += " ORDER BY timestamp DESC LIMIT 100";
-    const orders = db.prepare(sql).all(...params) as any[];
-    res.json(orders.map(o => ({ ...o, items: JSON.parse(o.items) })));
+    try {
+      const orders = db.prepare(sql).all(...params) as any[];
+      res.json(orders.map(o => {
+        let items = [];
+        try {
+          items = o.items ? JSON.parse(o.items) : [];
+        } catch (e) {
+          console.error(`[DB Error] History parse error for ${o.id}`, e);
+        }
+        return { ...o, items: Array.isArray(items) ? items : [] };
+      }));
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to query history", details: err.message });
+    }
+  });
+
+  // --- Global Error Handler ---
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("[Global Error]", err);
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: err.message,
+      path: req.path
+    });
   });
 
   // --- WebSocket ---
