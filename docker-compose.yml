@@ -3,10 +3,11 @@ services:
     build: .
     container_name: lunchpad-container
     ports:
-      - "3003:3003"
+      - "3400:3400"
     volumes:
       - ./data:/app/data
     restart: always
     environment:
       - NODE_ENV=production
-      - PORT=3003
+      - PORT=3400
+      - APP_URL=https://ss.plcnet.org:3402
