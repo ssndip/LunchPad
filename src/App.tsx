@@ -549,7 +549,17 @@ const App: React.FC = () => {
     });
   };
 
-  const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
+  // ⚡ Bolt: Memoize selected items to a Set for O(1) lookup during render loop
+  const selectedItemIds = useMemo(
+    () => new Set(selectedItems.map((i) => i.id)),
+    [selectedItems]
+  );
+
+  // ⚡ Bolt: Memoize total price calculation
+  const totalPrice = useMemo(
+    () => selectedItems.reduce((sum, item) => sum + item.price, 0),
+    [selectedItems]
+  );
 
   // --- Manager Aggregation Hooks (Moved to top to fix Error #310) ---
   interface AggregatedItem {
@@ -702,13 +712,15 @@ const App: React.FC = () => {
   };
 
   if (view === "kiosk") {
-    const groupedMenu = menu.reduce(
-      (acc, item) => {
-        if (!acc[item.category]) acc[item.category] = [];
-        acc[item.category].push(item);
-        return acc;
-      },
-      {} as Record<string, MenuItem[]>,
+    // ⚡ Bolt: Memoize grouped menu to prevent redundant O(n) reduction on every render
+    const groupedMenu = useMemo(
+      () =>
+        menu.reduce((acc, item) => {
+          if (!acc[item.category]) acc[item.category] = [];
+          acc[item.category].push(item);
+          return acc;
+        }, {} as Record<string, MenuItem[]>),
+      [menu]
     );
 
     const matchedCard = rfid ? true : undefined; // Optimistic match for Kiosk since cards aren't leaked to client anymore
@@ -828,75 +840,64 @@ const App: React.FC = () => {
                     <div className="divide-y divide-neutral-50">
                       {items
                         .filter((item) => item.available)
-                        .map((item) => (
-                          <motion.div
-                            key={item.id}
-                            layout
-                            initial={false}
-                            animate={{
-                              backgroundColor: selectedItems.find(
-                                (i) => i.id === item.id,
-                              )
-                                ? "#000000"
-                                : "#ffffff",
-                              color: selectedItems.find((i) => i.id === item.id)
-                                ? "#ffffff"
-                                : "#404040",
-                              scale: selectedItems.find((i) => i.id === item.id)
-                                ? 1.02
-                                : 1,
-                            }}
-                            transition={{ duration: 0.15 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => toggleItem(item)}
-                            className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-150 relative rounded-lg mb-1 overflow-hidden ${
-                              selectedItems.find((i) => i.id === item.id)
-                                ? "shadow-xl z-10"
-                                : "hover:bg-neutral-50 border border-transparent hover:border-neutral-200"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <AnimatePresence mode="wait">
-                                {selectedItems.find(
-                                  (i) => i.id === item.id,
-                                ) && (
-                                  <motion.div
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0, opacity: 0 }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                      damping: 20,
-                                    }}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                              <span
-                                className={`text-[15px] font-bold block truncate`}
-                              >
-                                {item.name}
-                              </span>
-                            </div>
-                            <div className="shrink-0 ml-4">
-                              <span
-                                className={`text-[13px] font-black font-mono`}
-                              >
-                                €{item.price.toFixed(2)}
-                              </span>
-                            </div>
+                        .map((item) => {
+                          const isSelected = selectedItemIds.has(item.id);
+                          return (
+                            <motion.div
+                              key={item.id}
+                              layout
+                              initial={false}
+                              animate={{
+                                backgroundColor: isSelected ? "#000000" : "#ffffff",
+                                color: isSelected ? "#ffffff" : "#404040",
+                                scale: isSelected ? 1.02 : 1,
+                              }}
+                              transition={{ duration: 0.15 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => toggleItem(item)}
+                              className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-150 relative rounded-lg mb-1 overflow-hidden ${
+                                isSelected
+                                  ? "shadow-xl z-10"
+                                  : "hover:bg-neutral-50 border border-transparent hover:border-neutral-200"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <AnimatePresence mode="wait">
+                                  {isSelected && (
+                                    <motion.div
+                                      initial={{ scale: 0, opacity: 0 }}
+                                      animate={{ scale: 1, opacity: 1 }}
+                                      exit={{ scale: 0, opacity: 0 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 20,
+                                      }}
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                                <span className="text-[15px] font-bold block truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <div className="shrink-0 ml-4">
+                                <span className="text-[13px] font-black font-mono">
+                                  €{item.price.toFixed(2)}
+                                </span>
+                              </div>
 
-                            {/* Animated selection bar highlight */}
-                            {selectedItems.find((i) => i.id === item.id) && (
-                              <motion.div
-                                layoutId="active-pill"
-                                className="absolute left-0 top-0 bottom-0 w-1 bg-white"
-                              />
-                            )}
-                          </motion.div>
-                        ))}
+                              {/* Animated selection bar highlight */}
+                              {isSelected && (
+                                <motion.div
+                                  layoutId="active-pill"
+                                  className="absolute left-0 top-0 bottom-0 w-1 bg-white"
+                                />
+                              )}
+                            </motion.div>
+                          );
+                        })}
                     </div>
                   </section>
                 ),
