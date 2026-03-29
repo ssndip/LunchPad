@@ -27,7 +27,7 @@ describe('POST /api/menu', () => {
     ];
 
     const response = await request(app)
-      .post('/api/menu')
+      .post('/api/menu?pin=test')
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);
