@@ -153,7 +153,12 @@ const isLocalOrigin = (origin?: string): boolean => {
 };
 export const getMenu = (database: Database.Database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
-  return items.map(i => ({ ...i, available: i.available === 1 }));
+  cachedMenu = items.map(i => ({ ...i, available: i.available === 1 }));
+  return cachedMenu;
+};
+
+export const invalidateMenuCache = () => {
+  cachedMenu = null;
 };
 
 // --- Initial Data ---
@@ -191,6 +196,8 @@ seedCards();
 initTestAdmin();
 
 // --- Server Setup ---
+export const appPromise = startServer();
+
 export async function startServer() {
   const app = express();
   app.set("trust proxy", true); // Handle reverse proxy headers
@@ -358,7 +365,7 @@ export async function startServer() {
   });
 
   // Menu Management
-  app.get("/api/menu", (req, res) => res.json(getMenu()));
+  app.get("/api/menu", (req, res) => res.json(getMenu(db)));
   app.post("/api/menu", requireAuth, (req, res) => {
     try {
       const items = req.body;
@@ -367,6 +374,7 @@ export async function startServer() {
         const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
         items.forEach((i: any) => insert.run(i.id, i.name, i.description, i.price, i.available ? 1 : 0, i.category));
       })();
+      invalidateMenuCache();
       const updated = getMenu(db);
       broadcast({ type: "MENU_UPDATE", data: updated });
       res.json({ success: true, menu: updated });
@@ -558,7 +566,8 @@ export async function startServer() {
         db.prepare("DELETE FROM orders").run();
         db.prepare("DELETE FROM daily_summaries").run();
       })();
-      broadcast({ type: "INITIAL_STATE", menu: getMenu(), orders: [], kioskOpen, cards: [] });
+      invalidateMenuCache();
+      broadcast({ type: "INITIAL_STATE", menu: getMenu(db), orders: [], kioskOpen, cards: [] });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -664,7 +673,7 @@ export async function startServer() {
     console.log(`[WS] Client connected from ${origin || 'local'}`);
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
-      menu: getMenu(),
+      menu: getMenu(db),
       orders: [], // Removed for security, fetch via API
       kioskOpen,
       cards: [] // Removed for security, fetch via API
@@ -698,3 +707,5 @@ if (process.env.NODE_ENV !== "test") {
     process.exit(1);
   });
 }
+
+export { db };

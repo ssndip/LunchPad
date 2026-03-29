@@ -48,8 +48,8 @@ describe('POST /api/v1/order', () => {
 
   it('should process a valid order successfully', async () => {
     // 1. Initial state check (optional but good for testing balance update)
-    const cardsBeforeRes = await request(app).get('/api/cards');
-    const userCardBefore = cardsBeforeRes.body.find((c: any) => c.rfid === '1234567890');
+    const cardsBeforeRes = await request(app).get('/api/cards?pin=test');
+    const userCardBefore = Array.isArray(cardsBeforeRes.body) ? cardsBeforeRes.body.find((c: any) => c.rfid === '1234567890') : null;
     const initialBalance = userCardBefore ? userCardBefore.balance : 0;
 
     // 2. Process order
@@ -67,14 +67,14 @@ describe('POST /api/v1/order', () => {
     expect(res.body.order.totalPrice).toBe(totalExpected);
 
     // 3. Verify balance was updated
-    const cardsAfterRes = await request(app).get('/api/cards');
-    const userCardAfter = cardsAfterRes.body.find((c: any) => c.rfid === '1234567890');
-    expect(userCardAfter.balance).toBe(initialBalance + totalExpected);
+    const cardsAfterRes = await request(app).get('/api/cards?pin=test');
+    const userCardAfter = Array.isArray(cardsAfterRes.body) ? cardsAfterRes.body.find((c: any) => c.rfid === '1234567890') : null;
+    expect(userCardAfter?.balance).toBe(initialBalance + totalExpected);
   });
 
   it('should return 403 if kiosk is closed', async () => {
     // Close the kiosk
-    await request(app).post('/api/status').send({ open: false });
+    await request(app).post('/api/status?pin=test').send({ open: false });
 
     const res = await request(app)
       .post('/api/v1/order')
@@ -84,7 +84,7 @@ describe('POST /api/v1/order', () => {
     expect(res.body.error).toBe('Kiosk is closed. Please open it from the Admin panel.');
 
     // Re-open for other tests if any
-    await request(app).post('/api/status').send({ open: true });
+    await request(app).post('/api/status?pin=test').send({ open: true });
   });
 
   it('should handle rfid string cleaning correctly', async () => {

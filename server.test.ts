@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
-import { getMenu } from './server';
+import { getMenu, invalidateMenuCache } from './server';
 
 describe('getMenu', () => {
   let db: Database.Database;
@@ -50,6 +50,7 @@ describe('getMenu', () => {
   });
 
   test('returns an empty array when there are no items', () => {
+    invalidateMenuCache();
     const result = getMenu(db);
     expect(result).toEqual([]);
   });
