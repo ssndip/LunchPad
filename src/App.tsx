@@ -764,6 +764,7 @@ const App: React.FC = () => {
               onClick={() => setView("manager")}
               className="group p-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
               title="Manager Settings"
+              aria-label="Manager Settings"
             >
               <Settings className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 transition-colors" />
             </button>
@@ -933,6 +934,7 @@ const App: React.FC = () => {
                       onClick={() => setSelectedItems([])}
                       className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                       title="Clear order items"
+                      aria-label="Clear order items"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -992,6 +994,7 @@ const App: React.FC = () => {
                             onClick={() => setRfid("")}
                             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
                             title="Clear RFID input"
+                            aria-label="Clear RFID input"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1202,6 +1205,7 @@ const App: React.FC = () => {
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400"
+                  aria-label="Close menu"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -1230,6 +1234,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="md:hidden p-2 hover:bg-neutral-100 rounded-xl text-neutral-600 transition-colors"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -1446,6 +1451,7 @@ const App: React.FC = () => {
                                 onClick={() => removeItem(item.id)}
                                 className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                                 title={`Remove ${item.name}`}
+                                aria-label={`Remove ${item.name}`}
                               >
                                 <Trash2 className="w-5 h-5" />
                               </button>
@@ -1830,6 +1836,7 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${globalAccess ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      aria-label="Toggle Global Network Access"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${globalAccess ? "left-9" : "left-1"}`}
@@ -1875,6 +1882,7 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${orderButtonEnabled ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      aria-label="Toggle Ordering Functionality"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${orderButtonEnabled ? "left-9" : "left-1"}`}
@@ -1907,6 +1915,7 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${testModeEnabled ? "bg-indigo-600" : "bg-neutral-200"}`}
+                      aria-label="Toggle Test Mode"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${testModeEnabled ? "left-9" : "left-1"}`}
@@ -2129,6 +2138,7 @@ const App: React.FC = () => {
                                       onClick={() => resetCardBalance(card.rfid)}
                                       className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
                                       title="Clear Balanced Owed"
+                                      aria-label="Clear balance owed"
                                     >
                                       <RotateCcw className="w-4 h-4" />
                                     </button>
@@ -2136,6 +2146,7 @@ const App: React.FC = () => {
                                       onClick={() => removeCard(card.rfid)}
                                       className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
                                       title="Delete Card"
+                                      aria-label="Delete card"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
