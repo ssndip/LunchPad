@@ -415,13 +415,8 @@ export async function startServer() {
       const now = new Date().toISOString();
       db.transaction(() => {
         const insert = db.prepare(`
-          INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin)
+          INSERT OR IGNORE INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin)
           VALUES (?, ?, ?, ?, ?)
-          ON CONFLICT(rfid) DO UPDATE SET
-            ownerName = excluded.ownerName,
-            balance = excluded.balance,
-            lastUpdated = excluded.lastUpdated,
-            isAdmin = excluded.isAdmin
         `);
         cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0));
       })();
@@ -478,7 +473,22 @@ export async function startServer() {
       broadcast({ type: "CARDS_UPDATE", data: updated });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
-      console.error("[Card Reset Error]", err);
+      console.error("[Card Reset All Error]", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Reset single card balance
+  app.post("/api/cards/:rfid/reset", requireAuth, (req, res) => {
+    try {
+      const { rfid } = req.params;
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
+      const updated = getCards();
+      broadcast({ type: "CARDS_UPDATE", data: updated });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Reset Single Error]", err);
       res.status(500).json({ error: err.message });
     }
   });

@@ -16,6 +16,7 @@ import {
   Zap,
   Menu,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { MenuItem, Order, AppState, Card, DailySummary } from "./types";
@@ -313,6 +314,18 @@ const App: React.FC = () => {
       console.error("Failed to update PIN", err);
       setPinUpdateStatus("error");
       setTimeout(() => setPinUpdateStatus("idle"), 3000);
+    }
+  };
+
+  const resetCardBalance = async (rfid: string) => {
+    if (!window.confirm("Are you sure you want to clear the balance for this card?")) return;
+    try {
+      await fetch(`/api/cards/${rfid}/reset`, {
+        method: "POST",
+        headers: { "x-admin-pin": adminPin },
+      });
+    } catch (err) {
+      console.error("Failed to reset card balance", err);
     }
   };
 
@@ -2026,7 +2039,7 @@ const App: React.FC = () => {
                       <h2 className="text-2xl font-bold mb-4">Import Cards</h2>
                       <p className="text-neutral-500 mb-6 text-sm">
                         Paste a list of cards. Format: "RFID Name" (one per
-                        line). Duplicates will be merged.
+                        line). <strong>Only new cards will be added.</strong> Existing cards will not be modified.
                       </p>
                       <textarea
                         value={pasteCardsText}
@@ -2111,13 +2124,22 @@ const App: React.FC = () => {
                                   </div>
                                 </td>
                                 <td className="p-6 text-right">
-                                  <button
-                                    onClick={() => removeCard(card.rfid)}
-                                    className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
-                                    title={`Remove card for ${card.ownerName}`}
-                                  >
-                                    <Trash2 className="w-5 h-5" />
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => resetCardBalance(card.rfid)}
+                                      className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
+                                      title="Clear Balanced Owed"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => removeCard(card.rfid)}
+                                      className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
+                                      title="Delete Card"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
