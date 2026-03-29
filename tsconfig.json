@@ -21,6 +21,8 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["server.ts", "src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.setup.ts"]
 }
