@@ -77,6 +77,7 @@ db.exec(`
 let globalAccessConfig = false;
 let orderButtonEnabledConfig = true;
 let testModeConfig = false;
+let adminPinConfig = process.env.ADMIN_PIN || "0000";
 
 const initSettings = () => {
   const globalAccess = db.prepare("SELECT value FROM settings WHERE key = ?").get("global_access") as { value: string } | undefined;
@@ -101,6 +102,13 @@ const initSettings = () => {
     testModeConfig = false;
   } else {
     testModeConfig = testMode.value === "1";
+  }
+
+  const adminPin = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
+  if (!adminPin) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_pin", adminPinConfig);
+  } else {
+    adminPinConfig = adminPin.value;
   }
 };
 
@@ -246,9 +254,8 @@ export async function startServer() {
 
   // --- API Routes ---
 
-  const ADMIN_PIN = process.env.ADMIN_PIN || "0000";
   if (!process.env.ADMIN_PIN) {
-    console.warn(`⚠️ WARNING: ADMIN_PIN environment variable is not set. Using default: ${ADMIN_PIN}`);
+    console.warn(`⚠️ WARNING: ADMIN_PIN environment variable is not set. Using default logic (DB or 0000)`);
   }
 
   const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -257,7 +264,7 @@ export async function startServer() {
       return res.status(401).json({ error: "Unauthorized: Missing PIN or Card" });
     }
 
-    if (pin === ADMIN_PIN) {
+    if (pin === adminPinConfig) {
       return next();
     }
 
@@ -320,6 +327,21 @@ export async function startServer() {
       }
 
       res.json({ success: true, globalAccess: globalAccessConfig, orderButtonEnabled: orderButtonEnabledConfig, testModeEnabled: testModeConfig });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/settings/pin", requireAuth, (req, res) => {
+    try {
+      const { newPin } = req.body;
+      if (!newPin || typeof newPin !== 'string') {
+        return res.status(400).json({ error: "Invalid PIN" });
+      }
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_pin", newPin);
+      adminPinConfig = newPin;
+      console.log(`[Settings] Admin PIN has been updated (InMemory updated)`);
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
