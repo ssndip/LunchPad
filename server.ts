@@ -151,6 +151,8 @@ const isLocalOrigin = (origin?: string): boolean => {
   }
   return false;
 };
+let cachedMenu: any[] | null = null;
+
 export const getMenu = (database: Database.Database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
   cachedMenu = items.map(i => ({ ...i, available: i.available === 1 }));
@@ -709,7 +711,7 @@ export async function startServer() {
   });
   return app;
 }
-export const appPromise = startServer();
+
 
 if (process.env.NODE_ENV !== "test") {
   appPromise.catch(err => {
@@ -718,4 +720,4 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 
-export { db };
+
