@@ -71,6 +71,10 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  -- ⚡ Bolt: Indexes for O(1) descending sorts
+  CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
 `);
 
 // --- Settings Cache ---

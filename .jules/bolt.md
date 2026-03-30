@@ -5,3 +5,7 @@
 ## 2025-03-01 - O(n) Array Lookups in React Render Loops
 **Learning:** Using `Array.prototype.find()` inside a `map` loop for rendering a list of items is a common React anti-pattern that leads to $O(N^2)$ or $O(N \times M)$ rendering complexity, causing severe performance drops when mapping over frequently changing state.
 **Action:** Memoize lookup targets into a `Set` or `Map` using `useMemo` before iterating over the main list in the render function to reduce lookup complexity to $O(1)$.
+
+## 2025-03-01 - O(N) Database Sorting Without Indexes
+**Learning:** Using `ORDER BY timestamp DESC` and `ORDER BY date DESC` repeatedly on unindexed tables (`orders` and `daily_summaries`) leads to O(N) performance drops as those tables grow (which they do rapidly, since every transaction is a row). The backend fetches latest orders heavily via the WebSocket and `/api/history` routes.
+**Action:** Add a `DESC` B-Tree index to frequently sorted tables to reduce sorting queries to O(1) reads, especially when sorting alongside pagination (`LIMIT`).
