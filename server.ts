@@ -259,7 +259,7 @@ export async function startServer() {
       callback(new Error('Access Denied: Global Access is disabled.'), false);
     }
   }));
-  app.use(express.json());
+  app.use(express.json({ limit: '500kb' }));
 
   let kioskOpen = true;
 
@@ -459,6 +459,20 @@ export async function startServer() {
   app.post("/api/menu", requireAuth, (req, res) => {
     try {
       const items = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "Expected an array of menu items" });
+      }
+      for (const i of items) {
+        if (i.name && (typeof i.name !== 'string' || i.name.length > 200)) {
+           return res.status(400).json({ error: "Invalid menu item name length" });
+        }
+        if (i.description && (typeof i.description !== 'string' || i.description.length > 1000)) {
+           return res.status(400).json({ error: "Invalid menu item description length" });
+        }
+        if (i.category && (typeof i.category !== 'string' || i.category.length > 100)) {
+           return res.status(400).json({ error: "Invalid menu item category length" });
+        }
+      }
       db.transaction(() => {
         db.prepare("DELETE FROM menu").run();
         const insert = db.prepare("INSERT INTO menu (id, name, description, price, available, category) VALUES (?, ?, ?, ?, ?, ?)");
@@ -482,6 +496,12 @@ export async function startServer() {
       const { rfid, ownerName, balance, isAdmin } = req.body;
       if (!rfid || !ownerName) {
         return res.status(400).json({ error: "RFID and ownerName are required" });
+      }
+      if (typeof rfid !== 'string' || rfid.length > 50) {
+        return res.status(400).json({ error: "Invalid RFID length" });
+      }
+      if (typeof ownerName !== 'string' || ownerName.length > 100) {
+        return res.status(400).json({ error: "Invalid ownerName length" });
       }
       const now = new Date().toISOString();
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
@@ -509,6 +529,14 @@ export async function startServer() {
       const cards = req.body;
       if (!Array.isArray(cards)) {
         return res.status(400).json({ error: "Expected an array of cards" });
+      }
+      for (const c of cards) {
+        if (!c.rfid || typeof c.rfid !== 'string' || c.rfid.length > 50) {
+           return res.status(400).json({ error: "Invalid RFID length in batch" });
+        }
+        if (!c.ownerName || typeof c.ownerName !== 'string' || c.ownerName.length > 100) {
+           return res.status(400).json({ error: "Invalid ownerName length in batch" });
+        }
       }
       const now = new Date().toISOString();
       db.transaction(() => {
@@ -547,6 +575,14 @@ export async function startServer() {
       const cards = req.body;
       if (!Array.isArray(cards)) {
         return res.status(400).json({ error: "Expected an array of cards" });
+      }
+      for (const c of cards) {
+        if (!c.rfid || typeof c.rfid !== 'string' || c.rfid.length > 50) {
+           return res.status(400).json({ error: "Invalid RFID length in update" });
+        }
+        if (!c.ownerName || typeof c.ownerName !== 'string' || c.ownerName.length > 100) {
+           return res.status(400).json({ error: "Invalid ownerName length in update" });
+        }
       }
       db.transaction(() => {
         db.prepare("DELETE FROM cards").run();
