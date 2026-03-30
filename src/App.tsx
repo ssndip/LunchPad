@@ -1623,6 +1623,7 @@ const App: React.FC = () => {
                               <input
                                 type="text"
                                 value={item.category || ""}
+                                aria-label={`${t("menu.category")} for ${item.name || "new item"}`}
                                 onChange={(e) =>
                                   updateItem(
                                     item.id,
@@ -1637,6 +1638,7 @@ const App: React.FC = () => {
                               <input
                                 type="text"
                                 value={item.name || ""}
+                                aria-label={`${t("menu.name")} for ${item.name || "new item"}`}
                                 onChange={(e) =>
                                   updateItem(item.id, "name", e.target.value)
                                 }
@@ -1649,6 +1651,7 @@ const App: React.FC = () => {
                                 <input
                                   type="number"
                                   value={item.price || 0}
+                                  aria-label={`${t("menu.price")} for ${item.name || "new item"}`}
                                   onChange={(e) =>
                                     updateItem(
                                       item.id,
@@ -2546,6 +2549,7 @@ const App: React.FC = () => {
                                     <input
                                       type="number"
                                       value={Number(card.balance) || 0}
+                                      aria-label={`Balance for ${card.ownerName || card.rfid}`}
                                       onChange={(e) => {
                                         const updated = cards.map((c) =>
                                           c.rfid === card.rfid
