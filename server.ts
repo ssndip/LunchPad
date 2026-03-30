@@ -151,6 +151,8 @@ const isLocalOrigin = (origin?: string): boolean => {
   }
   return false;
 };
+let cachedMenu: any[] | null = null;
+
 export const getMenu = (database: Database.Database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
   cachedMenu = items.map(i => ({ ...i, available: i.available === 1 }));
@@ -704,12 +706,13 @@ export async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  server.listen(Number(PORT), "0.0.0.0", () => {
-    console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
-  });
+  if (process.env.NODE_ENV !== "test") {
+    server.listen(Number(PORT), "0.0.0.0", () => {
+      console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+    });
+  }
   return app;
 }
-export const appPromise = startServer();
 
 if (process.env.NODE_ENV !== "test") {
   appPromise.catch(err => {
@@ -717,5 +720,3 @@ if (process.env.NODE_ENV !== "test") {
     process.exit(1);
   });
 }
-
-export { db };
