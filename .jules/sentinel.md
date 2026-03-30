@@ -7,3 +7,7 @@
 **Vulnerability:** The global Express error handler was directly returning `err.message` to the client in HTTP 500 responses. Additionally, many individual route handlers were catching errors and manually sending `res.status(500).json({ error: err.message })`.
 **Learning:** Returning unhandled error messages to the client can inadvertently expose sensitive internal details, such as SQL queries, file paths, or third-party API keys, which attackers can use to gain insights into the application's architecture or exploit other vulnerabilities. In this codebase, it's safer to rely on Express 4's built-in synchronous error forwarding by using `next(err)` to route exceptions to a sanitized global handler.
 **Prevention:** Always use a sanitized global error handler that returns generic error messages (e.g., "Internal Server Error") for unexpected exceptions. Detailed error information should only be logged server-side via `console.error` or a logging service, never exposed in the HTTP response body.
+## 2024-03-30 - Missing Input Validation
+**Vulnerability:** User inputs (e.g. `rfid` and `ownerName` in `/api/cards`) are processed and saved to the database without reasonable length limits. An attacker can submit an RFID consisting of 100,000 characters, which gets persisted in the DB.
+**Learning:** Even internal or admin-authenticated endpoints can be vectors for resource exhaustion (Denial of Service) if large payloads aren't rejected early.
+**Prevention:** Add explicit string length checks to all incoming text fields before passing them to the database.
