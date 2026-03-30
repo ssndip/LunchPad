@@ -17,9 +17,13 @@ import {
   Menu,
   X,
   RotateCcw,
+  AlertTriangle,
+  HelpCircle,
+  Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { MenuItem, Order, AppState, Card, DailySummary } from "./types";
+import { translations, Language } from "./translations";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>("kiosk");
@@ -28,6 +32,23 @@ const App: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([]);
   const [rfid, setRfid] = useState<string>("");
   const [selectedItems, setSelectedItems] = useState<MenuItem[]>([]);
+  const [lang, setLang] = useState<Language>(
+    (localStorage.getItem("lang") as Language) || "en",
+  );
+
+  const t = (path: string) => {
+    const parts = path.split(".");
+    let current: any = translations[lang];
+    for (const part of parts) {
+      if (!current || current[part] === undefined) return path;
+      current = current[part];
+    }
+    return current;
+  };
+
+  useEffect(() => {
+    localStorage.setItem("lang", lang);
+  }, [lang]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -36,6 +57,7 @@ const App: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [orderButtonEnabled, setOrderButtonEnabled] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
+  const [systemTime, setSystemTime] = useState(new Date());
 
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -56,12 +78,64 @@ const App: React.FC = () => {
           setOrderButtonEnabled(data.orderButtonEnabled);
         if (data.testModeEnabled !== undefined)
           setTestModeEnabled(data.testModeEnabled);
+        if (data.kioskAutoTiming !== undefined)
+          setKioskAutoTiming(data.kioskAutoTiming);
+        if (data.kioskOpenTime !== undefined)
+          setKioskOpenTime(data.kioskOpenTime);
+        if (data.kioskCloseTime !== undefined)
+          setKioskCloseTime(data.kioskCloseTime);
+        if (data.kioskCloseDay !== undefined)
+          setKioskCloseDay(data.kioskCloseDay);
         setConnectionError(null);
       }
     } catch (err) {
       console.error("Failed to fetch initial state", err);
     }
   };
+
+  const showConfirm = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    isDestructive = false,
+    confirmText = "Confirm",
+  ) => {
+    setConfirmConfig({ title, message, onConfirm, isDestructive, confirmText });
+  };
+
+  useEffect(() => {
+    const storedPin = sessionStorage.getItem("adminPin");
+    if (storedPin) {
+      setAdminPin(storedPin);
+      setView("manager");
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setSystemTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (adminPin && view === "manager") {
+      const headers = { "x-admin-pin": adminPin };
+      Promise.all([
+        fetch("/api/cards", { headers }),
+        fetch("/api/orders", { headers }),
+      ])
+        .then(async ([cardsRes, ordersRes]) => {
+          if (cardsRes.ok && ordersRes.ok) {
+            const [cardsData, ordersData] = await Promise.all([
+              cardsRes.json(),
+              ordersRes.json(),
+            ]);
+            if (Array.isArray(cardsData)) setCards(cardsData);
+            if (Array.isArray(ordersData)) setOrders(ordersData);
+          }
+        })
+        .catch((err) => console.error("Initial admin fetch failed", err));
+    }
+  }, [adminPin, view]);
 
   useEffect(() => {
     fetchInitialState();
@@ -113,6 +187,18 @@ const App: React.FC = () => {
             if (message.data.testModeEnabled !== undefined) {
               setTestModeEnabled(message.data.testModeEnabled);
             }
+            if (message.data.kioskAutoTiming !== undefined) {
+              setKioskAutoTiming(message.data.kioskAutoTiming);
+            }
+            if (message.data.kioskOpenTime !== undefined) {
+              setKioskOpenTime(message.data.kioskOpenTime);
+            }
+            if (message.data.kioskCloseTime !== undefined) {
+              setKioskCloseTime(message.data.kioskCloseTime);
+            }
+            if (message.data.kioskCloseDay !== undefined) {
+              setKioskCloseDay(message.data.kioskCloseDay);
+            }
             break;
         }
       };
@@ -149,6 +235,10 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<Order[]>([]);
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
   const [globalAccess, setGlobalAccess] = useState(false);
+  const [kioskAutoTiming, setKioskAutoTiming] = useState(false);
+  const [kioskOpenTime, setKioskOpenTime] = useState("00:00");
+  const [kioskCloseTime, setKioskCloseTime] = useState("09:00");
+  const [kioskCloseDay, setKioskCloseDay] = useState(0);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [dailyDetails, setDailyDetails] = useState<any[]>([]);
   const [filters, setFilters] = useState({
@@ -165,6 +255,14 @@ const App: React.FC = () => {
   const [isPasteCardsModalOpen, setIsPasteCardsModalOpen] = useState(false);
   const [newCardRfid, setNewCardRfid] = useState("");
   const [newCardOwner, setNewCardOwner] = useState("");
+  const [newCardIsAdmin, setNewCardIsAdmin] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+    confirmText?: string;
+  } | null>(null);
 
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -251,6 +349,14 @@ const App: React.FC = () => {
       setOrderButtonEnabled(data.orderButtonEnabled);
       if (data.testModeEnabled !== undefined)
         setTestModeEnabled(data.testModeEnabled);
+      if (data.kioskAutoTiming !== undefined)
+        setKioskAutoTiming(data.kioskAutoTiming);
+      if (data.kioskOpenTime !== undefined)
+        setKioskOpenTime(data.kioskOpenTime);
+      if (data.kioskCloseTime !== undefined)
+        setKioskCloseTime(data.kioskCloseTime);
+      if (data.kioskCloseDay !== undefined)
+        setKioskCloseDay(data.kioskCloseDay);
     } catch (err) {
       console.error("Failed to fetch settings", err);
     }
@@ -260,12 +366,20 @@ const App: React.FC = () => {
     access: boolean,
     orderBtn: boolean,
     testMode?: boolean,
+    autoTiming?: boolean,
+    openTime?: string,
+    closeTime?: string,
+    closeDay?: number,
   ) => {
     try {
-      // Optimitic update
+      // Optimistic update
       setGlobalAccess(access);
       setOrderButtonEnabled(orderBtn);
       if (testMode !== undefined) setTestModeEnabled(testMode);
+      if (autoTiming !== undefined) setKioskAutoTiming(autoTiming);
+      if (openTime !== undefined) setKioskOpenTime(openTime);
+      if (closeTime !== undefined) setKioskCloseTime(closeTime);
+      if (closeDay !== undefined) setKioskCloseDay(closeDay);
 
       await fetch("/api/settings", {
         method: "POST",
@@ -277,6 +391,10 @@ const App: React.FC = () => {
           globalAccess: access,
           orderButtonEnabled: orderBtn,
           testModeEnabled: testMode !== undefined ? testMode : testModeEnabled,
+          kioskAutoTiming: autoTiming !== undefined ? autoTiming : kioskAutoTiming,
+          kioskOpenTime: openTime !== undefined ? openTime : kioskOpenTime,
+          kioskCloseTime: closeTime !== undefined ? closeTime : kioskCloseTime,
+          kioskCloseDay: closeDay !== undefined ? closeDay : kioskCloseDay,
         }),
       });
     } catch (err) {
@@ -318,15 +436,22 @@ const App: React.FC = () => {
   };
 
   const resetCardBalance = async (rfid: string) => {
-    if (!window.confirm("Are you sure you want to clear the balance for this card?")) return;
-    try {
-      await fetch(`/api/cards/${rfid}/reset`, {
-        method: "POST",
-        headers: { "x-admin-pin": adminPin },
-      });
-    } catch (err) {
-      console.error("Failed to reset card balance", err);
-    }
+    showConfirm(
+      t("cards.clear_balance"),
+      t("modals.reset_warning"),
+      async () => {
+        try {
+          await fetch(`/api/cards/${rfid}/reset`, {
+            method: "POST",
+            headers: { "x-admin-pin": adminPin },
+          });
+        } catch (err) {
+          console.error("Failed to reset card balance", err);
+        }
+      },
+      true,
+      t("cards.clear_balance"),
+    );
   };
 
   useEffect(() => {
@@ -365,9 +490,17 @@ const App: React.FC = () => {
   };
 
   const removeItem = (id: number) => {
-    const updated = editingMenu.filter((item) => item.id !== id);
-    setEditingMenu(updated);
-    updateMenu(updated);
+    showConfirm(
+      t("modals.remove_item"),
+      t("modals.remove_item_warning"),
+      () => {
+        const updated = editingMenu.filter((item) => item.id !== id);
+        setEditingMenu(updated);
+        updateMenu(updated);
+      },
+      true,
+      t("modals.remove"),
+    );
   };
 
   const handlePasteMenu = () => {
@@ -433,6 +566,7 @@ const App: React.FC = () => {
       rfid: cleanRfid,
       ownerName: newCardOwner.trim(),
       balance: 0,
+      isAdmin: newCardIsAdmin,
     };
 
     try {
@@ -448,6 +582,7 @@ const App: React.FC = () => {
         setNewCardRfid("");
         setNewCardOwner("");
         setLastScanned(null);
+        setNewCardIsAdmin(false);
       }
     } catch (err) {
       console.error("Failed to add card", err);
@@ -455,15 +590,23 @@ const App: React.FC = () => {
   };
 
   const removeCard = async (rfid: string) => {
-    try {
-      setCards((prev) => prev.filter((c) => c.rfid !== rfid)); // Optimistic update
-      await fetch(`/api/cards/${rfid}`, {
-        method: "DELETE",
-        headers: { "x-admin-pin": adminPin },
-      });
-    } catch (err) {
-      console.error("Failed to remove card", err);
-    }
+    showConfirm(
+      t("cards.delete_card"),
+      t("modals.delete_warning"),
+      async () => {
+        try {
+          setCards((prev) => prev.filter((c) => c.rfid !== rfid)); // Optimistic update
+          await fetch(`/api/cards/${rfid}`, {
+            method: "DELETE",
+            headers: { "x-admin-pin": adminPin },
+          });
+        } catch (err) {
+          console.error("Failed to remove card", err);
+        }
+      },
+      true,
+      t("modals.remove"),
+    );
   };
 
   const handlePasteCards = async () => {
@@ -506,21 +649,23 @@ const App: React.FC = () => {
   };
 
   const resetAllBalances = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to reset ALL monthly balances to 0? This should usually be done at the end of the month.",
-      )
-    )
-      return;
-    try {
-      setCards((prev) => prev.map((c) => ({ ...c, balance: 0 }))); // Optimistic update
-      await fetch("/api/cards/reset-all", {
-        method: "POST",
-        headers: { "x-admin-pin": adminPin },
-      });
-    } catch (err) {
-      console.error("Failed to reset balances", err);
-    }
+    showConfirm(
+      t("cards.reset_monthly_balances"),
+      t("modals.reset_warning"),
+      async () => {
+        try {
+          setCards((prev) => prev.map((c) => ({ ...c, balance: 0 }))); // Optimistic update
+          await fetch("/api/cards/reset-all", {
+            method: "POST",
+            headers: { "x-admin-pin": adminPin },
+          });
+        } catch (err) {
+          console.error("Failed to reset balances", err);
+        }
+      },
+      true,
+      t("cards.reset_monthly_balances"),
+    );
   };
 
   const updateCards = async (updatedCards: Card[]) => {
@@ -549,7 +694,17 @@ const App: React.FC = () => {
     });
   };
 
-  const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
+  // ⚡ Bolt: Memoize selected items to a Set for O(1) lookup during render loop
+  const selectedItemIds = useMemo(
+    () => new Set(selectedItems.map((i) => i.id)),
+    [selectedItems]
+  );
+
+  // ⚡ Bolt: Memoize total price calculation
+  const totalPrice = useMemo(
+    () => selectedItems.reduce((sum, item) => sum + item.price, 0),
+    [selectedItems]
+  );
 
   // --- Manager Aggregation Hooks (Moved to top to fix Error #310) ---
   interface AggregatedItem {
@@ -702,13 +857,15 @@ const App: React.FC = () => {
   };
 
   if (view === "kiosk") {
-    const groupedMenu = menu.reduce(
-      (acc, item) => {
-        if (!acc[item.category]) acc[item.category] = [];
-        acc[item.category].push(item);
-        return acc;
-      },
-      {} as Record<string, MenuItem[]>,
+    // ⚡ Bolt: Memoize grouped menu to prevent redundant O(n) reduction on every render
+    const groupedMenu = useMemo(
+      () =>
+        menu.reduce((acc, item) => {
+          if (!acc[item.category]) acc[item.category] = [];
+          acc[item.category].push(item);
+          return acc;
+        }, {} as Record<string, MenuItem[]>),
+      [menu]
     );
 
     const matchedCard = rfid ? true : undefined; // Optimistic match for Kiosk since cards aren't leaked to client anymore
@@ -721,17 +878,16 @@ const App: React.FC = () => {
               <LogOut className="w-12 h-12 text-red-600" />
             </div>
             <h1 className="text-4xl font-black text-neutral-900 mb-4 uppercase tracking-tighter">
-              Ordering Closed
+              {t("kiosk.ordering_closed")}
             </h1>
             <p className="text-neutral-500 text-lg leading-relaxed">
-              The kitchen is no longer accepting new orders for today. Please
-              check back tomorrow!
+              {t("kiosk.check_back_tomorrow")}
             </p>
             <button
               onClick={() => setView("manager")}
               className="mt-8 px-8 py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all"
             >
-              Manager Login
+              {t("navigation.admin_login")}
             </button>
           </div>
         </div>
@@ -748,22 +904,38 @@ const App: React.FC = () => {
 
         <div className="relative z-10 flex-1 flex flex-col p-4 md:p-8">
           <header className="flex justify-between items-center mb-4 shrink-0">
-            <div>
+            <div className="flex flex-wrap items-baseline gap-4">
               <h1 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase leading-none">
-                Daily Menu
+                {t("kiosk.daily_menu")}
               </h1>
-              <p className="text-[9px] text-neutral-400 font-mono uppercase tracking-[0.2em] mt-1">
-                {new Date().toLocaleDateString("bg-BG", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </p>
+              <span className="text-2xl font-mono text-neutral-400 uppercase tracking-tighter leading-none">
+                {(() => {
+                  const now = new Date();
+                  const currentHHmm = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+                  const targetDate = new Date(now);
+                  
+                  if (kioskAutoTiming && currentHHmm >= kioskCloseTime) {
+                    targetDate.setDate(now.getDate() + 1);
+                  }
+                  
+                  return targetDate.toLocaleDateString(lang === "bg" ? "bg-BG" : "en-US", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  });
+                })()}
+              </span>
+              {kioskAutoTiming && (
+                <span className="text-[10px] font-bold px-3 py-1 bg-white text-neutral-500 rounded-full border border-neutral-200 uppercase tracking-widest shadow-sm">
+                  {t("kiosk.orders_for")}
+                </span>
+              )}
             </div>
             <button
               onClick={() => setView("manager")}
               className="group p-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
               title="Manager Settings"
+              aria-label="Manager Settings"
             >
               <Settings className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 transition-colors" />
             </button>
@@ -776,13 +948,10 @@ const App: React.FC = () => {
                   <AlertCircle className="w-8 h-8 text-red-600" />
                 </div>
                 <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">
-                  Connection Restricted
+                  {t("kiosk.connection_restricted")}
                 </h3>
                 <p className="text-neutral-500 text-sm max-w-md mx-auto leading-relaxed">
-                  Your connection was blocked because{" "}
-                  <strong>Global Network Access</strong> is disabled. Please
-                  enable it in **Admin → System Settings** to allow access from
-                  this device.
+                  {t("kiosk.restricted_message")}
                 </p>
               </div>
             ) : !orderButtonEnabled ? (
@@ -791,10 +960,10 @@ const App: React.FC = () => {
                   <Utensils className="w-8 h-8 text-neutral-400" />
                 </div>
                 <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">
-                  Testing Mode
+                  {t("kiosk.testing_mode")}
                 </h3>
                 <p className="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
-                  🛒 Ordering is currently disabled for maintenance or testing.
+                  {t("kiosk.ordering_disabled")}
                 </p>
               </div>
             ) : Object.keys(groupedMenu).length === 0 ? (
@@ -803,10 +972,10 @@ const App: React.FC = () => {
                   <Clock className="w-8 h-8 text-neutral-400" />
                 </div>
                 <h3 className="text-xl font-bold text-neutral-900 mb-1">
-                  No items available today
+                  {t("kiosk.no_items_available")}
                 </h3>
                 <p className="text-neutral-400 text-xs uppercase tracking-widest font-mono">
-                  Check back later or refresh
+                  {t("kiosk.check_later")}
                 </p>
               </div>
             ) : (
@@ -828,75 +997,64 @@ const App: React.FC = () => {
                     <div className="divide-y divide-neutral-50">
                       {items
                         .filter((item) => item.available)
-                        .map((item) => (
-                          <motion.div
-                            key={item.id}
-                            layout
-                            initial={false}
-                            animate={{
-                              backgroundColor: selectedItems.find(
-                                (i) => i.id === item.id,
-                              )
-                                ? "#000000"
-                                : "#ffffff",
-                              color: selectedItems.find((i) => i.id === item.id)
-                                ? "#ffffff"
-                                : "#404040",
-                              scale: selectedItems.find((i) => i.id === item.id)
-                                ? 1.02
-                                : 1,
-                            }}
-                            transition={{ duration: 0.15 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => toggleItem(item)}
-                            className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-150 relative rounded-lg mb-1 overflow-hidden ${
-                              selectedItems.find((i) => i.id === item.id)
-                                ? "shadow-xl z-10"
-                                : "hover:bg-neutral-50 border border-transparent hover:border-neutral-200"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <AnimatePresence mode="wait">
-                                {selectedItems.find(
-                                  (i) => i.id === item.id,
-                                ) && (
-                                  <motion.div
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0, opacity: 0 }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                      damping: 20,
-                                    }}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                              <span
-                                className={`text-[15px] font-bold block truncate`}
-                              >
-                                {item.name}
-                              </span>
-                            </div>
-                            <div className="shrink-0 ml-4">
-                              <span
-                                className={`text-[13px] font-black font-mono`}
-                              >
-                                €{item.price.toFixed(2)}
-                              </span>
-                            </div>
+                        .map((item) => {
+                          const isSelected = selectedItemIds.has(item.id);
+                          return (
+                            <motion.div
+                              key={item.id}
+                              layout
+                              initial={false}
+                              animate={{
+                                backgroundColor: isSelected ? "#000000" : "#ffffff",
+                                color: isSelected ? "#ffffff" : "#404040",
+                                scale: isSelected ? 1.02 : 1,
+                              }}
+                              transition={{ duration: 0.15 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => toggleItem(item)}
+                              className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-150 relative rounded-lg mb-1 overflow-hidden ${
+                                isSelected
+                                  ? "shadow-xl z-10"
+                                  : "hover:bg-neutral-50 border border-transparent hover:border-neutral-200"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <AnimatePresence mode="wait">
+                                  {isSelected && (
+                                    <motion.div
+                                      initial={{ scale: 0, opacity: 0 }}
+                                      animate={{ scale: 1, opacity: 1 }}
+                                      exit={{ scale: 0, opacity: 0 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 20,
+                                      }}
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                                <span className="text-[15px] font-bold block truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <div className="shrink-0 ml-4">
+                                <span className="text-[13px] font-black font-mono">
+                                  €{item.price.toFixed(2)}
+                                </span>
+                              </div>
 
-                            {/* Animated selection bar highlight */}
-                            {selectedItems.find((i) => i.id === item.id) && (
-                              <motion.div
-                                layoutId="active-pill"
-                                className="absolute left-0 top-0 bottom-0 w-1 bg-white"
-                              />
-                            )}
-                          </motion.div>
-                        ))}
+                              {/* Animated selection bar highlight */}
+                              {isSelected && (
+                                <motion.div
+                                  layoutId="active-pill"
+                                  className="absolute left-0 top-0 bottom-0 w-1 bg-white"
+                                />
+                              )}
+                            </motion.div>
+                          );
+                        })}
                     </div>
                   </section>
                 ),
@@ -915,7 +1073,7 @@ const App: React.FC = () => {
                 <div className="bg-white rounded-3xl shadow-2xl border border-neutral-200 p-4 flex flex-col md:flex-row items-center gap-4">
                   <div className="flex-1">
                     <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-0.5">
-                      Order Total
+                      {t("orders.total")}
                     </p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl font-black text-neutral-900 tracking-tighter">
@@ -923,7 +1081,7 @@ const App: React.FC = () => {
                       </span>
                       <span className="text-sm font-bold text-neutral-400 uppercase tracking-widest">
                         ({selectedItems.length}{" "}
-                        {selectedItems.length === 1 ? "item" : "items"})
+                        {selectedItems.length === 1 ? t("menu.item") : t("menu.items")})
                       </span>
                     </div>
                   </div>
@@ -933,6 +1091,7 @@ const App: React.FC = () => {
                       onClick={() => setSelectedItems([])}
                       className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                       title="Clear order items"
+                      aria-label="Clear order items"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -942,7 +1101,7 @@ const App: React.FC = () => {
                         <input
                           ref={rfidInputRef}
                           type="text"
-                          placeholder="Scan Card Now"
+                          placeholder={t("cards.scan_to_register")}
                           value={rfid}
                           autoComplete="off"
                           onChange={(e) => setRfid(e.target.value)}
@@ -992,6 +1151,7 @@ const App: React.FC = () => {
                             onClick={() => setRfid("")}
                             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
                             title="Clear RFID input"
+                            aria-label="Clear RFID input"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1003,7 +1163,7 @@ const App: React.FC = () => {
                           animate={{ opacity: 1, y: 0 }}
                           className="absolute -top-6 left-0 text-[10px] font-bold text-red-600 bg-white px-2 py-0.5 rounded-full border border-red-200 shadow-sm whitespace-nowrap"
                         >
-                          Unregistered Card
+                          {t("cards.unregistered")}
                         </motion.p>
                       )}
                     </div>
@@ -1012,7 +1172,24 @@ const App: React.FC = () => {
                       disabled={
                         isScanning ||
                         selectedItems.length === 0 ||
-                        (!testModeEnabled && (!rfid || !matchedCard))
+                        (!testModeEnabled && (!rfid || !matchedCard)) ||
+                        (() => {
+                           if (kioskAutoTiming) {
+                             const now = new Date();
+                             const current = now.getHours() * 60 + now.getMinutes();
+                             const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                             const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                             const open = openH * 60 + openM;
+                             const close = closeH * 60 + closeM;
+                             
+                             if (kioskCloseDay === 1) {
+                               return !(current >= open || current < close);
+                             } else {
+                               return !(current >= open && current < close);
+                             }
+                           }
+                           return !kioskOpen;
+                        })()
                       }
                       className="px-6 py-2 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                     >
@@ -1041,9 +1218,9 @@ const App: React.FC = () => {
                   <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
                     <CheckCircle2 className="w-12 h-12 text-white" />
                   </div>
-                  <h2 className="text-4xl font-bold mb-4">Order Placed!</h2>
+                  <h2 className="text-4xl font-bold mb-4">{t("kiosk.order_success")}</h2>
                   <p className="text-neutral-400 text-lg">
-                    Your lunch is being prepared.
+                    {t("kiosk.order_success")}
                   </p>
                 </div>
               </motion.div>
@@ -1066,10 +1243,10 @@ const App: React.FC = () => {
       <div className="h-screen bg-neutral-100 flex items-center justify-center p-8">
         <div className="bg-white p-12 rounded-[40px] shadow-2xl text-center max-w-lg">
           <h1 className="text-4xl font-black text-neutral-900 mb-4 uppercase tracking-tighter">
-            Admin Login
+            {t("navigation.admin_login")}
           </h1>
           <p className="text-neutral-500 mb-6">
-            Enter your Admin PIN to proceed
+            {t("navigation.enter_pin")}
           </p>
           <input
             type="password"
@@ -1087,27 +1264,15 @@ const App: React.FC = () => {
                     .then(async ([cardsRes, ordersRes]) => {
                       if (!cardsRes.ok || !ordersRes.ok) {
                         setAdminPin("");
-                        alert("Invalid PIN");
+                        alert(t("navigation.invalid_pin"));
                       } else {
-                        try {
-                          const [cardsData, ordersData] = await Promise.all([
-                            cardsRes.json(),
-                            ordersRes.json(),
-                          ]);
-                          if (Array.isArray(cardsData)) setCards(cardsData);
-                          if (Array.isArray(ordersData)) setOrders(ordersData);
-                        } catch (parseErr) {
-                          console.error("Failed to parse admin data", parseErr);
-                          setAdminPin("");
-                          alert(
-                            "Failed to load admin data. Check server logs.",
-                          );
-                        }
+                        sessionStorage.setItem("adminPin", pin);
+                        window.location.reload();
                       }
                     })
                     .catch(() => {
                       setAdminPin("");
-                      alert("Network error");
+                      alert(t("navigation.network_error"));
                     });
                 }
               }
@@ -1122,7 +1287,7 @@ const App: React.FC = () => {
             }}
             className="text-neutral-500 hover:text-neutral-900 transition-colors font-bold uppercase tracking-widest text-xs"
           >
-            Return to Kiosk
+            {t("navigation.exit")}
           </button>
         </div>
       </div>
@@ -1135,27 +1300,27 @@ const App: React.FC = () => {
         {
           id: "menu",
           icon: <Utensils className="w-5 h-5" />,
-          label: "Menu Management",
+          label: t("navigation.menu_management"),
         },
         {
           id: "orders",
           icon: <Clock className="w-5 h-5" />,
-          label: "Order Summary",
+          label: t("navigation.order_summary"),
         },
         {
           id: "history",
           icon: <Clock className="w-5 h-5" />,
-          label: "History",
+          label: t("navigation.history"),
         },
         {
           id: "cards",
           icon: <Users className="w-5 h-5" />,
-          label: "Card Management",
+          label: t("navigation.card_management"),
         },
         {
           id: "settings",
           icon: <Settings className="w-5 h-5" />,
-          label: "System Settings",
+          label: t("navigation.system_settings"),
         },
       ].map((link) => (
         <button
@@ -1197,11 +1362,12 @@ const App: React.FC = () => {
                   <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
                     <LayoutDashboard className="w-6 h-6" />
                   </div>
-                  <h2 className="text-xl font-bold">Admin</h2>
+                  <h2 className="text-xl font-bold">{t("navigation.admin")}</h2>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400"
+                  aria-label="Close menu"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -1218,7 +1384,7 @@ const App: React.FC = () => {
           <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
             <LayoutDashboard className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold">Admin</h2>
+          <h2 className="text-xl font-bold">{t("navigation.admin")}</h2>
         </div>
         {navLinks}
       </aside>
@@ -1230,16 +1396,23 @@ const App: React.FC = () => {
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="md:hidden p-2 hover:bg-neutral-100 rounded-xl text-neutral-600 transition-colors"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline text-xs font-serif italic text-neutral-400 tracking-widest uppercase">
-                Admin Dashboard
+                {t("navigation.dashboard")}
               </span>
               <ChevronRight className="hidden sm:inline w-3 h-3 text-neutral-300" />
               <span className="text-xs font-bold text-neutral-900 uppercase tracking-widest">
-                {activeTab.replace("-", " ")}
+                {[
+                  { id: "menu", label: t("navigation.menu_management") },
+                  { id: "orders", label: t("navigation.order_summary") },
+                  { id: "history", label: t("navigation.history") },
+                  { id: "cards", label: t("navigation.card_management") },
+                  { id: "settings", label: t("navigation.system_settings") },
+                ].find((tab) => tab.id === activeTab)?.label || activeTab}
               </span>
             </div>
           </div>
@@ -1248,45 +1421,110 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="hidden xs:flex flex-col">
                 <p className="text-[9px] font-mono uppercase tracking-widest text-neutral-400">
-                  Status
+                  {t("menu.status")}
                 </p>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-widest ${kioskOpen ? "text-green-600" : "text-red-600"}`}
+                  className={`text-[10px] font-black uppercase tracking-widest ${(() => {
+                    const now = new Date();
+                    const current = now.getHours() * 60 + now.getMinutes();
+                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                    const open = openH * 60 + openM;
+                    const close = closeH * 60 + closeM;
+                    
+                    const isWithinSchedule = kioskCloseDay === 1 
+                      ? (current >= open || current < close)
+                      : (current >= open && current < close);
+                      
+                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                    return isOpen ? "text-green-600" : "text-red-600";
+                  })()}`}
                 >
-                  {kioskOpen ? "Open" : "Closed"}
+                  {(() => {
+                    const now = new Date();
+                    const current = now.getHours() * 60 + now.getMinutes();
+                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                    const open = openH * 60 + openM;
+                    const close = closeH * 60 + closeM;
+                    
+                    const isWithinSchedule = kioskCloseDay === 1 
+                      ? (current >= open || current < close)
+                      : (current >= open && current < close);
+                      
+                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                    return isOpen ? t("menu.active") : t("menu.inactive");
+                  })()}
                 </span>
               </div>
               <div className="hidden xs:block w-px h-6 bg-neutral-200" />
               <button
-                onClick={() => toggleKiosk(!kioskOpen)}
+                onClick={() => {
+                  if (kioskAutoTiming) {
+                    // If in Auto mode, clicking the button disables Auto and forces the new manual state
+                    updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, false);
+                  }
+                  toggleKiosk(!kioskOpen);
+                }}
                 tabIndex={-1}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm ${kioskOpen ? "bg-white text-red-600 hover:bg-red-50 border border-red-100" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm ${(() => {
+                    const now = new Date();
+                    const current = now.getHours() * 60 + now.getMinutes();
+                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                    const open = openH * 60 + openM;
+                    const close = closeH * 60 + closeM;
+                    
+                    const isWithinSchedule = kioskCloseDay === 1 
+                      ? (current >= open || current < close)
+                      : (current >= open && current < close);
+                      
+                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                    return isOpen ? "bg-white text-red-600 hover:bg-red-50 border border-red-100" : "bg-neutral-900 text-white hover:bg-neutral-800";
+                })()}`}
               >
-                {kioskOpen ? "Close" : "Open"}
+                {(() => {
+                    const now = new Date();
+                    const current = now.getHours() * 60 + now.getMinutes();
+                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                    const open = openH * 60 + openM;
+                    const close = closeH * 60 + closeM;
+                    
+                    const isWithinSchedule = kioskCloseDay === 1 
+                      ? (current >= open || current < close)
+                      : (current >= open && current < close);
+                      
+                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                    return isOpen ? t("modals.close") : t("modals.open");
+                })()}
               </button>
             </div>
 
             <button
-              onClick={() => setView("kiosk")}
+              onClick={() => {
+                sessionStorage.removeItem("adminPin");
+                window.location.reload();
+              }}
               tabIndex={-1}
               className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-red-500 text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest hover:bg-red-600 transition-all shadow-md shadow-red-200"
             >
               <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
-              <span className="hidden xxs:inline">Exit</span>
+              <span className="hidden xxs:inline">{t("navigation.exit")}</span>
             </button>
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto p-4 sm:p-8 lg:p-12">
+        <div className="max-w-7xl mx-auto p-4 sm:p-8 lg:p-12">
           {activeTab === "menu" ? (
             <>
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                    Menu Management
+                    {t("navigation.menu_management")}
                   </h1>
                   <p className="text-neutral-500 text-sm md:text-base">
-                    Update today's offerings and prices
+                    {t("menu.management_desc")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3 sm:gap-4">
@@ -1295,14 +1533,14 @@ const App: React.FC = () => {
                     tabIndex={-1}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm"
                   >
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> Paste Menu
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> {t("menu.paste_title")}
                   </button>
                   <button
                     onClick={addItem}
                     tabIndex={-1}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm"
                   >
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> Add Item
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> {t("menu.add_item")}
                   </button>
                 </div>
               </div>
@@ -1322,16 +1560,15 @@ const App: React.FC = () => {
                       className="bg-white rounded-[32px] w-full max-w-2xl p-8 shadow-2xl"
                     >
                       <h2 className="text-2xl font-bold mb-4">
-                        Paste Menu Text
+                        {t("menu.paste_title")}
                       </h2>
                       <p className="text-neutral-500 mb-6 text-sm">
-                        Paste the menu text from your table. We'll automatically
-                        detect items and prices (e.g., "- Item Name 1.80€").
+                        {t("menu.paste_instructions")}
                       </p>
                       <textarea
                         value={pasteText}
                         onChange={(e) => setPasteText(e.target.value)}
-                        placeholder="Paste here..."
+                        placeholder={t("menu.paste_placeholder")}
                         className="w-full h-64 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm mb-6"
                       />
                       <div className="flex justify-end gap-4">
@@ -1339,13 +1576,13 @@ const App: React.FC = () => {
                           onClick={() => setIsPasteModalOpen(false)}
                           className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all"
                         >
-                          Cancel
+                          {t("modals.cancel")}
                         </button>
                         <button
                           onClick={handlePasteMenu}
                           className="px-8 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all"
                         >
-                          Import Menu
+                          {t("menu.paste_title")}
                         </button>
                       </div>
                     </motion.div>
@@ -1355,23 +1592,23 @@ const App: React.FC = () => {
 
               <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
+                  <table className="w-full text-left border-collapse min-w-0">
                     <thead>
                       <tr className="border-bottom border-neutral-100">
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Category
+                          {t("menu.category")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Name
+                          {t("menu.name")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Price
+                          {t("menu.price")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Status
+                          {t("menu.status")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Actions
+                          {t("cards.actions")}
                         </th>
                       </tr>
                     </thead>
@@ -1438,7 +1675,7 @@ const App: React.FC = () => {
                                     : "bg-red-100 text-red-700"
                                 }`}
                               >
-                                {item.available ? "Available" : "Sold Out"}
+                                {item.available ? t("menu.active") : t("menu.inactive")}
                               </button>
                             </td>
                             <td className="p-6">
@@ -1446,6 +1683,7 @@ const App: React.FC = () => {
                                 onClick={() => removeItem(item.id)}
                                 className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
                                 title={`Remove ${item.name}`}
+                                aria-label={`Remove ${item.name}`}
                               >
                                 <Trash2 className="w-5 h-5" />
                               </button>
@@ -1462,27 +1700,27 @@ const App: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                    Daily Summaries
+                    {t("navigation.order_summary")}
                   </h1>
                   <p className="text-neutral-500 text-sm md:text-base">
-                    Historical performance by day
+                    {t("orders.performance_subtitle")}
                   </p>
                 </div>
               </div>
 
               <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[500px]">
+                  <table className="w-full text-left border-collapse min-w-0">
                     <thead>
                       <tr className="border-bottom border-neutral-100">
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Date
+                          {t("orders.date")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-center">
-                          Orders
+                          {t("navigation.order_summary")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">
-                          Total Sales
+                          {t("orders.total")}
                         </th>
                       </tr>
                     </thead>
@@ -1539,7 +1777,7 @@ const App: React.FC = () => {
                                       <div className="flex items-center gap-3">
                                         <div className="w-1.5 h-6 bg-neutral-900 rounded-full" />
                                         <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
-                                          Items Breakdown
+                                          {t("orders.items_breakdown")}
                                         </h3>
                                       </div>
                                       <button
@@ -1552,8 +1790,7 @@ const App: React.FC = () => {
                                         }}
                                         className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-xl active:scale-95"
                                       >
-                                        <Plus className="w-4 h-4" /> Copy Text
-                                        Summary
+                                        <Plus className="w-4 h-4" /> {t("orders.copy_summary")}
                                       </button>
                                     </div>
 
@@ -1562,16 +1799,16 @@ const App: React.FC = () => {
                                         <thead>
                                           <tr className="bg-neutral-50/50 border-b border-neutral-100">
                                             <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400">
-                                              Category / Item
+                                              {t("menu.category")} / {t("menu.name")}
                                             </th>
                                             <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-center">
-                                              Quantity
+                                              {t("orders.quantity")}
                                             </th>
                                             <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-right">
-                                              Price
+                                              {t("menu.price")}
                                             </th>
                                             <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-right">
-                                              Total
+                                              {t("orders.total")}
                                             </th>
                                           </tr>
                                         </thead>
@@ -1618,7 +1855,7 @@ const App: React.FC = () => {
                                               colSpan={3}
                                               className="p-5 font-bold uppercase tracking-widest text-xs text-right"
                                             >
-                                              Daily Total Earnings
+                                              {t("orders.total")}
                                             </td>
                                             <td className="p-5 text-right font-mono font-black text-lg">
                                               €{summary.totalSales.toFixed(2)}
@@ -1639,7 +1876,7 @@ const App: React.FC = () => {
                             colSpan={3}
                             className="p-12 text-center text-neutral-400 italic"
                           >
-                            No summaries available yet.
+                            {t("orders.no_orders")}
                           </td>
                         </tr>
                       )}
@@ -1653,7 +1890,7 @@ const App: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                    Order History
+                    {t("navigation.history")}
                   </h1>
                   <p className="text-neutral-500 text-sm md:text-base">
                     Search and filter all past orders
@@ -1665,7 +1902,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                      Start Date
+                      {t("filters.start_date")}
                     </label>
                     <input
                       type="date"
@@ -1681,7 +1918,7 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                      End Date
+                      {t("filters.end_date")}
                     </label>
                     <input
                       type="date"
@@ -1697,7 +1934,7 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                      RFID / Card
+                      {t("cards.rfid")} / {t("cards.owner_name")}
                     </label>
                     <input
                       type="text"
@@ -1708,7 +1945,7 @@ const App: React.FC = () => {
                           rfid: e.target.value,
                         }))
                       }
-                      placeholder="Search RFID..."
+                      placeholder={t("filters.search_placeholder")}
                       className="w-full px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm"
                     />
                   </div>
@@ -1717,7 +1954,7 @@ const App: React.FC = () => {
                       onClick={fetchHistory}
                       className="w-full py-2 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all"
                     >
-                      Apply Filters
+                      {t("filters.apply")}
                     </button>
                   </div>
                 </div>
@@ -1725,20 +1962,20 @@ const App: React.FC = () => {
 
               <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
+                  <table className="w-full text-left border-collapse min-w-0">
                     <thead>
                       <tr className="border-bottom border-neutral-100">
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Date/Time
+                          {t("orders.timestamp")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Cardholder
+                          {t("orders.cardholder")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                          Items
+                          {t("orders.items")}
                         </th>
                         <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">
-                          Total
+                          {t("orders.total")}
                         </th>
                       </tr>
                     </thead>
@@ -1797,15 +2034,48 @@ const App: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                    System Settings
+                    {t("navigation.system_settings")}
                   </h1>
                   <p className="text-neutral-500 text-sm md:text-base">
-                    Global application behavior and network access
+                    {t("settings.global_desc")}
                   </p>
                 </div>
               </div>
 
               <div className="max-w-2xl">
+                {/* Language Section */}
+                <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center text-neutral-900">
+                        <Users className="w-6 h-6" /> 
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-neutral-900">
+                          {t("settings.language")}
+                        </h3>
+                        <p className="text-sm text-neutral-500 italic">
+                          {t("settings.language")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl">
+                      <button
+                        onClick={() => setLang("en")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${lang === "en" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
+                      >
+                        EN
+                      </button>
+                      <button
+                        onClick={() => setLang("bg")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${lang === "bg" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
+                      >
+                        BG
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -1814,10 +2084,10 @@ const App: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-neutral-900">
-                          Global Network Access
+                          {t("settings.global_access")}
                         </h3>
                         <p className="text-sm text-neutral-500 italic">
-                          Allow connections from any device or location
+                          {t("settings.global_access_desc")}
                         </p>
                       </div>
                     </div>
@@ -1830,6 +2100,7 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${globalAccess ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      aria-label="Toggle Global Network Access"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${globalAccess ? "left-9" : "left-1"}`}
@@ -1841,10 +2112,7 @@ const App: React.FC = () => {
                     <div className="flex items-start gap-3">
                       <AlertCircle className="w-5 h-5 text-neutral-400 mt-0.5" />
                       <div className="text-xs text-neutral-500 leading-relaxed font-serif italic">
-                        When <strong>DISABLED</strong>, access is restricted to
-                        devices on the local network (CORS & WebSocket
-                        protection). When <strong>ENABLED</strong>, anyone with
-                        the dashboard link can attempt to connect to the system.
+                        {t("settings.global_access_warning")}
                       </div>
                     </div>
                   </div>
@@ -1858,11 +2126,10 @@ const App: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-neutral-900">
-                          Ordering Functionality
+                          {t("settings.ordering_functionality")}
                         </h3>
                         <p className="text-sm text-neutral-500 italic">
-                          Toggle the visibility of the "Order" button on home
-                          screen
+                          {t("settings.ordering_desc")}
                         </p>
                       </div>
                     </div>
@@ -1875,6 +2142,7 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${orderButtonEnabled ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      aria-label="Toggle Ordering Functionality"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${orderButtonEnabled ? "left-9" : "left-1"}`}
@@ -1891,10 +2159,10 @@ const App: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-neutral-900">
-                          Test Mode (Bypass RFID)
+                          {t("settings.test_mode")}
                         </h3>
                         <p className="text-sm text-neutral-500 italic">
-                          Allow placing orders without scanning a physical card
+                          {t("settings.test_mode_desc")}
                         </p>
                       </div>
                     </div>
@@ -1907,12 +2175,165 @@ const App: React.FC = () => {
                         )
                       }
                       className={`w-16 h-8 rounded-full transition-all relative ${testModeEnabled ? "bg-indigo-600" : "bg-neutral-200"}`}
+                      aria-label="Toggle Test Mode"
                     >
                       <div
                         className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${testModeEnabled ? "left-9" : "left-1"}`}
                       />
                     </button>
                   </div>
+                </div>
+                <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-neutral-900" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-bold text-neutral-900">
+                            {t("settings.kiosk_status")}
+                          </h3>
+                          <div className="px-3 py-1 bg-neutral-900 text-white rounded-lg text-[10px] font-mono font-bold tracking-wider flex items-center gap-2 shadow-lg shadow-neutral-100">
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${kioskOpen ? "bg-green-500" : "bg-red-500"}`} />
+                            {systemTime.toLocaleTimeString(lang === "bg" ? "bg-BG" : "en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                          </div>
+                        </div>
+                        <p className="text-sm text-neutral-500 italic">
+                          {t("settings.kiosk_status_desc")}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (kioskAutoTiming) {
+                          // If in Auto mode, clicking the button disables Auto and forces the new manual state
+                          updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, false);
+                        }
+                        toggleKiosk(!kioskOpen);
+                      }}
+                      className={`w-16 h-8 rounded-full transition-all relative ${(() => {
+                        const now = new Date();
+                        const current = now.getHours() * 60 + now.getMinutes();
+                        const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                        const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                        const open = openH * 60 + openM;
+                        const close = closeH * 60 + closeM;
+                        
+                        const isWithinSchedule = kioskCloseDay === 1 
+                          ? (current >= open || current < close)
+                          : (current >= open && current < close);
+                          
+                        const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                        return isOpen ? "bg-neutral-900" : "bg-neutral-200";
+                      })()}`}
+                      aria-label="Toggle Kiosk Manual Status"
+                    >
+                      <div
+                        className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${(() => {
+                            const now = new Date();
+                            const current = now.getHours() * 60 + now.getMinutes();
+                            const [openH, openM] = kioskOpenTime.split(':').map(Number);
+                            const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+                            const open = openH * 60 + openM;
+                            const close = closeH * 60 + closeM;
+                            
+                            const isWithinSchedule = kioskCloseDay === 1 
+                              ? (current >= open || current < close)
+                              : (current >= open && current < close);
+                              
+                            const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
+                            return isOpen ? "left-9" : "left-1";
+                        })()}`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-neutral-100 mb-8" />
+
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-amber-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-neutral-900">
+                          {t("settings.auto_timing")}
+                        </h4>
+                        <p className="text-sm text-neutral-500 italic">
+                          {t("settings.auto_timing_desc")}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        updateSettings(
+                          globalAccess,
+                          orderButtonEnabled,
+                          testModeEnabled,
+                          !kioskAutoTiming,
+                        )
+                      }
+                      className={`w-16 h-8 rounded-full transition-all relative ${kioskAutoTiming ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      aria-label="Toggle Kiosk Auto-Timing"
+                    >
+                      <div
+                        className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${kioskAutoTiming ? "left-9" : "left-1"}`}
+                      />
+                    </button>
+                  </div>
+
+                  {kioskAutoTiming && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-neutral-50 rounded-3xl border border-neutral-100"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                            {t("settings.open_at")}
+                          </label>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full border border-green-100 uppercase tracking-tighter">
+                            {t("settings.today")}
+                          </span>
+                        </div>
+                        <input
+                          type="time"
+                          value={kioskOpenTime}
+                          onChange={(e) => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, e.target.value, kioskCloseTime)}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                            {t("settings.close_at")}
+                          </label>
+                          <div className="flex bg-neutral-100 p-0.5 rounded-lg border border-neutral-200">
+                            <button
+                              onClick={() => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, kioskCloseTime, 0)}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all ${kioskCloseDay === 0 ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                            >
+                              {t("settings.today")}
+                            </button>
+                            <button
+                              onClick={() => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, kioskCloseTime, 1)}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all ${kioskCloseDay === 1 ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                            >
+                              {t("settings.tomorrow")}
+                            </button>
+                          </div>
+                        </div>
+                        <input
+                          type="time"
+                          value={kioskCloseTime}
+                          onChange={(e) => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, e.target.value)}
+                          className="w-full px-4 py-3 bg-white rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Security Section */}
@@ -1923,7 +2344,7 @@ const App: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-neutral-900">
-                        Admin Security
+                        {t("settings.change_pin")}
                       </h3>
                       <p className="text-sm text-neutral-500 italic">
                         Update your administrative PIN
@@ -1934,7 +2355,7 @@ const App: React.FC = () => {
                   <div className="space-y-4 max-w-sm">
                     <div>
                       <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                        New PIN
+                        {t("settings.new_pin")}
                       </label>
                       <input
                         type="password"
@@ -1946,7 +2367,7 @@ const App: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                        Confirm New PIN
+                        {t("settings.confirm_new_pin")}
                       </label>
                       <input
                         type="password"
@@ -1979,7 +2400,7 @@ const App: React.FC = () => {
                           <CheckCircle2 className="w-5 h-5" /> PIN Updated
                         </>
                       ) : (
-                        "Update Admin PIN"
+                        t("settings.update_pin")
                       )}
                     </button>
 
@@ -1997,11 +2418,10 @@ const App: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-                    Card Management
+                    {t("navigation.card_management")}
                   </h1>
                   <p className="text-neutral-500 text-sm md:text-base">
-                    Track accumulated costs per cardholder. Reset manually each
-                    month.
+                    {t("cards.management_desc")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3 sm:gap-4">
@@ -2010,14 +2430,14 @@ const App: React.FC = () => {
                     tabIndex={-1}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm"
                   >
-                    <Trash2 className="w-4 h-4" /> Reset Monthly Balances
+                    <Trash2 className="w-4 h-4" /> {t("cards.reset_monthly_balances")}
                   </button>
                   <button
                     onClick={() => setIsPasteCardsModalOpen(true)}
                     tabIndex={-1}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm"
                   >
-                    <Plus className="w-4 h-4" /> Import Cards
+                    <Plus className="w-4 h-4" /> {t("cards.import_cards")}
                   </button>
                 </div>
               </div>
@@ -2036,15 +2456,14 @@ const App: React.FC = () => {
                       exit={{ scale: 0.9, y: 20 }}
                       className="bg-white rounded-[32px] w-full max-w-2xl p-8 shadow-2xl"
                     >
-                      <h2 className="text-2xl font-bold mb-4">Import Cards</h2>
+                      <h2 className="text-2xl font-bold mb-4">{t("cards.import_cards")}</h2>
                       <p className="text-neutral-500 mb-6 text-sm">
-                        Paste a list of cards. Format: "RFID Name" (one per
-                        line). <strong>Only new cards will be added.</strong> Existing cards will not be modified.
+                        {t("cards.import_instructions")}
                       </p>
                       <textarea
                         value={pasteCardsText}
                         onChange={(e) => setPasteCardsText(e.target.value)}
-                        placeholder="12345678 John Doe&#10;87654321 Jane Smith"
+                        placeholder={t("cards.import_placeholder")}
                         className="w-full h-64 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm mb-6"
                       />
                       <div className="flex justify-end gap-4">
@@ -2052,13 +2471,13 @@ const App: React.FC = () => {
                           onClick={() => setIsPasteCardsModalOpen(false)}
                           className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all"
                         >
-                          Cancel
+                          {t("modals.cancel")}
                         </button>
                         <button
                           onClick={handlePasteCards}
                           className="px-8 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all"
                         >
-                          Import Cards
+                          {t("cards.import_cards")}
                         </button>
                       </div>
                     </motion.div>
@@ -2070,20 +2489,23 @@ const App: React.FC = () => {
                 <div className="lg:col-span-2">
                   <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[600px]">
+                      <table className="w-full text-left border-collapse min-w-0">
                         <thead>
                           <tr className="border-bottom border-neutral-100">
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                              RFID
+                              {t("cards.rfid")}
                             </th>
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400">
-                              Owner Name
+                              {t("cards.owner_name")}
+                            </th>
+                            <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-center">
+                              {t("cards.admin")}
                             </th>
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">
-                              Owed
+                              {t("cards.owed")}
                             </th>
                             <th className="p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 text-right">
-                              Actions
+                              {t("cards.actions")}
                             </th>
                           </tr>
                         </thead>
@@ -2099,6 +2521,24 @@ const App: React.FC = () => {
                                 </td>
                                 <td className="p-6 font-bold text-neutral-900">
                                   {card.ownerName || "N/A"}
+                                </td>
+                                <td className="p-6 text-center">
+                                  <button
+                                    onClick={() => {
+                                      const updated = cards.map((c) =>
+                                        c.rfid === card.rfid
+                                          ? { ...c, isAdmin: !c.isAdmin }
+                                          : c,
+                                      );
+                                      updateCards(updated);
+                                    }}
+                                    className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all mx-auto relative ${card.isAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
+                                    aria-label="Toggle Admin Privileges"
+                                  >
+                                    <div
+                                      className={`absolute top-0.5 w-4 h-4 md:w-5 md:h-5 bg-white rounded-full transition-all ${card.isAdmin ? "left-[1.35rem] md:left-[1.65rem]" : "left-0.5"}`}
+                                    />
+                                  </button>
                                 </td>
                                 <td className="p-6 text-right">
                                   <div className="flex items-center justify-end gap-1">
@@ -2128,14 +2568,16 @@ const App: React.FC = () => {
                                     <button
                                       onClick={() => resetCardBalance(card.rfid)}
                                       className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
-                                      title="Clear Balanced Owed"
+                                      title={t("cards.clear_balance_tooltip")}
+                                      aria-label={t("cards.clear_balance_tooltip")}
                                     >
                                       <RotateCcw className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => removeCard(card.rfid)}
                                       className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors"
-                                      title="Delete Card"
+                                      title={t("cards.delete_card")}
+                                      aria-label={t("cards.delete_card")}
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -2149,7 +2591,7 @@ const App: React.FC = () => {
                                 colSpan={4}
                                 className="p-12 text-center text-neutral-400 italic"
                               >
-                                No cards registered yet.
+                                {t("cards.no_cards")}
                               </td>
                             </tr>
                           )}
@@ -2161,7 +2603,7 @@ const App: React.FC = () => {
 
                 <div className="space-y-6">
                   <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm">
-                    <h3 className="text-lg font-bold mb-4">Add New Card</h3>
+                    <h3 className="text-lg font-bold mb-4">{t("cards.add_new_card")}</h3>
                     <div className="space-y-4">
                       <button
                         onClick={() => {
@@ -2180,7 +2622,7 @@ const App: React.FC = () => {
                         />
                         {isScanning
                           ? "Waiting for Scan..."
-                          : "Scan to Register"}
+                          : t("cards.scan_to_register")}
                       </button>
 
                       {lastScanned && (
@@ -2203,7 +2645,7 @@ const App: React.FC = () => {
                       )}
                       <div>
                         <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                          RFID Number
+                          {t("cards.rfid")}
                         </label>
                         <input
                           ref={managerRfidRef}
@@ -2229,13 +2671,13 @@ const App: React.FC = () => {
                               (nextInput as HTMLInputElement)?.focus();
                             }
                           }}
-                          placeholder="e.g. 12345678"
+                          placeholder={t("cards.rfid_placeholder")}
                           className="w-full px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm"
                         />
                       </div>
                       <div>
                         <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                          Owner Name
+                          {t("cards.owner_name")}
                         </label>
                         <input
                           type="text"
@@ -2247,9 +2689,23 @@ const App: React.FC = () => {
                               addManualCard();
                             }
                           }}
-                          placeholder="e.g. John Doe"
+                          placeholder={t("cards.owner_placeholder")}
                           className="w-full px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm"
                         />
+                      </div>
+                      <div className="flex items-center gap-3 py-2">
+                        <button
+                          onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
+                          className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all relative ${newCardIsAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
+                          aria-label="Toggle Admin Privileges for new card"
+                        >
+                          <div
+                            className={`absolute top-0.5 w-4 h-4 md:w-5 md:h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? "left-[1.35rem] md:left-[1.65rem]" : "left-0.5"}`}
+                          />
+                        </button>
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                          {t("cards.admin_privileges")}
+                        </span>
                       </div>
                       <button
                         onClick={addManualCard}
@@ -2257,7 +2713,7 @@ const App: React.FC = () => {
                         tabIndex={-1}
                         className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 disabled:opacity-50 transition-all"
                       >
-                        Add Card
+                        {t("cards.add_new_card")}
                       </button>
                     </div>
                   </div>
@@ -2267,6 +2723,76 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmConfig && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmConfig(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl border border-neutral-100 overflow-hidden"
+            >
+              {/* Visual Accent */}
+              <div className={`absolute top-0 left-0 w-full h-1.5 ${confirmConfig.isDestructive ? 'bg-red-500' : 'bg-neutral-900'}`} />
+              
+              <div className="flex items-center gap-4 mb-6">
+                {confirmConfig.isDestructive ? (
+                  <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center text-neutral-900 shrink-0">
+                    <HelpCircle className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-xl font-bold text-neutral-900">
+                    {confirmConfig.title}
+                  </h3>
+                  <p className="text-neutral-500 text-sm mt-1">
+                    Please confirm this action
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-neutral-600 mb-8 leading-relaxed">
+                {confirmConfig.message}
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmConfig(null)}
+                  className="flex-1 py-3 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
+                >
+                  {t("modals.cancel")}
+                </button>
+                <button
+                  onClick={() => {
+                    confirmConfig.onConfirm();
+                    setConfirmConfig(null);
+                  }}
+                  className={`flex-1 py-3 px-6 rounded-2xl text-white font-bold transition-all shadow-lg text-sm ${
+                    confirmConfig.isDestructive 
+                    ? 'bg-red-500 hover:bg-red-600 shadow-red-100' 
+                    : 'bg-neutral-900 hover:bg-neutral-800 shadow-neutral-100'
+                  }`}
+                >
+                  {confirmConfig.confirmText || t("modals.confirm")}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -22,6 +22,7 @@ export interface Card {
   rfid: string;
   ownerName: string;
   balance: number;
+  isAdmin?: boolean;
 }
 
 export interface DailySummary {
