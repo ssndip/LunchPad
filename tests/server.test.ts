@@ -31,7 +31,11 @@ describe('POST /api/menu', () => {
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);
-    expect(response.body).toEqual({ error: errorMessage });
+    expect(response.body).toEqual({
+      error: "Internal Server Error",
+      message: "An unexpected error occurred",
+      path: "/api/menu"
+    });
     expect(db.transaction).toHaveBeenCalled();
   });
 });
