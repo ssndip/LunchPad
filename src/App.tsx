@@ -25,6 +25,26 @@ import { motion, AnimatePresence } from "motion/react";
 import { MenuItem, Order, AppState, Card, DailySummary } from "./types";
 import { translations, Language } from "./translations";
 
+const SystemClock = ({ lang }: { lang: Language }) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <>
+      {time.toLocaleTimeString(lang === "bg" ? "bg-BG" : "en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })}
+    </>
+  );
+};
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>("kiosk");
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -57,7 +77,7 @@ const App: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [orderButtonEnabled, setOrderButtonEnabled] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
-  const [systemTime, setSystemTime] = useState(new Date());
+  const [minuteTick, setMinuteTick] = useState(0);
 
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -109,11 +129,6 @@ const App: React.FC = () => {
       setAdminPin(storedPin);
       setView("manager");
     }
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => setSystemTime(new Date()), 1000);
-    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -239,6 +254,28 @@ const App: React.FC = () => {
   const [kioskOpenTime, setKioskOpenTime] = useState("00:00");
   const [kioskCloseTime, setKioskCloseTime] = useState("09:00");
   const [kioskCloseDay, setKioskCloseDay] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setMinuteTick(prev => prev + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // ⚡ Bolt: Memoize Kiosk Auto-Timing computation so it only runs on minute boundaries
+  const computedKioskOpen = useMemo(() => {
+    if (!kioskAutoTiming) return kioskOpen;
+    const now = new Date();
+    const current = now.getHours() * 60 + now.getMinutes();
+    const [openH, openM] = kioskOpenTime.split(':').map(Number);
+    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
+    const open = openH * 60 + openM;
+    const close = closeH * 60 + closeM;
+
+    if (kioskCloseDay === 1) {
+      return (current >= open || current < close);
+    } else {
+      return (current >= open && current < close);
+    }
+  }, [minuteTick, kioskAutoTiming, kioskOpen, kioskOpenTime, kioskCloseTime, kioskCloseDay]);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [dailyDetails, setDailyDetails] = useState<any[]>([]);
   const [filters, setFilters] = useState({
@@ -910,14 +947,13 @@ const App: React.FC = () => {
               </h1>
               <span className="text-2xl font-mono text-neutral-400 uppercase tracking-tighter leading-none">
                 {(() => {
+                  // ⚡ Bolt: We can recalculate this inline on minute ticks, but memoizing is better
                   const now = new Date();
                   const currentHHmm = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
                   const targetDate = new Date(now);
-                  
                   if (kioskAutoTiming && currentHHmm >= kioskCloseTime) {
                     targetDate.setDate(now.getDate() + 1);
                   }
-                  
                   return targetDate.toLocaleDateString(lang === "bg" ? "bg-BG" : "en-US", {
                     weekday: "long",
                     day: "numeric",
@@ -1173,23 +1209,7 @@ const App: React.FC = () => {
                         isScanning ||
                         selectedItems.length === 0 ||
                         (!testModeEnabled && (!rfid || !matchedCard)) ||
-                        (() => {
-                           if (kioskAutoTiming) {
-                             const now = new Date();
-                             const current = now.getHours() * 60 + now.getMinutes();
-                             const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                             const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                             const open = openH * 60 + openM;
-                             const close = closeH * 60 + closeM;
-                             
-                             if (kioskCloseDay === 1) {
-                               return !(current >= open || current < close);
-                             } else {
-                               return !(current >= open && current < close);
-                             }
-                           }
-                           return !kioskOpen;
-                        })()
+                        !computedKioskOpen
                       }
                       className="px-6 py-2 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                     >
@@ -1424,37 +1444,9 @@ const App: React.FC = () => {
                   {t("menu.status")}
                 </p>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-widest ${(() => {
-                    const now = new Date();
-                    const current = now.getHours() * 60 + now.getMinutes();
-                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                    const open = openH * 60 + openM;
-                    const close = closeH * 60 + closeM;
-                    
-                    const isWithinSchedule = kioskCloseDay === 1 
-                      ? (current >= open || current < close)
-                      : (current >= open && current < close);
-                      
-                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                    return isOpen ? "text-green-600" : "text-red-600";
-                  })()}`}
+                  className={`text-[10px] font-black uppercase tracking-widest ${computedKioskOpen ? "text-green-600" : "text-red-600"}`}
                 >
-                  {(() => {
-                    const now = new Date();
-                    const current = now.getHours() * 60 + now.getMinutes();
-                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                    const open = openH * 60 + openM;
-                    const close = closeH * 60 + closeM;
-                    
-                    const isWithinSchedule = kioskCloseDay === 1 
-                      ? (current >= open || current < close)
-                      : (current >= open && current < close);
-                      
-                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                    return isOpen ? t("menu.active") : t("menu.inactive");
-                  })()}
+                  {computedKioskOpen ? t("menu.active") : t("menu.inactive")}
                 </span>
               </div>
               <div className="hidden xs:block w-px h-6 bg-neutral-200" />
@@ -1467,37 +1459,9 @@ const App: React.FC = () => {
                   toggleKiosk(!kioskOpen);
                 }}
                 tabIndex={-1}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm ${(() => {
-                    const now = new Date();
-                    const current = now.getHours() * 60 + now.getMinutes();
-                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                    const open = openH * 60 + openM;
-                    const close = closeH * 60 + closeM;
-                    
-                    const isWithinSchedule = kioskCloseDay === 1 
-                      ? (current >= open || current < close)
-                      : (current >= open && current < close);
-                      
-                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                    return isOpen ? "bg-white text-red-600 hover:bg-red-50 border border-red-100" : "bg-neutral-900 text-white hover:bg-neutral-800";
-                })()}`}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm ${computedKioskOpen ? "bg-white text-red-600 hover:bg-red-50 border border-red-100" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
               >
-                {(() => {
-                    const now = new Date();
-                    const current = now.getHours() * 60 + now.getMinutes();
-                    const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                    const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                    const open = openH * 60 + openM;
-                    const close = closeH * 60 + closeM;
-                    
-                    const isWithinSchedule = kioskCloseDay === 1 
-                      ? (current >= open || current < close)
-                      : (current >= open && current < close);
-                      
-                    const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                    return isOpen ? t("modals.close") : t("modals.open");
-                })()}
+                {computedKioskOpen ? t("modals.close") : t("modals.open")}
               </button>
             </div>
 
@@ -2199,7 +2163,7 @@ const App: React.FC = () => {
                           </h3>
                           <div className="px-3 py-1 bg-neutral-900 text-white rounded-lg text-[10px] font-mono font-bold tracking-wider flex items-center gap-2 shadow-lg shadow-neutral-100">
                             <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${kioskOpen ? "bg-green-500" : "bg-red-500"}`} />
-                            {systemTime.toLocaleTimeString(lang === "bg" ? "bg-BG" : "en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                            <SystemClock lang={lang} />
                           </div>
                         </div>
                         <p className="text-sm text-neutral-500 italic">
@@ -2215,39 +2179,11 @@ const App: React.FC = () => {
                         }
                         toggleKiosk(!kioskOpen);
                       }}
-                      className={`w-16 h-8 rounded-full transition-all relative ${(() => {
-                        const now = new Date();
-                        const current = now.getHours() * 60 + now.getMinutes();
-                        const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                        const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                        const open = openH * 60 + openM;
-                        const close = closeH * 60 + closeM;
-                        
-                        const isWithinSchedule = kioskCloseDay === 1 
-                          ? (current >= open || current < close)
-                          : (current >= open && current < close);
-                          
-                        const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                        return isOpen ? "bg-neutral-900" : "bg-neutral-200";
-                      })()}`}
+                      className={`w-16 h-8 rounded-full transition-all relative ${computedKioskOpen ? "bg-neutral-900" : "bg-neutral-200"}`}
                       aria-label="Toggle Kiosk Manual Status"
                     >
                       <div
-                        className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${(() => {
-                            const now = new Date();
-                            const current = now.getHours() * 60 + now.getMinutes();
-                            const [openH, openM] = kioskOpenTime.split(':').map(Number);
-                            const [closeH, closeM] = kioskCloseTime.split(':').map(Number);
-                            const open = openH * 60 + openM;
-                            const close = closeH * 60 + closeM;
-                            
-                            const isWithinSchedule = kioskCloseDay === 1 
-                              ? (current >= open || current < close)
-                              : (current >= open && current < close);
-                              
-                            const isOpen = kioskAutoTiming ? isWithinSchedule : kioskOpen;
-                            return isOpen ? "left-9" : "left-1";
-                        })()}`}
+                        className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${computedKioskOpen ? "left-9" : "left-1"}`}
                       />
                     </button>
                   </div>
