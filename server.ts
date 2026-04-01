@@ -81,10 +81,6 @@ db.exec(`
 let globalAccessConfig = false;
 let orderButtonEnabledConfig = true;
 let testModeConfig = false;
-let kioskAutoTimingConfig = false;
-let kioskOpenTimeConfig = "00:00";
-let kioskCloseTimeConfig = "09:00";
-let kioskCloseDayConfig = 0;
 let adminPinConfig = process.env.ADMIN_PIN || "0000";
 
 const initSettings = () => {
@@ -117,38 +113,6 @@ const initSettings = () => {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_pin", adminPinConfig);
   } else {
     adminPinConfig = adminPin.value;
-  }
-
-  const kioskAutoTiming = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_auto_timing") as { value: string } | undefined;
-  if (!kioskAutoTiming) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_auto_timing", "0");
-    kioskAutoTimingConfig = false;
-  } else {
-    kioskAutoTimingConfig = kioskAutoTiming.value === "1";
-  }
-
-  const kioskOpenTime = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_open_time") as { value: string } | undefined;
-  if (!kioskOpenTime) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_open_time", "00:00");
-    kioskOpenTimeConfig = "00:00";
-  } else {
-    kioskOpenTimeConfig = kioskOpenTime.value;
-  }
-
-  const kioskCloseTime = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_close_time") as { value: string } | undefined;
-  if (!kioskCloseTime) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_close_time", "09:00");
-    kioskCloseTimeConfig = "09:00";
-  } else {
-    kioskCloseTimeConfig = kioskCloseTime.value;
-  }
-
-  const kioskCloseDay = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_close_day") as { value: string } | undefined;
-  if (!kioskCloseDay) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_close_day", "0");
-    kioskCloseDayConfig = 0;
-  } else {
-    kioskCloseDayConfig = parseInt(kioskCloseDay.value, 10);
   }
 };
 
@@ -344,16 +308,13 @@ export async function startServer() {
     res.json({ 
       globalAccess: globalAccessConfig,
       orderButtonEnabled: orderButtonEnabledConfig,
-      testModeEnabled: testModeConfig,
-      kioskAutoTiming: kioskAutoTimingConfig,
-      kioskOpenTime: kioskOpenTimeConfig,
-      kioskCloseTime: kioskCloseTimeConfig
+      testModeEnabled: testModeConfig
     });
   });
 
   app.post("/api/settings", requireAuth, (req, res, next) => {
     try {
-      const { globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, kioskCloseTime } = req.body;
+      const { globalAccess, orderButtonEnabled, testModeEnabled } = req.body;
       
       if (globalAccess !== undefined) {
         if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
@@ -378,52 +339,11 @@ export async function startServer() {
         console.log(`[Settings] Test mode is now ${testModeEnabled ? 'ENABLED' : 'DISABLED'} (InMemory updated)`);
       }
 
-      if (kioskAutoTiming !== undefined) {
-        if (typeof kioskAutoTiming !== 'boolean') return res.status(400).json({ error: "Invalid value for kioskAutoTiming" });
-        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_auto_timing", kioskAutoTiming ? "1" : "0");
-        kioskAutoTimingConfig = kioskAutoTiming;
-      }
-
-      if (kioskOpenTime !== undefined) {
-        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_open_time", kioskOpenTime);
-        kioskOpenTimeConfig = kioskOpenTime;
-      }
-
-      if (kioskCloseTime !== undefined) {
-        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_time", kioskCloseTime);
-        kioskCloseTimeConfig = kioskCloseTime;
-      }
-
-      const { kioskCloseDay } = req.body;
-      if (kioskCloseDay !== undefined) {
-        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_day", kioskCloseDay.toString());
-        kioskCloseDayConfig = kioskCloseDay;
-      }
-
-      if (kioskAutoTiming !== undefined || kioskOpenTime !== undefined || kioskCloseTime !== undefined || kioskCloseDay !== undefined) {
-        broadcast({ 
-          type: "STATUS_UPDATE", 
-          data: { 
-            kioskOpen, 
-            orderButtonEnabled: orderButtonEnabledConfig, 
-            testModeEnabled: testModeConfig,
-            kioskAutoTiming: kioskAutoTimingConfig,
-            kioskOpenTime: kioskOpenTimeConfig,
-            kioskCloseTime: kioskCloseTimeConfig,
-            kioskCloseDay: kioskCloseDayConfig
-          } 
-        });
-      }
-
       res.json({ 
         success: true, 
         globalAccess: globalAccessConfig, 
         orderButtonEnabled: orderButtonEnabledConfig, 
-        testModeEnabled: testModeConfig,
-        kioskAutoTiming: kioskAutoTimingConfig,
-        kioskOpenTime: kioskOpenTimeConfig,
-        kioskCloseTime: kioskCloseTimeConfig,
-        kioskCloseDay: kioskCloseDayConfig
+        testModeEnabled: testModeConfig
       });
     } catch (err: any) {
       next(err);
@@ -451,10 +371,7 @@ export async function startServer() {
       kioskOpen,
       globalAccess: globalAccessConfig,
       orderButtonEnabled: orderButtonEnabledConfig,
-      testModeEnabled: testModeConfig,
-      kioskAutoTiming: kioskAutoTimingConfig,
-      kioskOpenTime: kioskOpenTimeConfig,
-      kioskCloseTime: kioskCloseTimeConfig
+      testModeEnabled: testModeConfig
     });
   });
 
@@ -655,17 +572,8 @@ export async function startServer() {
       const total = selectedItems.reduce((sum, i) => sum + i.price, 0);
       const now = new Date();
       
-      // Automatic Date Rolling (gather orders for next day)
+      // Sequential date logic (all orders for Today)
       let dateStr = now.toISOString().split('T')[0];
-      if (kioskAutoTimingConfig) {
-        const currentHHmm = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        if (currentHHmm >= kioskCloseTimeConfig) {
-          // It's after cut-off, so order is for Tomorrow
-          const tomorrow = new Date(now);
-          tomorrow.setDate(now.getDate() + 1);
-          dateStr = tomorrow.toISOString().split('T')[0];
-        }
-      }
       const orderId = `ORD-${Date.now()}`;
 
       const newOrder = {

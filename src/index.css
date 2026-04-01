@@ -15,3 +15,10 @@
     background: rgba(0, 0, 0, 0.2);
   }
 }
+
+html, body, #root {
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}

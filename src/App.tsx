@@ -892,24 +892,22 @@ const App: React.FC = () => {
       console.error("Failed to update menu", err);
     }
   };
+  // ⚡ Bolt: Memoize grouped menu to prevent redundant O(n) reduction on every render
+  const groupedMenu = useMemo(
+    () =>
+      menu.reduce((acc, item) => {
+        if (!acc[item.category]) acc[item.category] = [];
+        acc[item.category].push(item);
+        return acc;
+      }, {} as Record<string, MenuItem[]>),
+    [menu]
+  );
 
-  if (view === "kiosk") {
-    // ⚡ Bolt: Memoize grouped menu to prevent redundant O(n) reduction on every render
-    const groupedMenu = useMemo(
-      () =>
-        menu.reduce((acc, item) => {
-          if (!acc[item.category]) acc[item.category] = [];
-          acc[item.category].push(item);
-          return acc;
-        }, {} as Record<string, MenuItem[]>),
-      [menu]
-    );
-
-    const matchedCard = rfid ? true : undefined; // Optimistic match for Kiosk since cards aren't leaked to client anymore
+  if (view === "kiosk") {    const matchedCard = rfid ? true : undefined; // Optimistic match for Kiosk since cards aren't leaked to client anymore
 
     if (!kioskOpen) {
       return (
-        <div className="h-screen bg-neutral-100 flex items-center justify-center p-8">
+        <div className="h-[100dvh] overflow-hidden bg-neutral-100 flex items-center justify-center p-8">
           <div className="bg-white p-12 rounded-[40px] shadow-2xl text-center max-w-lg">
             <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-8">
               <LogOut className="w-12 h-12 text-red-600" />
@@ -932,7 +930,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col relative font-sans">
+      <div key="kiosk-view" className="h-[100dvh] overflow-hidden bg-[#F8F9FA] flex flex-col relative font-sans">
         {/* Dynamic Background */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-30">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neutral-200 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
@@ -1261,7 +1259,7 @@ const App: React.FC = () => {
 
   if (view === "manager" && !adminPin) {
     return (
-      <div className="h-screen bg-neutral-100 flex items-center justify-center p-8">
+      <div key="manager-login" className="h-[100dvh] overflow-hidden bg-neutral-100 flex items-center justify-center p-8">
         <div className="bg-white p-12 rounded-[40px] shadow-2xl text-center max-w-lg">
           <h1 className="text-4xl font-black text-neutral-900 mb-4 uppercase tracking-tighter">
             {t("navigation.admin_login")}
@@ -1361,7 +1359,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="h-screen overflow-hidden bg-neutral-100 flex relative">
+    <div key="manager-dashboard" className="h-[100dvh] overflow-hidden bg-neutral-100 flex relative">
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
