@@ -1102,6 +1102,7 @@ const App: React.FC = () => {
                           ref={rfidInputRef}
                           type="text"
                           placeholder={t("cards.scan_to_register")}
+                          aria-label={t("cards.scan_to_register")}
                           value={rfid}
                           autoComplete="off"
                           onChange={(e) => setRfid(e.target.value)}
@@ -1251,6 +1252,7 @@ const App: React.FC = () => {
           <input
             type="password"
             placeholder="****"
+            aria-label={t("navigation.enter_pin")}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 const pin = (e.currentTarget as HTMLInputElement).value;
@@ -1904,10 +1906,11 @@ const App: React.FC = () => {
               <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                    <label htmlFor="startDate" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                       {t("filters.start_date")}
                     </label>
                     <input
+                      id="startDate"
                       type="date"
                       value={filters.startDate}
                       onChange={(e) =>
@@ -1920,10 +1923,11 @@ const App: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                    <label htmlFor="endDate" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                       {t("filters.end_date")}
                     </label>
                     <input
+                      id="endDate"
                       type="date"
                       value={filters.endDate}
                       onChange={(e) =>
@@ -1936,10 +1940,11 @@ const App: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                    <label htmlFor="rfidSearch" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                       {t("cards.rfid")} / {t("cards.owner_name")}
                     </label>
                     <input
+                      id="rfidSearch"
                       type="text"
                       value={filters.rfid}
                       onChange={(e) =>
@@ -2294,7 +2299,7 @@ const App: React.FC = () => {
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                          <label htmlFor="kioskOpenTime" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
                             {t("settings.open_at")}
                           </label>
                           <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full border border-green-100 uppercase tracking-tighter">
@@ -2302,6 +2307,7 @@ const App: React.FC = () => {
                           </span>
                         </div>
                         <input
+                          id="kioskOpenTime"
                           type="time"
                           value={kioskOpenTime}
                           onChange={(e) => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, e.target.value, kioskCloseTime)}
@@ -2310,7 +2316,7 @@ const App: React.FC = () => {
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                          <label htmlFor="kioskCloseTime" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400">
                             {t("settings.close_at")}
                           </label>
                           <div className="flex bg-neutral-100 p-0.5 rounded-lg border border-neutral-200">
@@ -2329,6 +2335,7 @@ const App: React.FC = () => {
                           </div>
                         </div>
                         <input
+                          id="kioskCloseTime"
                           type="time"
                           value={kioskCloseTime}
                           onChange={(e) => updateSettings(globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, e.target.value)}
@@ -2357,10 +2364,11 @@ const App: React.FC = () => {
 
                   <div className="space-y-4 max-w-sm">
                     <div>
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                      <label htmlFor="newPin" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                         {t("settings.new_pin")}
                       </label>
                       <input
+                        id="newPin"
                         type="password"
                         value={newPin}
                         onChange={(e) => setNewPin(e.target.value)}
@@ -2369,10 +2377,11 @@ const App: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                      <label htmlFor="confirmPin" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                         {t("settings.confirm_new_pin")}
                       </label>
                       <input
+                        id="confirmPin"
                         type="password"
                         value={confirmPin}
                         onChange={(e) => setConfirmPin(e.target.value)}
@@ -2648,10 +2657,11 @@ const App: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                        <label htmlFor="newCardRfid" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                           {t("cards.rfid")}
                         </label>
                         <input
+                          id="newCardRfid"
                           ref={managerRfidRef}
                           type="text"
                           value={newCardRfid}
@@ -2680,10 +2690,11 @@ const App: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
+                        <label htmlFor="newCardOwner" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
                           {t("cards.owner_name")}
                         </label>
                         <input
+                          id="newCardOwner"
                           type="text"
                           value={newCardOwner}
                           onChange={(e) => setNewCardOwner(e.target.value)}
