@@ -351,7 +351,7 @@ export async function startServer() {
     });
   });
 
-  app.post("/api/settings", requireAuth, (req, res) => {
+  app.post("/api/settings", requireAuth, (req, res, next) => {
     try {
       const { globalAccess, orderButtonEnabled, testModeEnabled, kioskAutoTiming, kioskOpenTime, kioskCloseTime } = req.body;
       
@@ -426,11 +426,11 @@ export async function startServer() {
         kioskCloseDay: kioskCloseDayConfig
       });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
-  app.post("/api/settings/pin", requireAuth, (req, res) => {
+  app.post("/api/settings/pin", requireAuth, (req, res, next) => {
     try {
       const { newPin } = req.body;
       if (!newPin || typeof newPin !== 'string') {
@@ -441,7 +441,7 @@ export async function startServer() {
       console.log(`[Settings] Admin PIN has been updated (InMemory updated)`);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
@@ -460,7 +460,7 @@ export async function startServer() {
 
   // Menu Management
   app.get("/api/menu", (req, res) => res.json(getMenu(db)));
-  app.post("/api/menu", requireAuth, (req, res) => {
+  app.post("/api/menu", requireAuth, (req, res, next) => {
     try {
       const items = req.body;
       if (!Array.isArray(items)) {
@@ -487,7 +487,7 @@ export async function startServer() {
       broadcast({ type: "MENU_UPDATE", data: updated });
       res.json({ success: true, menu: updated });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
@@ -495,7 +495,7 @@ export async function startServer() {
   app.get("/api/cards", requireAuth, (req, res) => res.json(getCards()));
 
   // Add/Update single card
-  app.post("/api/cards", requireAuth, (req, res) => {
+  app.post("/api/cards", requireAuth, (req, res, next) => {
     try {
       const { rfid, ownerName, balance, isAdmin } = req.body;
       if (!rfid || !ownerName) {
@@ -524,11 +524,11 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Add Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
   // Batch add cards
-  app.post("/api/cards/batch", requireAuth, (req, res) => {
+  app.post("/api/cards/batch", requireAuth, (req, res, next) => {
     try {
       const cards = req.body;
       if (!Array.isArray(cards)) {
@@ -555,11 +555,11 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Batch Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
   // Delete card
-  app.delete("/api/cards/:rfid", requireAuth, (req, res) => {
+  app.delete("/api/cards/:rfid", requireAuth, (req, res, next) => {
     try {
       const { rfid } = req.params;
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
@@ -569,12 +569,12 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Delete Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
   // Update all cards (bulk update/replace)
-  app.post("/api/cards/update", requireAuth, (req, res) => {
+  app.post("/api/cards/update", requireAuth, (req, res, next) => {
     try {
       const cards = req.body;
       if (!Array.isArray(cards)) {
@@ -599,12 +599,12 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Update Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
   // Reset all balances (monthly clear)
-  app.post("/api/cards/reset-all", requireAuth, (req, res) => {
+  app.post("/api/cards/reset-all", requireAuth, (req, res, next) => {
     try {
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
       const updated = getCards();
@@ -612,12 +612,12 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset All Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
   // Reset single card balance
-  app.post("/api/cards/:rfid/reset", requireAuth, (req, res) => {
+  app.post("/api/cards/:rfid/reset", requireAuth, (req, res, next) => {
     try {
       const { rfid } = req.params;
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
@@ -627,11 +627,11 @@ export async function startServer() {
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset Single Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
   // Order Processing
-  app.post("/api/v1/order", (req, res) => {
+  app.post("/api/v1/order", (req, res, next) => {
     try {
       const { rfid, itemIds } = req.body;
       if (!rfid || !itemIds || !Array.isArray(itemIds)) {
@@ -705,13 +705,13 @@ export async function startServer() {
 
     } catch (err: any) {
       console.error("[Order Processing Error]", err);
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
   // History & Summaries
   app.get("/api/orders", requireAuth, (req, res) => res.json(getOrders()));
-  app.post("/api/orders/reset", requireAuth, (req, res) => {
+  app.post("/api/orders/reset", requireAuth, (req, res, next) => {
     try {
       db.transaction(() => {
         db.prepare("DELETE FROM orders").run();
@@ -721,7 +721,7 @@ export async function startServer() {
       broadcast({ type: "INITIAL_STATE", menu: getMenu(db), orders: [], kioskOpen, cards: [] });
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
@@ -730,7 +730,7 @@ export async function startServer() {
     res.json(summaries);
   });
 
-  app.get("/api/summaries/:date", requireAuth, (req, res) => {
+  app.get("/api/summaries/:date", requireAuth, (req, res, next) => {
     try {
       const { date } = req.params;
       const orders = db.prepare("SELECT items FROM orders WHERE date = ?").all(date) as any[];
@@ -765,11 +765,11 @@ export async function startServer() {
       
       res.json(Object.values(itemMap).sort((a, b) => b.total - a.total));
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      next(err);
     }
   });
 
-  app.get("/api/history", requireAuth, (req, res) => {
+  app.get("/api/history", requireAuth, (req, res, next) => {
     const { startDate, endDate, rfid, ownerName } = req.query;
     let sql = "SELECT * FROM orders WHERE 1=1";
     const params: any[] = [];
@@ -796,7 +796,8 @@ export async function startServer() {
         return { ...o, items: Array.isArray(items) ? items : [] };
       }));
     } catch (err: any) {
-      res.status(500).json({ error: "Failed to query history", details: err.message });
+      err.message = "Failed to query history: " + err.message;
+      next(err);
     }
   });
 
@@ -805,7 +806,7 @@ export async function startServer() {
     console.error("[Global Error]", err);
     res.status(500).json({ 
       error: "Internal Server Error", 
-      message: err.message,
+      message: "An unexpected error occurred",
       path: req.path
     });
   });
