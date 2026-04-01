@@ -437,7 +437,7 @@ export async function startServer() {
       `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0);
       
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Add Error]", err);
@@ -468,7 +468,7 @@ export async function startServer() {
         cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0));
       })();
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Batch Error]", err);
@@ -482,7 +482,7 @@ export async function startServer() {
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Delete Error]", err);
@@ -512,7 +512,7 @@ export async function startServer() {
         cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0));
       })();
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Update Error]", err);
@@ -525,7 +525,7 @@ export async function startServer() {
     try {
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ?").run(new Date().toISOString());
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset All Error]", err);
@@ -540,7 +540,7 @@ export async function startServer() {
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
       const updated = getCards();
-      broadcast({ type: "CARDS_UPDATE", data: updated });
+      broadcast({ type: "CARDS_UPDATE" });
       res.json({ success: true, cards: updated });
     } catch (err: any) {
       console.error("[Card Reset Single Error]", err);
@@ -607,7 +607,8 @@ export async function startServer() {
         }
       })();
 
-      broadcast({ type: "NEW_ORDER", data: newOrder });
+      const { rfid: _rfid, ...sanitizedOrder } = newOrder;
+      broadcast({ type: "NEW_ORDER", data: sanitizedOrder });
       console.log(`[Order] SUCCESS: ${orderId} for "${card.rfid}" - Total: €${total.toFixed(2)}`);
       res.json({ success: true, order: newOrder });
 

@@ -184,12 +184,19 @@ const App: React.FC = () => {
           case "MENU_UPDATE":
             setMenu(message.data);
             break;
-          case "CARDS_UPDATE":
-            console.log(
-              "Received CARDS_UPDATE. New count:",
-              message.data?.length,
-            );
-            setCards(message.data);
+                    case "CARDS_UPDATE":
+            console.log("Received CARDS_UPDATE signal.");
+            {
+              const pin = sessionStorage.getItem("adminPin");
+              if (pin) {
+                fetch("/api/cards", { headers: { "x-admin-pin": pin } })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    if (Array.isArray(data)) setCards(data);
+                  })
+                  .catch((err) => console.error("Failed to fetch cards on update", err));
+              }
+            }
             break;
           case "NEW_ORDER":
             setOrders((prev) => [message.data, ...prev]);
