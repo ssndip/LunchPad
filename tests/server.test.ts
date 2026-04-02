@@ -27,7 +27,8 @@ describe('POST /api/menu', () => {
     ];
 
     const response = await request(app)
-      .post('/api/menu?pin=0000')
+      .post('/api/menu')
+      .set('x-admin-pin', '0000')
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);
