@@ -271,7 +271,7 @@ export async function startServer() {
   }
 
   const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const pin = req.headers['x-admin-pin'] || req.query.pin;
+    const pin = req.headers['x-admin-pin'];
     if (!pin) {
       return res.status(401).json({ error: "Unauthorized: Missing PIN or Card" });
     }
