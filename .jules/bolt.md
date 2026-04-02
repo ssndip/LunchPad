@@ -17,3 +17,7 @@
 ## 2025-03-31 - Preventing Full App 1-Second Re-renders
 **Learning:** Keeping a `systemTime` state updated via a 1-second interval at the top-level of a complex React app causes the entire tree to re-render 60 times a minute. This wastes CPU and causes UI stuttering.
 **Action:** Extract rapidly updating states (like a live clock) into isolated micro-components (e.g., `<SystemClock />`) and memoize time-based computations (e.g., `useMemo` on a 60-second tick) so the main app only re-renders when necessary.
+
+## 2024-05-28 - Indexing Expression Functions in SQLite
+**Learning:** Queries that use functions on columns in the `WHERE` clause (like `WHERE LOWER(rfid) = ?`) bypass standard column indexes (like a `PRIMARY KEY` on `rfid`), resulting in a full table scan (`SCAN table`).
+**Action:** Always add expression-based indexes (e.g., `CREATE INDEX ON table(LOWER(column))`) when querying with functions to ensure O(1) or O(log N) lookup time instead of O(N) table scans.
