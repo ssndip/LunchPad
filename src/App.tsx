@@ -2069,7 +2069,9 @@ const App: React.FC = () => {
                           testModeEnabled,
                         )
                       }
-                      className={`w-16 h-8 rounded-full transition-all relative ${globalAccess ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      role="switch"
+                      aria-checked={globalAccess}
+                      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${globalAccess ? "bg-neutral-900" : "bg-neutral-200"}`}
                       aria-label="Toggle Global Network Access"
                     >
                       <div
@@ -2111,7 +2113,9 @@ const App: React.FC = () => {
                           testModeEnabled,
                         )
                       }
-                      className={`w-16 h-8 rounded-full transition-all relative ${orderButtonEnabled ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      role="switch"
+                      aria-checked={orderButtonEnabled}
+                      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${orderButtonEnabled ? "bg-neutral-900" : "bg-neutral-200"}`}
                       aria-label="Toggle Ordering Functionality"
                     >
                       <div
@@ -2144,7 +2148,9 @@ const App: React.FC = () => {
                           !testModeEnabled,
                         )
                       }
-                      className={`w-16 h-8 rounded-full transition-all relative ${testModeEnabled ? "bg-indigo-600" : "bg-neutral-200"}`}
+                      role="switch"
+                      aria-checked={testModeEnabled}
+                      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${testModeEnabled ? "bg-indigo-600" : "bg-neutral-200"}`}
                       aria-label="Toggle Test Mode"
                     >
                       <div
@@ -2182,7 +2188,9 @@ const App: React.FC = () => {
                         }
                         toggleKiosk(!kioskOpen);
                       }}
-                      className={`w-16 h-8 rounded-full transition-all relative ${computedKioskOpen ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      role="switch"
+                      aria-checked={computedKioskOpen}
+                      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${computedKioskOpen ? "bg-neutral-900" : "bg-neutral-200"}`}
                       aria-label="Toggle Kiosk Manual Status"
                     >
                       <div
@@ -2216,7 +2224,9 @@ const App: React.FC = () => {
                           !kioskAutoTiming,
                         )
                       }
-                      className={`w-16 h-8 rounded-full transition-all relative ${kioskAutoTiming ? "bg-neutral-900" : "bg-neutral-200"}`}
+                      role="switch"
+                      aria-checked={kioskAutoTiming}
+                      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${kioskAutoTiming ? "bg-neutral-900" : "bg-neutral-200"}`}
                       aria-label="Toggle Kiosk Auto-Timing"
                     >
                       <div
@@ -2478,7 +2488,9 @@ const App: React.FC = () => {
                                       );
                                       updateCards(updated);
                                     }}
-                                    className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all mx-auto relative ${card.isAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
+                                    role="switch"
+                                    aria-checked={card.isAdmin}
+                                    className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all mx-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${card.isAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
                                     aria-label="Toggle Admin Privileges"
                                   >
                                     <div
@@ -2645,7 +2657,9 @@ const App: React.FC = () => {
                       <div className="flex items-center gap-3 py-2">
                         <button
                           onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
-                          className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all relative ${newCardIsAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
+                          role="switch"
+                          aria-checked={newCardIsAdmin}
+                          className={`w-10 h-5 md:w-12 md:h-6 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${newCardIsAdmin ? "bg-neutral-900" : "bg-neutral-200"}`}
                           aria-label="Toggle Admin Privileges for new card"
                         >
                           <div
