@@ -17,3 +17,6 @@
 ## 2025-03-31 - Preventing Full App 1-Second Re-renders
 **Learning:** Keeping a `systemTime` state updated via a 1-second interval at the top-level of a complex React app causes the entire tree to re-render 60 times a minute. This wastes CPU and causes UI stuttering.
 **Action:** Extract rapidly updating states (like a live clock) into isolated micro-components (e.g., `<SystemClock />`) and memoize time-based computations (e.g., `useMemo` on a 60-second tick) so the main app only re-renders when necessary.
+## 2026-04-02 - Expression Indexing for Case-Insensitive Lookups
+**Learning:** Changing database schema queries from `LOWER(col) = ?` to `col = ?` to enable indexing can introduce critical regressions if existing database records contain unnormalized (e.g., mixed-case) data that requires the lowercase cast to match successfully.
+**Action:** Use an SQLite expression index (e.g., `CREATE INDEX ON table(LOWER(column))`) to achieve O(1) performance for case-insensitive queries while safely maintaining full backward compatibility with any unnormalized historical data.

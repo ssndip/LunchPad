@@ -75,6 +75,9 @@ db.exec(`
   -- ⚡ Bolt: Indexes for O(1) descending sorts
   CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
+
+  -- ⚡ Bolt: Expression index for O(1) lookup on cards by lowercase RFID
+  CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
 `);
 
 // --- Settings Cache ---
