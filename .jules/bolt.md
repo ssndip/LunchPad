@@ -21,3 +21,7 @@
 ## 2024-05-28 - Indexing Expression Functions in SQLite
 **Learning:** Queries that use functions on columns in the `WHERE` clause (like `WHERE LOWER(rfid) = ?`) bypass standard column indexes (like a `PRIMARY KEY` on `rfid`), resulting in a full table scan (`SCAN table`).
 **Action:** Always add expression-based indexes (e.g., `CREATE INDEX ON table(LOWER(column))`) when querying with functions to ensure O(1) or O(log N) lookup time instead of O(N) table scans.
+
+## 2026-04-03 - O(N) Database Lookups Without Indexes
+**Learning:** Using `WHERE date = ?` and `WHERE rfid = ?` on unindexed tables (`orders`) leads to O(N) full table scans. As the transaction log grows, the `/api/history` and `/api/summaries` routes become severe performance bottlenecks.
+**Action:** Add B-Tree indexes (`CREATE INDEX IF NOT EXISTS`) on frequently filtered columns to reduce lookup complexity from O(N) to O(log N).

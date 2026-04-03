@@ -78,6 +78,10 @@ db.exec(`
 
   -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
   CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
+
+  -- ⚡ Bolt: Indexes for O(log N) lookups on frequently queried fields in history and summaries
+  CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date);
+  CREATE INDEX IF NOT EXISTS idx_orders_rfid ON orders(rfid);
 `);
 
 // --- Settings Cache ---
