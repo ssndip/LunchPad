@@ -15,3 +15,7 @@
 **Vulnerability:** The `requireAuth` middleware in `server.ts` was accepting the admin PIN via the URL query string (`req.query.pin`), which can lead to the sensitive credential being logged in server access logs, proxy logs, and browser history.
 **Learning:** Accepting authentication credentials (such as PINs, tokens, or passwords) via URL parameters exposes them to unintended logging mechanisms and potential leakage to third parties. Credentials should always be transmitted via HTTP headers (e.g., Authorization or custom headers like `x-admin-pin`) or in the request body for POST requests.
 **Prevention:** Always enforce the use of HTTP headers for transmitting authentication credentials and remove fallback mechanisms that check URL query parameters.
+## 2024-06-25 - Fix CORS Origin Bypass Vulnerability
+**Vulnerability:** The CORS origin check `isLocalOrigin` allowed bypass via domains like `10.evil.com` because it only checked `hostname.startsWith('10.')` without verifying if the domain was actually an IP address. Additionally, the fallback behavior allowed access on parsing errors.
+**Learning:** String matching on domain names (like `.startsWith()`) is dangerous for origin validation as it can easily be bypassed with crafted subdomains or domain combinations.
+**Prevention:** Always parse IPs or use strict regex/`net.isIPv4` before checking subnets, and ensure default behavior on parsing errors is to deny access (`return false`).
