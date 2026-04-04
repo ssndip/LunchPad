@@ -3,6 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import path from "path";
+import net from "net";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
@@ -136,25 +137,28 @@ const isLocalOrigin = (origin?: string): boolean => {
     const u = new URL(origin);
     const hostname = u.hostname;
     // Localhost / Loopback
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '0.0.0.0') return true;
+    if (hostname === 'localhost' || hostname === '[::1]') return true;
     
-    // Private IP Ranges
-    // 192.168.x.x
-    if (hostname.startsWith('192.168.')) return true;
-    // 10.x.x.x
-    if (hostname.startsWith('10.')) return true;
-    // 172.16.x.x to 172.31.x.x
-    if (hostname.startsWith('172.')) {
-      const parts = hostname.split('.');
-      if (parts.length >= 2) {
-        const secondOctet = parseInt(parts[1], 10);
-        if (secondOctet >= 16 && secondOctet <= 31) return true;
+    if (net.isIPv4(hostname)) {
+      if (hostname === '127.0.0.1' || hostname === '0.0.0.0') return true;
+      // Private IP Ranges
+      // 192.168.x.x
+      if (hostname.startsWith('192.168.')) return true;
+      // 10.x.x.x
+      if (hostname.startsWith('10.')) return true;
+      // 172.16.x.x to 172.31.x.x
+      if (hostname.startsWith('172.')) {
+        const parts = hostname.split('.');
+        if (parts.length >= 2) {
+          const secondOctet = parseInt(parts[1], 10);
+          if (secondOctet >= 16 && secondOctet <= 31) return true;
+        }
       }
     }
     // Docker / Internal service names (e.g., 'lunchpad')
     if (!hostname.includes('.')) return true;
   } catch (e) {
-    return true; // If we can't parse it, better to allow it by default in this kiosk context
+    return false; // Don't allow by default on error to prevent bypasses
   }
   return false;
 };
