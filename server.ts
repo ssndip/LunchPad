@@ -550,6 +550,35 @@ export async function startServer() {
       next(err);
     }
   });
+  
+  // Feature 3: Scan-to-Load Profile (Balance + History)
+  app.get("/api/cards/:rfid/profile", (req, res, next) => {
+    try {
+      const { rfid } = req.params;
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      
+      const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
+      if (!card) return res.status(404).json({ error: "Card not found" });
+
+      const orders = db.prepare("SELECT * FROM orders WHERE LOWER(rfid) = ? ORDER BY timestamp DESC LIMIT 5").all(cleanRfid) as any[];
+      const parsedOrders = orders.map(o => ({
+        ...o,
+        items: o.items ? JSON.parse(o.items) : []
+      }));
+
+      res.json({
+        rfid: card.rfid,
+        ownerName: card.ownerName,
+        balance: card.balance,
+        isAdmin: card.isAdmin === 1,
+        recentOrders: parsedOrders
+      });
+    } catch (err: any) {
+      console.error("[Profile Fetch Error]", err);
+      next(err);
+    }
+  });
+
   // Order Processing
   app.post("/api/v1/order", (req, res, next) => {
     try {
