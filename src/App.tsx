@@ -237,6 +237,13 @@ export default function App() {
               navigator.clipboard.writeText(text);
               alert('Summary copied to clipboard');
             }}
+            onResetHistory={async () => {
+              if (s.adminPin) {
+                await api.resetOrders(s.adminPin);
+                s.setOrders([]);
+                s.setSummaries([]);
+              }
+            }}
             t={t}
           />
         )}
@@ -261,6 +268,12 @@ export default function App() {
               if (s.adminPin) {
                 await api.updateCards(s.adminPin, newCards);
                 s.setCards(newCards);
+              }
+            }}
+            onDeleteAllCards={async () => {
+              if (s.adminPin) {
+                await api.deleteAllCards(s.adminPin);
+                fetchCards();
               }
             }}
             onRemoveCard={async (rfid) => {

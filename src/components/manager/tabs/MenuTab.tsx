@@ -66,7 +66,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           {editingMenu.length > 0 && (
             <button
               onClick={() => {
-                if (window.confirm(t('modals.reset_warning'))) {
+                if (window.confirm(t('modals.delete_menu_warning'))) {
                   onDeleteAll();
                 }
               }}

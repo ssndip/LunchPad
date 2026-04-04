@@ -117,6 +117,9 @@ export const translations = {
       remove_item_warning: "Are you sure you want to remove this item from the menu? This cannot be undone.",
       remove: "Remove",
       overwrite_warning: "This will overwrite your current menu with the new items. Are you sure?",
+      delete_menu_warning: "Are you sure you want to delete the entire menu? This cannot be undone.",
+      delete_cards_warning: "Are you sure you want to delete all registered cards? This will clear the entire user registry.",
+      reset_history_warning: "This will permanently delete all order history and daily summaries. Are you sure?",
     },
     filters: {
       start_date: "Start Date",
@@ -272,6 +275,9 @@ export const translations = {
       remove_item_warning: "Сигурни ли сте, че искате да премахнете този артикул от менюто? Това действие не може да бъде отменено.",
       remove: "Премахни",
       overwrite_warning: "Това ще замени текущото меню с новите артикули. Сигурни ли сте?",
+      delete_menu_warning: "Сигурни ли сте, че искате да изтриете цялото меню? Това действие не може да бъде отменено.",
+      delete_cards_warning: "Сигурни ли сте, че искате да изтриете всички регистрирани карти? Това ще изчисти целия регистър на потребители.",
+      reset_history_warning: "Това ще изтрие за постоянно цялата история на поръчките и дневните отчети. Сигурни ли сте?",
     },
     filters: {
       start_date: "Начална дата",

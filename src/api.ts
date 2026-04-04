@@ -68,6 +68,14 @@ export const fetchSummaries = async (pin: string) => {
   return res.json();
 };
 
+export const resetOrders = async (pin: string): Promise<void> => {
+  const res = await fetch('/api/orders/reset', {
+    method: 'POST',
+    headers: authHeaders(pin),
+  });
+  if (!res.ok) throw new Error('Failed to reset orders');
+};
+
 export const fetchDailySummaryDetails = async (pin: string, date: string) => {
   const res = await fetch(`/api/summaries/${date}`, { headers: authHeaders(pin) });
   if (!res.ok) throw new Error('Failed to fetch daily details');
@@ -152,6 +160,13 @@ export const updateCards = async (pin: string, cards: Card[]): Promise<void> => 
 export const resetAllBalances = async (pin: string): Promise<void> => {
   await fetch('/api/cards/reset-all', {
     method: 'POST',
+    headers: authHeaders(pin),
+  });
+};
+
+export const deleteAllCards = async (pin: string): Promise<void> => {
+  await fetch('/api/cards', {
+    method: 'DELETE',
     headers: authHeaders(pin),
   });
 };

@@ -9,6 +9,7 @@ interface CardsTabProps {
   onRemoveCard: (rfid: string) => void;
   onResetCardBalance: (rfid: string) => void;
   onResetAllBalances: () => void;
+  onDeleteAllCards: () => void;
   onAddManualCard: () => void;
   onBatchAddCards: () => void;
   // New card form
@@ -35,6 +36,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   onRemoveCard,
   onResetCardBalance,
   onResetAllBalances,
+  onDeleteAllCards,
   onAddManualCard,
   onBatchAddCards,
   newCardRfid,
@@ -68,9 +70,20 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           <button
             onClick={onResetAllBalances}
             tabIndex={-1}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm"
+            className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm shadow-sm"
           >
-            <Trash2 className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
+            <RotateCcw className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(t('modals.delete_cards_warning'))) {
+                onDeleteAllCards();
+              }
+            }}
+            tabIndex={-1}
+            className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all text-sm shadow-md shadow-red-100"
+          >
+            <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
           </button>
           <button
             onClick={() => setIsPasteCardsModalOpen(true)}

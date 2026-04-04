@@ -44,7 +44,7 @@ export interface UserProfile {
   ownerName: string;
   balance: number;
   isAdmin?: boolean;
-  orders: Order[];
+  recentOrders: Order[]; // Feature 3: history from /profile endpoint
 }
 
 export type AppState = 'kiosk' | 'manager';

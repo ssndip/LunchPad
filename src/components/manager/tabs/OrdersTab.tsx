@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { DailySummary } from '../../../types';
 
 interface OrdersTabProps {
@@ -9,6 +9,7 @@ interface OrdersTabProps {
   dailyDetails: Array<{ category: string; name: string; quantity: number; price: number; total: number }>;
   onExpandDate: (date: string) => void;
   onCopySummary: (date: string, total: number) => void;
+  onResetHistory: () => void;
   t: (key: string) => string;
 }
 
@@ -18,6 +19,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   dailyDetails,
   onExpandDate,
   onCopySummary,
+  onResetHistory,
   t,
 }) => {
   return (
@@ -31,6 +33,19 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             {t('orders.performance_subtitle')}
           </p>
         </div>
+        {summaries.length > 0 && (
+          <button
+            onClick={() => {
+              if (window.confirm(t('modals.reset_history_warning'))) {
+                onResetHistory();
+              }
+            }}
+            tabIndex={-1}
+            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all text-sm shadow-lg shadow-red-100 active:scale-95"
+          >
+            <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Reset History'}
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">

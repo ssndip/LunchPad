@@ -493,6 +493,20 @@ export async function startServer() {
     }
   });
 
+  // Delete all cards (Clear registry)
+  app.delete("/api/cards", requireAuth, (req, res, next) => {
+    try {
+      db.prepare("DELETE FROM cards").run();
+      initTestAdmin(); // Ensure test admin persists
+      const updated = getCards();
+      broadcast({ type: "CARDS_UPDATE" });
+      res.json({ success: true, cards: updated });
+    } catch (err: any) {
+      console.error("[Card Delete All Error]", err);
+      next(err);
+    }
+  });
+
   // Update all cards (bulk update/replace)
   app.post("/api/cards/update", requireAuth, (req, res, next) => {
     try {

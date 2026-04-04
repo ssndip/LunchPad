@@ -1,9 +1,8 @@
 /**
- * Feature 3 — User History & Balance Modal
- * Activated by the "User Balance" button on the kiosk screen.
- * Listens for an RFID scan and shows the cardholder's balance + recent orders.
+ * UserHistoryModal — Feature 3: User history and balance screen.
+ * Simplified to use centralized RFID flow from KioskView.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CreditCard, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { UserProfile } from '../../types';
@@ -12,38 +11,35 @@ import * as api from '../../api';
 interface UserHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  scannedRfid?: string; // Feature 3: Passed from KioskView on scan
   t: (key: string) => string;
 }
 
 export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   isOpen,
   onClose,
+  scannedRfid,
   t,
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rfidInput, setRfidInput] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus the hidden input when modal opens
+  // Clear or load based on rfid
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    if (scannedRfid) {
+      handleLoadProfile(scannedRfid);
+    } else {
       setProfile(null);
       setError(null);
-      setRfidInput('');
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isOpen, scannedRfid]);
 
-  const handleScan = async (rawValue: string) => {
-    const rfid = rawValue.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
-    if (!rfid || rfid.length < 4) return;
-
+  const handleLoadProfile = async (rfid: string) => {
     setLoading(true);
     setError(null);
     setProfile(null);
-    setRfidInput('');
 
     try {
       const data = await api.fetchCardProfile(rfid);
@@ -98,39 +94,16 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             </div>
 
             <div className="p-8">
-              {/* Hidden RFID capture input — always focused */}
-              <div className="relative mb-6">
-                <div
-                  className={`flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all ${
-                    loading
-                      ? 'border-neutral-300 bg-neutral-50'
-                      : 'border-dashed border-neutral-300 bg-neutral-50 hover:border-neutral-500'
-                  }`}
-                  onClick={() => inputRef.current?.focus()}
-                >
-                  <CreditCard
-                    className={`w-5 h-5 shrink-0 ${loading ? 'animate-pulse text-neutral-400' : 'text-neutral-400'}`}
-                  />
-                  <input
-                    ref={inputRef}
-                    value={rfidInput}
-                    onChange={(e) => setRfidInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleScan(e.currentTarget.value);
-                      }
-                    }}
-                    placeholder={t('kiosk.user_history_scan_prompt')}
-                    className="flex-1 bg-transparent border-none focus:outline-none font-mono text-sm text-neutral-700 placeholder:text-neutral-400"
-                    autoComplete="off"
-                  />
-                  {loading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400 shrink-0" />}
+              {/* Load state indicator */}
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                   <Loader2 className="w-10 h-10 animate-spin text-neutral-300 mb-4" />
+                   <p className="text-neutral-400 text-sm font-medium italic">{t('navigation.network_error') || 'Loading profile...'}</p>
                 </div>
-              </div>
+              )}
 
               {/* Error state */}
-              {error && (
+              {error && !loading && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -142,7 +115,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               )}
 
               {/* Profile result */}
-              {profile && (
+              {profile && !loading && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -175,13 +148,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   </div>
 
                   {/* Recent orders */}
-                  {Array.isArray(profile.orders) && profile.orders.length > 0 ? (
+                  {Array.isArray(profile.recentOrders) && profile.recentOrders.length > 0 ? (
                     <div>
                       <p className="text-[10px] font-bold font-mono uppercase tracking-widest text-neutral-400 mb-3">
                         {t('kiosk.recent_orders')}
                       </p>
                       <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
-                        {profile.orders.map((order) => (
+                        {profile.recentOrders.map((order) => (
                           <div
                             key={order.id}
                             className="flex items-center justify-between py-3 px-4 bg-neutral-50 rounded-xl border border-neutral-100"
@@ -215,7 +188,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               )}
 
               {/* Initial prompt */}
-              {!loading && !profile && !error && (
+              {!loading && !profile && (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CreditCard className="w-8 h-8 text-neutral-400" />

@@ -73,17 +73,31 @@ export const KioskView: React.FC<KioskViewProps> = ({
 }) => {
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
+  const [historyScanRfid, setHistoryScanRfid] = useState<string | undefined>(undefined);
   const [sidePicker, setSidePicker] = useState<MenuItem | null>(null);
 
-  // Feature 2: Global RFID scan-to-order listener
-  // Only active when there are items in the cart and the user history modal is closed
+  // Feature 2 & 3: Unified RFID scanner logic
   useRfidScanner({
-    active: selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled,
-    onScan: (rfid) => {
-      setRfid(rfid);
-      onOrder(rfid);
+    active: true, // Always listen while in Kiosk mode
+    onScan: (scanned) => {
+      if (selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled) {
+        // Place order if items selected
+        setRfid(scanned);
+        onOrder(scanned);
+      } else {
+        // Show profile if cart empty or modal already open
+        setRfid(scanned);
+        setHistoryScanRfid(scanned);
+        setUserHistoryOpen(true);
+      }
     },
   });
+
+  // Reset modal-specific scan when closed
+  const handleCloseHistory = () => {
+    setUserHistoryOpen(false);
+    setHistoryScanRfid(undefined);
+  };
 
   // Intercept toggleItem — open SideDishPicker for main dishes
   const handleToggle = (item: MenuItem) => {
@@ -230,7 +244,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
       {/* Feature 3: User history modal */}
       <UserHistoryModal
         isOpen={userHistoryOpen}
-        onClose={() => setUserHistoryOpen(false)}
+        onClose={handleCloseHistory}
+        scannedRfid={historyScanRfid}
         t={t}
       />
     </div>
