@@ -67,14 +67,12 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         <div className="flex flex-wrap gap-3">
           <button
             onClick={onResetAllBalances}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm"
           >
             <Trash2 className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
           </button>
           <button
             onClick={() => setIsPasteCardsModalOpen(true)}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm"
           >
             <Plus className="w-4 h-4" /> {t('cards.import_cards')}
@@ -182,7 +180,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             <div className="space-y-4">
               <button
                 onClick={() => { setIsScanning(true); managerRfidRef.current?.focus(); }}
-                tabIndex={-1}
                 className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-2 ${isScanning ? 'bg-neutral-900 text-white border-neutral-900 ring-4 ring-neutral-100' : 'bg-white text-neutral-900 border-neutral-200 hover:border-neutral-900'}`}
               >
                 <CreditCard className={`w-4 h-4 ${isScanning ? 'animate-pulse' : ''}`} />
@@ -250,7 +247,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               <button
                 onClick={onAddManualCard}
                 disabled={!newCardRfid || !newCardOwner}
-                tabIndex={-1}
                 className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 disabled:opacity-50 transition-all"
               >
                 {t('cards.add_new_card')}
