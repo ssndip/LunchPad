@@ -346,20 +346,12 @@ export default function App() {
             testModeEnabled={s.testModeEnabled}
             kioskOpen={s.kioskOpen}
             computedKioskOpen={s.computedKioskOpen}
-            kioskAutoTiming={s.kioskAutoTiming}
-            kioskOpenTime={s.kioskOpenTime}
-            kioskCloseTime={s.kioskCloseTime}
-            kioskCloseDay={s.kioskCloseDay}
             newPin={s.newPin}
             setNewPin={s.setNewPin}
             confirmPin={s.confirmPin}
             setConfirmPin={s.setConfirmPin}
             pinUpdateStatus={s.pinUpdateStatus}
-            onUpdateSettings={(acc, ord, tst, auto, oTime, cTime, cDay) => {
-              if (auto !== undefined) s.setKioskAutoTiming(auto);
-              if (oTime !== undefined) s.setKioskOpenTime(oTime);
-              if (cTime !== undefined) s.setKioskCloseTime(cTime);
-              if (cDay !== undefined) s.setKioskCloseDay(cDay);
+            onUpdateSettings={(acc, ord, tst) => {
               handleUpdateSettings(acc, ord, tst);
             }}
             onToggleKiosk={handleToggleKioskManual}
@@ -404,14 +396,13 @@ export default function App() {
       orderButtonEnabled={s.orderButtonEnabled}
       testModeEnabled={s.testModeEnabled}
       computedKioskOpen={s.computedKioskOpen}
-      kioskAutoTiming={s.kioskAutoTiming}
-      kioskCloseTime={s.kioskCloseTime}
       lang={s.lang}
       onToggleItem={handleToggleItem}
       onAddWithSide={handleAddWithSide}
       onOrder={handleOrder}
       onClearCart={s.resetCart}
       onGoToManager={() => s.setMode('manager')}
+      onToggleKiosk={handleToggleKioskManual}
       t={t}
     />
   );

@@ -13,10 +13,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- Database Setup ---
-const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+const DEFAULT_PROD_DIR = '/app/data';
+let DB_DIR = '.';
+
+if (process.env.NODE_ENV === 'production') {
+  if (fs.existsSync(DEFAULT_PROD_DIR)) {
+    DB_DIR = DEFAULT_PROD_DIR;
+  } else {
+    try {
+      fs.mkdirSync(DEFAULT_PROD_DIR, { recursive: true });
+      DB_DIR = DEFAULT_PROD_DIR;
+    } catch (e) {
+      console.warn(`[DB] Production data dir ${DEFAULT_PROD_DIR} not writable, falling back to local '.'`);
+      DB_DIR = '.';
+    }
+  }
 }
+
 const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
 console.log(`[DB] Initializing database at: ${dbPath}`);
 export const db = new Database(dbPath);

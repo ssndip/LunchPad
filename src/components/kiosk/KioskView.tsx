@@ -1,14 +1,10 @@
 /**
  * KioskView — Root kiosk screen.
  * Orchestrates: header, menu grid, order bar, side picker, user history modal.
- * Feature 1: h-[100dvh] overflow-hidden, inner grid scrolls.
- * Feature 2: useRfidScanner global listener fires handleOrder automatically.
- * Feature 3: User history modal.
- * Feature 5: SideDishPicker intercept.
  */
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, CreditCard, Users } from 'lucide-react';
+import { Settings, AlertCircle, LogOut, Users } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { Language } from '../../translations';
 import { KioskMenuGrid } from './KioskMenuGrid';
@@ -34,8 +30,6 @@ interface KioskViewProps {
   orderButtonEnabled: boolean;
   testModeEnabled: boolean;
   computedKioskOpen: boolean;
-  kioskAutoTiming: boolean;
-  kioskCloseTime: string;
   lang: Language;
   // Actions
   onToggleItem: (item: MenuItem) => void;
@@ -43,6 +37,7 @@ interface KioskViewProps {
   onOrder: (rfidOverride?: string) => void;
   onClearCart: () => void;
   onGoToManager: () => void;
+  onToggleKiosk: (open: boolean) => void;
   t: (key: string) => string;
 }
 
@@ -61,14 +56,13 @@ export const KioskView: React.FC<KioskViewProps> = ({
   orderButtonEnabled,
   testModeEnabled,
   computedKioskOpen,
-  kioskAutoTiming,
-  kioskCloseTime,
   lang,
   onToggleItem,
   onAddWithSide,
   onOrder,
   onClearCart,
   onGoToManager,
+  onToggleKiosk,
   t,
 }) => {
   const rfidInputRef = useRef<HTMLInputElement>(null);
@@ -78,14 +72,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   // Feature 2 & 3: Unified RFID scanner logic
   useRfidScanner({
-    active: true, // Always listen while in Kiosk mode
+    active: true,
     onScan: (scanned) => {
       if (selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled) {
-        // Place order if items selected
         setRfid(scanned);
         onOrder(scanned);
       } else {
-        // Show profile if cart empty or modal already open
         setRfid(scanned);
         setHistoryScanRfid(scanned);
         setUserHistoryOpen(true);
@@ -93,13 +85,11 @@ export const KioskView: React.FC<KioskViewProps> = ({
     },
   });
 
-  // Reset modal-specific scan when closed
   const handleCloseHistory = () => {
     setUserHistoryOpen(false);
     setHistoryScanRfid(undefined);
   };
 
-  // Intercept toggleItem — open SideDishPicker for main dishes
   const handleToggle = (item: MenuItem) => {
     const isSelected = selectedItemIds.has(item.id);
     if (!isSelected && item.hasIncludedSide && sideItems.length > 0) {
@@ -116,17 +106,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
     setSidePicker(null);
   };
 
-  // Date display
   const displayDate = (() => {
-    const now = new Date();
-    const currentHHmm =
-      now.getHours().toString().padStart(2, '0') +
-      ':' +
-      now.getMinutes().toString().padStart(2, '0');
-    const target = new Date(now);
-    if (kioskAutoTiming && currentHHmm >= kioskCloseTime) {
-      target.setDate(now.getDate() + 1);
-    }
+    const target = new Date();
     return target.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', {
       weekday: 'long',
       day: 'numeric',
@@ -135,16 +116,13 @@ export const KioskView: React.FC<KioskViewProps> = ({
   })();
 
   return (
-    /* Feature 1: Full-viewport lock — no outer scroll */
     <div className="h-[100dvh] overflow-hidden bg-[#F8F9FA] flex flex-col relative font-sans">
-      {/* Decorative background blobs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-20">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neutral-300 rounded-full blur-[140px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-neutral-200 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2" />
       </div>
 
       <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
         <header className="shrink-0 flex justify-between items-center px-4 md:px-8 py-4">
           <div className="flex flex-wrap items-baseline gap-3">
             <h1 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase leading-none">
@@ -153,19 +131,28 @@ export const KioskView: React.FC<KioskViewProps> = ({
             <span className="text-lg font-mono text-neutral-400 uppercase tracking-tight leading-none hidden sm:block">
               {displayDate}
             </span>
-            {kioskAutoTiming && (
-              <span className="text-[10px] font-bold px-3 py-1 bg-white text-neutral-500 rounded-full border border-neutral-200 uppercase tracking-widest shadow-sm">
-                {t('kiosk.orders_for')}
-              </span>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Feature 3: User history button */}
+            {/* Kiosk Status Toggle */}
+            <button
+              onClick={() => onToggleKiosk(!computedKioskOpen)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all active:scale-95 shadow-sm hover:shadow-md ${
+                computedKioskOpen 
+                  ? 'bg-green-50 border-green-200 text-green-700' 
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}
+              title={computedKioskOpen ? "Kiosk is OPEN" : "Kiosk is CLOSED"}
+            >
+              <div className={`w-2 h-2 rounded-full ${computedKioskOpen ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+              <span className="text-[10px] font-black uppercase tracking-wider">
+                {computedKioskOpen ? t('settings.kiosk_open') : t('settings.kiosk_closed')}
+              </span>
+            </button>
+
             <button
               onClick={() => setUserHistoryOpen(true)}
               className="group flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
-              title="Check balance & history"
               aria-label="User Balance & History"
             >
               <Users className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 transition-colors" />
@@ -174,11 +161,9 @@ export const KioskView: React.FC<KioskViewProps> = ({
               </span>
             </button>
 
-            {/* Manager link */}
             <button
               onClick={onGoToManager}
               className="group p-2 rounded-xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-all active:scale-95"
-              title="Manager Settings"
               aria-label="Manager Settings"
             >
               <Settings className="w-4 h-4 text-neutral-400 group-hover:text-neutral-900 transition-colors" />
@@ -186,7 +171,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
           </div>
         </header>
 
-        {/* Menu grid — scrolls inside, Feature 1 */}
         <KioskMenuGrid
           groupedMenu={groupedMenu}
           selectedItemIds={selectedItemIds}
@@ -196,7 +180,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
           t={t}
         />
 
-        {/* Order bar — shrink-0, never scrolls */}
         <KioskOrderBar
           selectedItems={selectedItems}
           totalPrice={totalPrice}
@@ -213,10 +196,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
         />
       </div>
 
-      {/* Success overlay */}
       <OrderSuccessOverlay show={showSuccess} t={t} />
 
-      {/* Error toast */}
       <AnimatePresence>
         {error && (
           <motion.div
@@ -231,7 +212,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Feature 5: Side dish picker */}
       {sidePicker && (
         <SideDishPicker
           item={sidePicker}
@@ -241,7 +221,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
         />
       )}
 
-      {/* Feature 3: User history modal */}
       <UserHistoryModal
         isOpen={userHistoryOpen}
         onClose={handleCloseHistory}
@@ -252,13 +231,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   );
 };
 
-// ─── Closed kiosk screen ──────────────────────────────────────────────────────
-interface KioskClosedProps {
-  onGoToManager: () => void;
-  t: (key: string) => string;
-}
-
-export const KioskClosed: React.FC<KioskClosedProps> = ({ onGoToManager, t }) => (
+export const KioskClosed: React.FC<{ onGoToManager: () => void; t: (key: string) => string }> = ({ onGoToManager, t }) => (
   <div className="h-[100dvh] overflow-hidden bg-neutral-100 flex items-center justify-center p-8">
     <div className="bg-white p-12 rounded-[40px] shadow-2xl text-center max-w-lg w-full">
       <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-8">

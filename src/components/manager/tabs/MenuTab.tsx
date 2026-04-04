@@ -38,8 +38,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
   const handleApply = () => {
     if (!parsed || parsed.items.length === 0) return;
-    // Explicitly confirm overwriting if there is an existing menu
-    if (editingMenu.length > 0 && !window.confirm(t('modals.overwrite_warning'))) return;
     onApplyMenu(parsed.items);
     setIsPasteOpen(false);
     setPasteText('');
@@ -71,7 +69,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 }
               }}
               tabIndex={-1}
-              className="flex items-center gap-2 px-5 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all text-sm"
+              className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all text-sm shadow-lg shadow-red-100 active:scale-95"
             >
               <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
             </button>

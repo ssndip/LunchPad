@@ -58,10 +58,6 @@ export function useAppState() {
   const [orderButtonEnabled, setOrderButtonEnabled] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [kioskOpen, setKioskOpen] = useState(false);
-  const [kioskAutoTiming, setKioskAutoTiming] = useState(true);
-  const [kioskOpenTime, setKioskOpenTime] = useState('08:00');
-  const [kioskCloseTime, setKioskCloseTime] = useState('11:00');
-  const [kioskCloseDay, setKioskCloseDay] = useState(0); // 0 = today, 1 = tomorrow
 
   // PIN Change Form
   const [newPin, setNewPin] = useState('');
@@ -102,19 +98,7 @@ export function useAppState() {
    * Determines if the kiosk is currently open based on either manual toggle
    * or automated timing logic.
    */
-  const computedKioskOpen = useMemo(() => {
-    if (!kioskAutoTiming) return kioskOpen;
-    
-    const now = new Date();
-    const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-    
-    // Auto-close logic
-    if (currentHHmm >= kioskCloseTime) return false;
-    // Auto-open logic (if current time is before open time, it's also closed)
-    if (currentHHmm < kioskOpenTime) return false;
-    
-    return true;
-  }, [kioskAutoTiming, kioskOpen, kioskOpenTime, kioskCloseTime]);
+  const computedKioskOpen = kioskOpen;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -178,10 +162,6 @@ export function useAppState() {
     orderButtonEnabled, setOrderButtonEnabled,
     testModeEnabled, setTestModeEnabled,
     kioskOpen, setKioskOpen,
-    kioskAutoTiming, setKioskAutoTiming,
-    kioskOpenTime, setKioskOpenTime,
-    kioskCloseTime, setKioskCloseTime,
-    kioskCloseDay, setKioskCloseDay,
     newPin, setNewPin,
     confirmPin, setConfirmPin,
     pinUpdateStatus, setPinUpdateStatus,
