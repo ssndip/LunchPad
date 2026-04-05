@@ -121,11 +121,14 @@ const initSettings = () => {
 };
 
 const initTestAdmin = () => {
-  const existing = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN");
+  const existing = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
   if (!existing) {
     db.prepare("INSERT INTO cards (rfid, ownerName, balance, isAdmin, lastUpdated) VALUES (?, ?, ?, ?, ?)")
-      .run("TEST-ADMIN", "Test Administrator", 999.00, 1, new Date().toISOString());
+      .run("TEST-ADMIN", "Test Administrator", 999.00, 0, new Date().toISOString());
     console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering");
+  } else if (existing.isAdmin === 1) {
+    db.prepare("UPDATE cards SET isAdmin = 0 WHERE rfid = ?").run("TEST-ADMIN");
+    console.log("[DB] Revoked admin rights from TEST-ADMIN card to secure backdoor");
   }
 };
 
