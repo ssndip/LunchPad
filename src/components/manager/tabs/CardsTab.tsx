@@ -67,14 +67,12 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         <div className="flex flex-wrap gap-3">
           <button
             onClick={onResetAllBalances}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm"
           >
             <Trash2 className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
           </button>
           <button
             onClick={() => setIsPasteCardsModalOpen(true)}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm"
           >
             <Plus className="w-4 h-4" /> {t('cards.import_cards')}
@@ -136,7 +134,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                         <button
                           onClick={() => onUpdateCards(cards.map((c) => c.rfid === card.rfid ? { ...c, isAdmin: !c.isAdmin } : c))}
                           role="switch" aria-checked={card.isAdmin}
-                          className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${card.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                          className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${card.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
                           aria-label="Toggle Admin"
                         >
                           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${card.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
@@ -182,7 +180,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             <div className="space-y-4">
               <button
                 onClick={() => { setIsScanning(true); managerRfidRef.current?.focus(); }}
-                tabIndex={-1}
                 className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-2 ${isScanning ? 'bg-neutral-900 text-white border-neutral-900 ring-4 ring-neutral-100' : 'bg-white text-neutral-900 border-neutral-200 hover:border-neutral-900'}`}
               >
                 <CreditCard className={`w-4 h-4 ${isScanning ? 'animate-pulse' : ''}`} />
@@ -239,7 +236,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 <button
                   onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
                   role="switch" aria-checked={newCardIsAdmin}
-                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
                   aria-label="Toggle Admin for new card"
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
@@ -250,7 +247,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               <button
                 onClick={onAddManualCard}
                 disabled={!newCardRfid || !newCardOwner}
-                tabIndex={-1}
                 className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 disabled:opacity-50 transition-all"
               >
                 {t('cards.add_new_card')}

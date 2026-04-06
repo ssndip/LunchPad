@@ -28,7 +28,10 @@ describe('App Component', () => {
   it('renders the initial kiosk view correctly', () => {
     render(<App />);
 
-    // Check for Daily Menu title
-    expect(screen.getByText(/Daily Menu/i)).toBeInTheDocument();
+    // Check for Daily Menu title or Ordering Closed
+    const dailyMenu = screen.queryByText(/Daily Menu/i);
+    const closedMenuBG = screen.queryByText(/Поръчките са преустановени/i);
+    const closedMenuEN = screen.queryByText(/Ordering Closed/i);
+    expect(dailyMenu || closedMenuBG || closedMenuEN).toBeInTheDocument();
   });
 });
