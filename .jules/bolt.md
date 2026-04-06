@@ -21,3 +21,7 @@
 ## 2024-05-28 - Indexing Expression Functions in SQLite
 **Learning:** Queries that use functions on columns in the `WHERE` clause (like `WHERE LOWER(rfid) = ?`) bypass standard column indexes (like a `PRIMARY KEY` on `rfid`), resulting in a full table scan (`SCAN table`).
 **Action:** Always add expression-based indexes (e.g., `CREATE INDEX ON table(LOWER(column))`) when querying with functions to ensure O(1) or O(log N) lookup time instead of O(N) table scans.
+
+## 2024-05-28 - Compound Indexes for Filtering and Sorting
+**Learning:** For queries that filter and sort on different columns (e.g., `WHERE LOWER(rfid) = ? ORDER BY timestamp DESC`), SQLite will only use an index for the filter condition (if available) and then perform a full sort (`USE TEMP B-TREE FOR ORDER BY`).
+**Action:** Always create a compound index encompassing both the filter function/column and the sort direction (e.g., `CREATE INDEX ON orders(LOWER(rfid), timestamp DESC)`) to achieve O(1) filtering and O(1) sorting, eliminating temporary B-trees in large tables.
