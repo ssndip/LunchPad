@@ -15,3 +15,7 @@
 **Vulnerability:** The `requireAuth` middleware in `server.ts` was accepting the admin PIN via the URL query string (`req.query.pin`), which can lead to the sensitive credential being logged in server access logs, proxy logs, and browser history.
 **Learning:** Accepting authentication credentials (such as PINs, tokens, or passwords) via URL parameters exposes them to unintended logging mechanisms and potential leakage to third parties. Credentials should always be transmitted via HTTP headers (e.g., Authorization or custom headers like `x-admin-pin`) or in the request body for POST requests.
 **Prevention:** Always enforce the use of HTTP headers for transmitting authentication credentials and remove fallback mechanisms that check URL query parameters.
+## 2024-05-22 - Prevent hardcoded backdoor in production
+**Vulnerability:** A mock test administrator card with full permissions (`isAdmin=1`) and a high balance was unconditionally seeded in the SQLite database during application initialization, making it available as a backdoor if the code was deployed to a production environment.
+**Learning:** Hardcoded, automatic seeding of admin credentials or test accounts poses a severe business logic vulnerability if deployed to production. Seeding scripts should always respect the environment they are running in.
+**Prevention:** Explicitly guard seed functions for test accounts or admin backdoors using environment variables (e.g., `if (process.env.NODE_ENV === 'production') return;`). Never assume the application will only run in non-production environments.

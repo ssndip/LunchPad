@@ -121,11 +121,12 @@ const initSettings = () => {
 };
 
 const initTestAdmin = () => {
+  if (process.env.NODE_ENV === 'production') return;
   const existing = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN");
   if (!existing) {
     db.prepare("INSERT INTO cards (rfid, ownerName, balance, isAdmin, lastUpdated) VALUES (?, ?, ?, ?, ?)")
       .run("TEST-ADMIN", "Test Administrator", 999.00, 1, new Date().toISOString());
-    console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering");
+    console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering in test/dev environment");
   }
 };
 
