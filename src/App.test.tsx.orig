@@ -26,8 +26,7 @@ global.fetch = vi.fn().mockResolvedValue({
     kioskOpen: false,
     globalAccess: false,
     orderButtonEnabled: true,
-    testModeEnabled: false,
-    kioskAutoTiming: false
+    testModeEnabled: false
   })
 }) as any;
 
@@ -35,6 +34,6 @@ describe('App Component', () => {
   it('renders the initial kiosk view correctly', async () => {
     render(<App />);
 
-    expect(await screen.findByText(/Дневно Меню/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Поръчките са преустановени/i)).toBeInTheDocument();
   });
 });

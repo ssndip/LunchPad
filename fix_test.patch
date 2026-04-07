@@ -1,0 +1,20 @@
+--- src/App.test.tsx
++++ src/App.test.tsx
+@@ -25,7 +25,8 @@
+     kioskOpen: true,
+     globalAccess: true,
+     orderButtonEnabled: true,
+-    testModeEnabled: false,
+-    kioskAutoTiming: false
++    testModeEnabled: false
+   })
+ }) as any;
+
+@@ -35,8 +36,8 @@
+   it('renders the initial kiosk view correctly', async () => {
+     render(<App />);
+
+-    expect(await screen.findByText(/Поръчките са преустановени/i)).toBeInTheDocument();
++    expect(await screen.findByText(/Дневно Меню/i)).toBeInTheDocument();
+   });
+ });

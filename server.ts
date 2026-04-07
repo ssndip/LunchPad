@@ -287,8 +287,12 @@ export async function startServer() {
       return next();
     }
 
+    if (typeof pin !== 'string') {
+      return res.status(400).json({ error: "Invalid PIN format" });
+    }
+
     // Check if the provided pin is a valid RFID of an admin card
-    const cleanRfid = String(pin).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = pin.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
     const adminCard = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ? AND isAdmin = 1").get(cleanRfid);
     
     if (adminCard) {
@@ -486,6 +490,7 @@ export async function startServer() {
   app.delete("/api/cards/:rfid", requireAuth, (req, res, next) => {
     try {
       const { rfid } = req.params;
+      if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid RFID format" });
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
       const updated = getCards();
@@ -544,6 +549,7 @@ export async function startServer() {
   app.post("/api/cards/:rfid/reset", requireAuth, (req, res, next) => {
     try {
       const { rfid } = req.params;
+      if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid RFID format" });
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
       const updated = getCards();
@@ -559,6 +565,7 @@ export async function startServer() {
   app.get("/api/cards/:rfid/profile", (req, res, next) => {
     try {
       const { rfid } = req.params;
+      if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid RFID format" });
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       
       const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
@@ -590,6 +597,7 @@ export async function startServer() {
       if (!rfid || !itemIds || !Array.isArray(itemIds)) {
         return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
       }
+      if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid RFID format" });
       if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
 
       // Match frontend cleaning logic: trim, remove non-printable, lowercase
@@ -723,6 +731,9 @@ export async function startServer() {
     if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
     if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
     if (ownerName) {
+      if (typeof ownerName !== 'string') {
+        return res.status(400).json({ error: "Invalid ownerName format" });
+      }
       sql += " AND ownerName LIKE ? ESCAPE '\\'";
       const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
       params.push(`%${escapedOwnerName}%`);
