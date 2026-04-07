@@ -142,6 +142,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                   <td className="p-5">
                     <button
                       onClick={() => onUpdateItem(item.id, 'available', !item.available)}
+                      role="switch"
+                      aria-checked={item.available}
+                      aria-label={`Toggle availability for ${item.name}`}
                       className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
                         item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                       }`}
