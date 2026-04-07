@@ -77,6 +77,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
 
+  -- ⚡ Bolt: Add index for daily summaries item breakdown O(1) lookup
+  CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date);
+
+  -- ⚡ Bolt: Add compound index for user profile history lookup (O(1) lookup + sort)
+  CREATE INDEX IF NOT EXISTS idx_orders_lower_rfid_timestamp ON orders(LOWER(rfid), timestamp DESC);
+
   -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
   CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
 `);
