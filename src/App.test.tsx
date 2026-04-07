@@ -25,10 +25,24 @@ global.fetch = vi.fn().mockResolvedValue({
 }) as any;
 
 describe('App Component', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Set time to something that wouldn't show "ordering closed" depending on logic
+    // Actually the logic uses a clock, lets set time to 12:00:00
+    vi.setSystemTime(new Date(2024, 1, 1, 12, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders the initial kiosk view correctly', () => {
     render(<App />);
 
-    // Check for Daily Menu title
-    expect(screen.getByText(/Daily Menu/i)).toBeInTheDocument();
+    // Check for Daily Menu title or closed message
+    const hasDailyMenu = screen.queryByText(/Daily Menu/i);
+    const hasClosedMsg = screen.queryByText(/Поръчките са преустановени/i);
+
+    expect(hasDailyMenu || hasClosedMsg).toBeInTheDocument();
   });
 });

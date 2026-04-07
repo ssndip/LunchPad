@@ -426,7 +426,7 @@ export async function startServer() {
         return res.status(400).json({ error: "RFID and ownerName are required" });
       }
       if (typeof rfid !== 'string' || rfid.length > 50) {
-        return res.status(400).json({ error: "Invalid RFID length" });
+        return res.status(400).json({ error: "Invalid RFID type or length" });
       }
       if (typeof ownerName !== 'string' || ownerName.length > 100) {
         return res.status(400).json({ error: "Invalid ownerName length" });
@@ -589,6 +589,9 @@ export async function startServer() {
       const { rfid, itemIds } = req.body;
       if (!rfid || !itemIds || !Array.isArray(itemIds)) {
         return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+      }
+      if (typeof rfid !== 'string') {
+        return res.status(400).json({ error: "Invalid RFID type" });
       }
       if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
 
