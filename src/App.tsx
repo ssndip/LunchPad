@@ -2,7 +2,7 @@
  * App.tsx — Modular Root Component
  * Refactored from 2700 lines to ~300.
  */
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, lazy, Suspense } from 'react';
 import { useAppState } from './hooks/useAppState';
 import { useWebSocket } from './hooks/useWebSocket';
 import { translations } from './translations';
@@ -11,15 +11,15 @@ import { MenuItem, Card, CartItem } from './types';
 
 // Components
 import { KioskView, KioskClosed } from './components/kiosk/KioskView';
-import { ManagerLogin } from './components/manager/ManagerLogin';
-import { ManagerDashboard } from './components/manager/ManagerDashboard';
 
-// Tabs
-import { MenuTab } from './components/manager/tabs/MenuTab';
-import { OrdersTab } from './components/manager/tabs/OrdersTab';
-import { HistoryTab } from './components/manager/tabs/HistoryTab';
-import { CardsTab } from './components/manager/tabs/CardsTab';
-import { SettingsTab } from './components/manager/tabs/SettingsTab';
+// Lazily load Manager Components to reduce initial bundle size for Kiosk view
+const ManagerLogin = lazy(() => import('./components/manager/ManagerLogin').then(m => ({ default: m.ManagerLogin })));
+const ManagerDashboard = lazy(() => import('./components/manager/ManagerDashboard').then(m => ({ default: m.ManagerDashboard })));
+const MenuTab = lazy(() => import('./components/manager/tabs/MenuTab').then(m => ({ default: m.MenuTab })));
+const OrdersTab = lazy(() => import('./components/manager/tabs/OrdersTab').then(m => ({ default: m.OrdersTab })));
+const HistoryTab = lazy(() => import('./components/manager/tabs/HistoryTab').then(m => ({ default: m.HistoryTab })));
+const CardsTab = lazy(() => import('./components/manager/tabs/CardsTab').then(m => ({ default: m.CardsTab })));
+const SettingsTab = lazy(() => import('./components/manager/tabs/SettingsTab').then(m => ({ default: m.SettingsTab })));
 
 export default function App() {
   const s = useAppState();
@@ -178,22 +178,26 @@ export default function App() {
   if (s.mode === 'manager') {
     if (!s.isManagerLoggedIn) {
       return (
-        <ManagerLogin
-          onLogin={(pin) => s.loginManager(pin)}
-          onBack={() => s.setMode('kiosk')}
-          t={t}
-        />
+        <Suspense fallback={<div className="h-[100dvh] bg-neutral-100 flex items-center justify-center">Loading Manager...</div>}>
+          <ManagerLogin
+            onLogin={(pin) => s.loginManager(pin)}
+            onBack={() => s.setMode('kiosk')}
+            t={t}
+          />
+        </Suspense>
       );
     }
 
     return (
-      <ManagerDashboard
+      <Suspense fallback={<div className="h-[100dvh] bg-[#F8F9FA] flex items-center justify-center">Loading Dashboard...</div>}>
+        <ManagerDashboard
         activeTab={s.activeTab}
         onTabChange={s.setActiveTab}
         onLogout={s.logoutManager}
         lang={s.lang}
         t={t}
       >
+        <Suspense fallback={<div className="p-10 text-neutral-500 font-mono text-sm tracking-widest uppercase">Loading section...</div>}>
         {s.activeTab === 'menu' && (
           <MenuTab
             editingMenu={s.menu}
@@ -366,7 +370,9 @@ export default function App() {
             t={t}
           />
         )}
+        </Suspense>
       </ManagerDashboard>
+      </Suspense>
     );
   }
 

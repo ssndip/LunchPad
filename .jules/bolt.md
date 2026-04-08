@@ -21,3 +21,7 @@
 ## 2024-05-28 - Indexing Expression Functions in SQLite
 **Learning:** Queries that use functions on columns in the `WHERE` clause (like `WHERE LOWER(rfid) = ?`) bypass standard column indexes (like a `PRIMARY KEY` on `rfid`), resulting in a full table scan (`SCAN table`).
 **Action:** Always add expression-based indexes (e.g., `CREATE INDEX ON table(LOWER(column))`) when querying with functions to ensure O(1) or O(log N) lookup time instead of O(N) table scans.
+
+## 2025-04-01 - Code Splitting for Kiosk Applications
+**Learning:** Monolithic React bundles in single-page applications that serve both lightweight (Kiosk) and heavyweight (Admin/Manager) user contexts often unnecessarily burden the critical path. Loading administrative tabs for regular users degrades initial load performance.
+**Action:** Use `React.lazy` and `Suspense` to code-split administrative components and tabs out of the main bundle, reducing the initial payload size for default user views while still loading the heavyweight components asynchronously when needed.
