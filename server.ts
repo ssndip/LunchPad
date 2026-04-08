@@ -587,8 +587,8 @@ export async function startServer() {
   app.post("/api/v1/order", (req, res, next) => {
     try {
       const { rfid, itemIds } = req.body;
-      if (!rfid || !itemIds || !Array.isArray(itemIds)) {
-        return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+      if (!rfid || typeof rfid !== 'string' || !itemIds || !Array.isArray(itemIds)) {
+        return res.status(400).json({ error: "Invalid request: Missing or invalid RFID or items" });
       }
       if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed. Please open it from the Admin panel." });
 
@@ -716,6 +716,11 @@ export async function startServer() {
 
   app.get("/api/history", requireAuth, (req, res, next) => {
     const { startDate, endDate, rfid, ownerName } = req.query;
+
+    if (ownerName !== undefined && typeof ownerName !== 'string') {
+      return res.status(400).json({ error: "Invalid ownerName parameter" });
+    }
+
     let sql = "SELECT * FROM orders WHERE 1=1";
     const params: any[] = [];
 
