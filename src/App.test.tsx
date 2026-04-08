@@ -24,11 +24,20 @@ global.fetch = vi.fn().mockResolvedValue({
   json: () => Promise.resolve([])
 }) as any;
 
+// Mock current time to be within kiosk opening hours (09:00 AM)
+vi.useFakeTimers();
+vi.setSystemTime(new Date('2026-04-07T09:00:00Z'));
+
+import { useStore } from './store/useStore';
+
 describe('App Component', () => {
   it('renders the initial kiosk view correctly', () => {
+    // Force the kiosk to be open for the test environment
+    useStore.setState({ kioskOpen: true, kioskAutoTiming: false });
+    
     render(<App />);
 
-    // Check for Daily Menu title
-    expect(screen.getByText(/Daily Menu/i)).toBeInTheDocument();
+    // Check for Daily Menu title (Bulgarian default)
+    expect(screen.getByText(/Дневно меню|Daily Menu/i)).toBeInTheDocument();
   });
 });

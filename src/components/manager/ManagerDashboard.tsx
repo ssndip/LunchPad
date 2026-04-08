@@ -19,6 +19,8 @@ interface ManagerDashboardProps {
   lang: Language;
   t: (key: string) => string;
   children: React.ReactNode;
+  kioskOpen: boolean;
+  onToggleKiosk: (open: boolean) => void;
 }
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
@@ -28,6 +30,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   lang,
   t,
   children,
+  kioskOpen,
+  onToggleKiosk,
 }) => {
   const menuItems = [
     { id: 'menu', icon: MenuIcon, label: t('navigation.menu_management') },
@@ -90,7 +94,26 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden flex flex-col">
         {/* Top Header Shell */}
-        <header className="h-20 bg-white/50 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-end px-10">
+        <header className="h-20 bg-white/50 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-between px-10">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-neutral-100 shadow-sm">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${kioskOpen ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
+                Kiosk: {kioskOpen ? 'Open' : 'Closed'}
+              </span>
+              <button
+                onClick={() => onToggleKiosk(!kioskOpen)}
+                className={`ml-2 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  kioskOpen 
+                    ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                    : 'bg-green-50 text-green-600 hover:bg-green-100'
+                }`}
+              >
+                {kioskOpen ? 'Close' : 'Open'}
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
               {lang === 'bg' ? 'Български' : 'English'}

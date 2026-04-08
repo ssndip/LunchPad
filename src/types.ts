@@ -1,11 +1,22 @@
+export interface ExtraFee {
+  type: string;
+  amount: number;
+}
+
 export interface MenuItem {
   id: number;
   name: string;
-  description?: string; // Optional — Feature 4 often lacks description
-  price: number;
+  description?: string;
+  basePrice: number;        // Feature 7: original price before fees
+  price: number;            // Total price after applied fees
   available: boolean;
   category: string;
-  hasIncludedSide?: boolean; // Feature 5: main dishes that include a side
+  tags: string[];           // Feature 7: tag-based rules (e.g. "bbq", "side")
+  extraFees: ExtraFee[];    // Feature 7: breakout of fees (e.g. container fee)
+  hasIncludedSide?: boolean;
+  requiresSideChoice?: boolean; // Feature 7: trigger side dish selection
+  selectedSide?: string;        // Feature 7: pre-selected side dish name
+  sideChoices?: string[];
 }
 
 // Feature 5: Cart item extends MenuItem with an optional chosen side dish

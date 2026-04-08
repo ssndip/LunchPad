@@ -1,16 +1,23 @@
 /**
- * App.tsx — Modular Root Component
- * Refactored from 2700 lines to ~300.
+ * App.tsx — Modular Root Component refactored to use Zustand
  */
 import { useEffect, useCallback } from 'react';
-import { useAppState } from './hooks/useAppState';
+import { useStore } from './store/useStore';
+import { 
+  useGroupedMenu, 
+  useSideItems, 
+  useTotalPrice, 
+  useSelectedItemIds, 
+  useComputedKioskOpen 
+} from './store/selectors';
 import { useWebSocket } from './hooks/useWebSocket';
 import { translations } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
 
 // Components
-import { KioskView, KioskClosed } from './components/kiosk/KioskView';
+import { KioskView } from './components/kiosk/KioskView';
+import { KioskClosed } from './components/kiosk/KioskView';
 import { ManagerLogin } from './components/manager/ManagerLogin';
 import { ManagerDashboard } from './components/manager/ManagerDashboard';
 
@@ -22,7 +29,15 @@ import { CardsTab } from './components/manager/tabs/CardsTab';
 import { SettingsTab } from './components/manager/tabs/SettingsTab';
 
 export default function App() {
-  const s = useAppState();
+  const s = useStore();
+  
+  // Selectors
+  const groupedMenu = useGroupedMenu();
+  const sideItems = useSideItems();
+  const totalPrice = useTotalPrice();
+  const selectedItemIds = useSelectedItemIds();
+  const computedKioskOpen = useComputedKioskOpen();
+
   const t = (key: string) => {
     const keys = key.split('.');
     let obj: any = translations[s.lang];
@@ -55,7 +70,7 @@ export default function App() {
     onConnectionError: (err) => s.setConnectionError(err),
   });
 
-  // ─── Initial Fetch (Auth protected data if PIN exists) ─────────────────────
+  // ─── Initial Fetch ─────────────────────────────────────────────────────────
   const fetchCards = useCallback(async () => {
     if (!s.adminPin) return;
     try {
@@ -64,11 +79,10 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch cards', err);
     }
-  }, [s.adminPin]);
+  }, [s.adminPin, s.setCards]);
 
   useEffect(() => {
     if (s.isManagerLoggedIn && s.adminPin) {
-      // Sync all manager data when logged in
       fetchCards();
       api.fetchOrders(s.adminPin).then(s.setOrders).catch(console.error);
       api.fetchSummaries(s.adminPin).then(s.setSummaries).catch(console.error);
@@ -78,22 +92,42 @@ export default function App() {
         s.setTestModeEnabled(res.testModeEnabled);
       }).catch(console.error);
     }
-  }, [s.isManagerLoggedIn, s.adminPin, fetchCards]);
+  }, [s.isManagerLoggedIn, s.adminPin, fetchCards, s.setOrders, s.setSummaries, s.setGlobalAccess, s.setOrderButtonEnabled, s.setTestModeEnabled]);
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
   const handleToggleItem = (item: MenuItem) => {
-    const isSelected = s.selectedItemIds.has(item.id);
+    const isSelected = selectedItemIds.has(item.id);
     if (isSelected) {
-      s.setSelectedItems((prev) => prev.filter((i) => i.id !== item.id));
+      s.setSelectedItems(s.selectedItems.filter((i) => i.id !== item.id));
     } else {
-      const cartItem: CartItem = { ...item };
-      s.setSelectedItems((prev) => [...prev, cartItem]);
+      let side: string | undefined = item.selectedSide;
+      
+      // Feature 7: Auto-select fallback if required but not pre-selected
+      if (!side && item.requiresSideChoice && sideItems.length > 0) {
+        const allowedSides = item.sideChoices && item.sideChoices.length > 0
+          ? sideItems.filter(s => item.sideChoices?.includes(s.name))
+          : sideItems;
+        if (allowedSides.length > 0) {
+          side = allowedSides[0].name;
+        }
+      }
+      const cartItem: CartItem = { ...item, side };
+      s.setSelectedItems([...s.selectedItems, cartItem]);
     }
   };
 
   const handleAddWithSide = (item: MenuItem, side?: string) => {
-    const cartItem: CartItem = { ...item, side };
-    s.setSelectedItems((prev) => [...prev, cartItem]);
+    const isSelected = selectedItemIds.has(item.id);
+    if (isSelected) {
+      // Update existing
+      s.setSelectedItems(s.selectedItems.map((i) => 
+        i.id === item.id ? { ...i, side } : i
+      ));
+    } else {
+      // Add new
+      const cartItem: CartItem = { ...item, side };
+      s.setSelectedItems([...s.selectedItems, cartItem]);
+    }
   };
 
   const handleOrder = async (rfidOverride?: string) => {
@@ -128,7 +162,7 @@ export default function App() {
     try {
       await api.updateMenu(s.adminPin, items);
       s.setMenu(items);
-    } catch (err) {
+    } catch {
       alert('Failed to update menu');
     }
   };
@@ -143,7 +177,6 @@ export default function App() {
       item.id === id ? { ...item, [field]: value } : item
     );
     s.setMenu(updated);
-    // Debounce or manual save? Existing App.tsx saved instantly on blur/change
     handleApplyMenu(updated);
   };
 
@@ -159,7 +192,7 @@ export default function App() {
       s.setGlobalAccess(access);
       s.setOrderButtonEnabled(orderBtn);
       if (test !== undefined) s.setTestModeEnabled(test);
-    } catch (err) {
+    } catch {
       alert('Failed to update settings');
     }
   };
@@ -169,7 +202,7 @@ export default function App() {
     try {
       await api.toggleKioskStatus(s.adminPin, open);
       s.setKioskOpen(open);
-    } catch (err) {
+    } catch {
       alert('Failed to update kiosk status');
     }
   };
@@ -193,6 +226,8 @@ export default function App() {
         onLogout={s.logoutManager}
         lang={s.lang}
         t={t}
+        kioskOpen={s.kioskOpen}
+        onToggleKiosk={handleToggleKioskManual}
       >
         {s.activeTab === 'menu' && (
           <MenuTab
@@ -202,9 +237,12 @@ export default function App() {
               const newItem: MenuItem = {
                 id: newId,
                 name: 'New Item',
+                basePrice: 0,
                 price: 0,
                 available: true,
                 category: 'Uncategorized',
+                tags: [],
+                extraFees: [],
               };
               handleApplyMenu([...s.menu, newItem]);
             }}
@@ -244,7 +282,7 @@ export default function App() {
           <HistoryTab
             history={s.orders}
             filters={s.historyFilters}
-            onFilterChange={(k, v) => s.setHistoryFilters(prev => ({ ...prev, [k]: v }))}
+            onFilterChange={(k, v) => s.setHistoryFilters({ ...s.historyFilters, [k]: v })}
             onApplyFilters={async () => {
               if (s.adminPin) {
                 const results = await api.fetchHistory(s.adminPin, s.historyFilters);
@@ -298,11 +336,11 @@ export default function App() {
             onBatchAddCards={async () => {
               if (s.adminPin && s.pasteCardsText) {
                 const lines = s.pasteCardsText.split('\n');
-                const cards: Card[] = lines.map(line => {
+                const cardsToBatch: Card[] = lines.map(line => {
                   const [rfid, ...nameParts] = line.trim().split(/\s+/);
                   return { rfid, ownerName: nameParts.join(' ') || 'User', balance: 0, isAdmin: false };
                 }).filter(c => c.rfid);
-                await api.batchAddCards(s.adminPin, cards);
+                await api.batchAddCards(s.adminPin, cardsToBatch);
                 s.setIsPasteCardsModalOpen(false);
                 s.setPasteCardsText('');
                 fetchCards();
@@ -327,29 +365,18 @@ export default function App() {
         {s.activeTab === 'settings' && (
           <SettingsTab
             lang={s.lang}
-            setLang={s.changeLang}
+            setLang={s.setLang}
             globalAccess={s.globalAccess}
             orderButtonEnabled={s.orderButtonEnabled}
             testModeEnabled={s.testModeEnabled}
-            kioskOpen={s.kioskOpen}
-            computedKioskOpen={s.computedKioskOpen}
-            kioskAutoTiming={s.kioskAutoTiming}
-            kioskOpenTime={s.kioskOpenTime}
-            kioskCloseTime={s.kioskCloseTime}
-            kioskCloseDay={s.kioskCloseDay}
             newPin={s.newPin}
             setNewPin={s.setNewPin}
             confirmPin={s.confirmPin}
             setConfirmPin={s.setConfirmPin}
             pinUpdateStatus={s.pinUpdateStatus}
-            onUpdateSettings={(acc, ord, tst, auto, oTime, cTime, cDay) => {
-              if (auto !== undefined) s.setKioskAutoTiming(auto);
-              if (oTime !== undefined) s.setKioskOpenTime(oTime);
-              if (cTime !== undefined) s.setKioskCloseTime(cTime);
-              if (cDay !== undefined) s.setKioskCloseDay(cDay);
+            onUpdateSettings={(acc, ord, tst) => {
               handleUpdateSettings(acc, ord, tst);
             }}
-            onToggleKiosk={handleToggleKioskManual}
             onUpdatePin={async () => {
               if (s.adminPin && s.newPin === s.confirmPin) {
                 s.setPinUpdateStatus('loading');
@@ -370,18 +397,18 @@ export default function App() {
     );
   }
 
-  if (!s.computedKioskOpen && !s.testModeEnabled) {
+  if (!computedKioskOpen && !s.testModeEnabled) {
     return <KioskClosed onGoToManager={() => s.setMode('manager')} t={t} />;
   }
 
   return (
     <KioskView
       menu={s.menu}
-      groupedMenu={s.groupedMenu}
-      sideItems={s.sideItems}
+      groupedMenu={groupedMenu}
+      sideItems={sideItems}
       selectedItems={s.selectedItems}
-      selectedItemIds={s.selectedItemIds}
-      totalPrice={s.totalPrice}
+      selectedItemIds={selectedItemIds}
+      totalPrice={totalPrice}
       rfid={s.rfid}
       setRfid={s.setRfid}
       isScanning={s.isScanning}
@@ -390,7 +417,7 @@ export default function App() {
       connectionError={s.connectionError}
       orderButtonEnabled={s.orderButtonEnabled}
       testModeEnabled={s.testModeEnabled}
-      computedKioskOpen={s.computedKioskOpen}
+      computedKioskOpen={computedKioskOpen}
       kioskAutoTiming={s.kioskAutoTiming}
       kioskCloseTime={s.kioskCloseTime}
       lang={s.lang}

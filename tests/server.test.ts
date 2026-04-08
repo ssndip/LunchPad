@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import { startServer, db } from '../server';
+import { startServer } from '../server';
+import { db } from '../server/db';
 
 describe('POST /api/menu', () => {
   let app: any;

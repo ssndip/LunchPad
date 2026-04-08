@@ -43,12 +43,12 @@ export const fetchOrders = async (pin: string): Promise<Order[]> => {
 /** Place a kiosk order. Returns the raw response so callers can read error bodies. */
 export const placeOrder = async (
   rfid: string,
-  itemIds: number[],
+  items: { id: number, side?: string }[],
 ): Promise<Response> => {
   return fetch('/api/v1/order', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rfid: rfid.trim(), itemIds }),
+    body: JSON.stringify({ rfid: rfid.trim(), items }),
   });
 };
 

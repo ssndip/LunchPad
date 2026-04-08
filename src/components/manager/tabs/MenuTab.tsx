@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu, ParseResult } from '../../../utils/menuParser';
 
@@ -30,6 +30,61 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<ParseResult | null>(null);
 
+  // Helper to identify side dish items reliably across languages
+  const isSideDishCategory = (category?: string) => {
+    if (!category) return false;
+    return /side dishes|гарнитур/i.test(category);
+  };
+
+  /**
+   * Internal Checkbox Selector for Side Dishes
+   */
+  const SideDishSelector: React.FC<{
+    selected: string[];
+    available: MenuItem[];
+    onChange: (names: string[]) => void;
+  }> = ({ selected, available, onChange }) => {
+    const handleToggle = (name: string) => {
+      if (selected.includes(name)) {
+        onChange(selected.filter(s => s !== name));
+      } else {
+        onChange([...selected, name]);
+      }
+    };
+
+    if (available.length === 0) {
+      return <p className="text-[10px] text-red-400 italic">No side dishes found</p>;
+    }
+
+    return (
+      <div className="flex flex-col gap-1.5 mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 max-h-40 overflow-y-auto custom-scrollbar">
+        <p className="text-[10px] font-bold text-neutral-400 mb-1 uppercase tracking-tight">Allowed Sides:</p>
+        {available.map(item => (
+          <button
+            key={item.id}
+            onClick={() => handleToggle(item.name)}
+            className="flex items-center gap-2 text-[10px] text-left hover:bg-white p-1 rounded-lg transition-colors group"
+          >
+            {selected.includes(item.name) ? (
+              <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
+            ) : (
+              <Square className="w-3.5 h-3.5 text-neutral-300 group-hover:block hidden" />
+            )}
+            {!selected.includes(item.name) && <Square className="w-3.5 h-3.5 text-neutral-200 block group-hover:hidden" />}
+            <span className={selected.includes(item.name) ? 'font-bold text-neutral-900' : 'text-neutral-500'}>
+              {item.name}
+            </span>
+          </button>
+        ))}
+        {selected.length === 0 && (
+          <p className="text-[9px] text-neutral-400 italic mt-1 border-t border-neutral-100 pt-1">
+            * No specific sides selected: All sides allowed by default
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const handleParse = () => {
     if (!pasteText.trim()) return;
     const result = parsePastedMenu(pasteText);
@@ -44,6 +99,28 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     setIsPasteOpen(false);
     setPasteText('');
     setParsed(null);
+  };
+
+  const updateParsedItem = (index: number, field: keyof MenuItem, value: any) => {
+    if (!parsed) return;
+    const newItems = [...parsed.items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setParsed({ ...parsed, items: newItems });
+  };
+
+  const removeParsedItem = (index: number) => {
+    if (!parsed) return;
+    const newItems = parsed.items.filter((_, i) => i !== index);
+    setParsed({ ...parsed, items: newItems });
+  };
+
+  const moveParsedItem = (index: number, direction: 'up' | 'down') => {
+    if (!parsed) return;
+    const newItems = [...parsed.items];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    setParsed({ ...parsed, items: newItems });
   };
 
   const handleClose = () => {
@@ -99,7 +176,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr>
-                {[t('menu.category'), t('menu.name'), t('menu.price'), t('menu.status'), t('cards.actions')].map((h) => (
+                {[t('menu.category'), t('menu.name'), t('menu.price'), t('menu.included_side') || 'Included Side', t('menu.status'), t('cards.actions')].map((h) => (
                   <th key={h} className="p-5 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100">
                     {h}
                   </th>
@@ -137,6 +214,27 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                         onChange={(e) => onUpdateItem(item.id, 'price', parseFloat(e.target.value))}
                         className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
                       />
+                    </div>
+                  </td>
+                  <td className="p-5">
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
+                        className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+                          item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
+                        }`}
+                        title={t('menu.included_side') || 'Included Side'}
+                      >
+                        <Layers className="w-5 h-5" />
+                      </button>
+                      
+                      {item.hasIncludedSide && (
+                        <SideDishSelector
+                          selected={item.sideChoices || []}
+                          available={editingMenu.filter(m => isSideDishCategory(m.category))}
+                          onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
+                        />
+                      )}
                     </div>
                   </td>
                   <td className="p-5">
@@ -237,19 +335,83 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     ) : (
                       <div className="max-h-72 overflow-y-auto custom-scrollbar rounded-2xl border border-neutral-200">
                         <table className="w-full text-sm">
-                          <thead className="sticky top-0 bg-neutral-50 border-b border-neutral-100">
+                          <thead className="sticky top-0 bg-neutral-50 border-b border-neutral-100 z-10">
                             <tr>
-                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.category')}</th>
-                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.name')}</th>
-                              <th className="p-3 text-right font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.price')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-1/4">{t('menu.category')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-2/5">{t('menu.name')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.price')}</th>
+                              <th className="p-3 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.side')}</th>
+                              <th className="p-3 text-right font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('cards.actions')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-neutral-50">
                             {parsed.items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-neutral-50">
-                                <td className="p-3 text-[10px] uppercase tracking-widest text-neutral-400">{item.category}</td>
-                                <td className="p-3 font-bold text-neutral-900">{item.name}</td>
-                                <td className="p-3 text-right font-mono font-bold text-neutral-900">€{item.price.toFixed(2)}</td>
+                              <tr key={idx} className="hover:bg-neutral-50 group">
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={item.category}
+                                    onChange={(e) => updateParsedItem(idx, 'category', e.target.value)}
+                                    className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-[10px] uppercase tracking-widest text-neutral-400 focus:outline-none focus:border-neutral-400"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={item.name}
+                                    onChange={(e) => updateParsedItem(idx, 'name', e.target.value)}
+                                    className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-xs font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    value={item.price}
+                                    onChange={(e) => updateParsedItem(idx, 'price', parseFloat(e.target.value))}
+                                    className="w-16 bg-white border border-neutral-200 rounded-lg p-1 text-xs font-mono font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                  />
+                                </td>
+                                <td className="p-2 text-center align-top">
+                                  <button
+                                    onClick={() => updateParsedItem(idx, 'hasIncludedSide', !item.hasIncludedSide)}
+                                    className={`p-1.5 rounded-lg transition-colors ${item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600' : 'text-neutral-300 hover:bg-neutral-100'}`}
+                                  >
+                                    <Layers className="w-3.5 h-3.5" />
+                                  </button>
+                                  {item.hasIncludedSide && (
+                                    <div className="mt-1">
+                                      <SideDishSelector
+                                        selected={item.sideChoices || []}
+                                        available={editingMenu.filter(m => isSideDishCategory(m.category))}
+                                        onChange={(names) => updateParsedItem(idx, 'sideChoices', names)}
+                                      />
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-2">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      onClick={() => moveParsedItem(idx, 'up')}
+                                      disabled={idx === 0}
+                                      className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                    >
+                                      <ArrowUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => moveParsedItem(idx, 'down')}
+                                      disabled={idx === parsed.items.length - 1}
+                                      className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                    >
+                                      <ArrowDown className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => removeParsedItem(idx)}
+                                      className="p-1.5 text-neutral-300 hover:text-red-500"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>

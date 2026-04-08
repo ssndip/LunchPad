@@ -26,6 +26,7 @@ interface KioskOrderBarProps {
   orderButtonEnabled: boolean;
   onOrder: () => void;
   onClearCart: () => void;
+  onChangeSide: (item: CartItem) => void;
   t: (key: string) => string;
 }
 
@@ -41,6 +42,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
   orderButtonEnabled,
   onOrder,
   onClearCart,
+  onChangeSide,
   t,
 }) => {
   const orderDisabled =
@@ -59,21 +61,43 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
           className="shrink-0 w-full px-4 pb-4 pt-2"
         >
           <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-neutral-200/80 px-5 py-4 flex flex-col gap-3">
-            {/* Item list summary */}
-            <div className="max-h-28 overflow-y-auto custom-scrollbar space-y-1">
+            <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
               {selectedItems.map((item) => (
-                <div key={item.id} className="flex items-baseline justify-between">
-                  <span className="text-sm font-bold text-neutral-900 truncate max-w-[65%]">
-                    {item.name}
+                <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm font-bold text-neutral-900 truncate">
+                      {item.name}
+                    </span>
+                    <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
+                      €{item.price.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Nested Sides & Fees */}
+                  <div className="pl-3 mt-1 space-y-0.5">
                     {item.side && (
-                      <span className="ml-2 text-[10px] font-medium text-neutral-400">
-                        + {item.side}
-                      </span>
+                      <div className="flex items-center justify-between group">
+                        <span className="text-[10px] text-neutral-400 font-medium">
+                          └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
+                          <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
+                        </span>
+                        {(item.requiresSideChoice || item.hasIncludedSide) && (
+                          <button
+                            onClick={() => onChangeSide(item)}
+                            className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            {t('kiosk.change')}
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </span>
-                  <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
-                    €{item.price.toFixed(2)}
-                  </span>
+                    {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
+                      <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
+                        <span>└─ {fee.type}</span>
+                        <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
