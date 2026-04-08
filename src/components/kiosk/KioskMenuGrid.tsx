@@ -105,7 +105,7 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                   .map((item) => {
                     const isSelected = selectedItemIds.has(item.id);
                     return (
-                      <motion.div
+                      <motion.button
                         key={item.id}
                         layout
                         initial={false}
@@ -117,7 +117,8 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                         transition={{ duration: 0.12 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => onToggle(item)}
-                        className={`cursor-pointer flex justify-between items-center px-4 py-3.5 relative transition-all duration-150 ${
+                        aria-pressed={isSelected}
+                        className={`w-full text-left cursor-pointer flex justify-between items-center px-4 py-3.5 relative transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500 ${
                           isSelected
                             ? 'shadow-inner'
                             : 'hover:bg-neutral-50'
@@ -164,7 +165,7 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                             className="absolute left-0 top-0 bottom-0 w-1 bg-white/40 rounded-r"
                           />
                         )}
-                      </motion.div>
+                      </motion.button>
                     );
                   })}
               </div>

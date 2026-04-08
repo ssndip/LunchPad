@@ -136,7 +136,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                         <button
                           onClick={() => onUpdateCards(cards.map((c) => c.rfid === card.rfid ? { ...c, isAdmin: !c.isAdmin } : c))}
                           role="switch" aria-checked={card.isAdmin}
-                          className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${card.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                          className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${card.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
                           aria-label="Toggle Admin"
                         >
                           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${card.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
@@ -239,7 +239,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 <button
                   onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
                   role="switch" aria-checked={newCardIsAdmin}
-                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
                   aria-label="Toggle Admin for new card"
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
