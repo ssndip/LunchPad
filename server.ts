@@ -28,8 +28,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize DB and Settings
-initDb();
-seedInitialData();
 initSettings();
 
 export const appPromise = startServer();

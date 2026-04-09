@@ -4,9 +4,23 @@ import { getMenu } from "./menuController";
 import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
 
+const stmts = {
+  getOrders: db.prepare("SELECT * FROM orders ORDER BY timestamp DESC LIMIT ?"),
+  findCardByRfid: db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?"),
+  updateCardBalance: db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?"),
+  insertOrder: db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"),
+  getDailySummary: db.prepare("SELECT * FROM daily_summaries WHERE date = ?"),
+  insertDailySummary: db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount) VALUES (?, ?, ?)"),
+  updateDailySummary: db.prepare("UPDATE daily_summaries SET totalSales = totalSales + ?, orderCount = orderCount + 1 WHERE date = ?"),
+  deleteOrders: db.prepare("DELETE FROM orders"),
+  deleteSummaries: db.prepare("DELETE FROM daily_summaries"),
+  fetchSummaries: db.prepare("SELECT * FROM daily_summaries ORDER BY date DESC LIMIT 30"),
+  fetchSummaryDetails: db.prepare("SELECT items FROM orders WHERE date = ?")
+};
+
 export const getOrders = (limit = 50) => {
   try {
-    const orders = db.prepare("SELECT * FROM orders ORDER BY timestamp DESC LIMIT ?").all(limit) as any[];
+    const orders = stmts.getOrders.all(limit) as any[];
     return orders.map(o => {
       let items = [];
       try {
@@ -35,7 +49,7 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
 
     const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
-    const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
+    const card = stmts.findCardByRfid.get(cleanRfid) as any;
     if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
 
     const menu = getMenu(db);
@@ -66,19 +80,15 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     };
 
     db.transaction(() => {
-      db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
-        .run(total, now.toISOString(), card.rfid);
+      stmts.updateCardBalance.run(total, now.toISOString(), card.rfid);
       
-      db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(orderId, card.rfid, card.ownerName, JSON.stringify(enrichedItems), total, now.toISOString(), dateStr, "completed");
+      stmts.insertOrder.run(orderId, card.rfid, card.ownerName, JSON.stringify(enrichedItems), total, now.toISOString(), dateStr, "completed");
 
-      const summary = db.prepare("SELECT * FROM daily_summaries WHERE date = ?").get(dateStr) as any;
+      const summary = stmts.getDailySummary.get(dateStr) as any;
       if (!summary) {
-        db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount) VALUES (?, ?, ?)")
-          .run(dateStr, total, 1);
+        stmts.insertDailySummary.run(dateStr, total, 1);
       } else {
-        db.prepare("UPDATE daily_summaries SET totalSales = totalSales + ?, orderCount = orderCount + 1 WHERE date = ?")
-          .run(total, dateStr);
+        stmts.updateDailySummary.run(total, dateStr);
       }
     })();
 
@@ -94,8 +104,8 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
 export const resetOrders = (req: Request, res: Response, next: NextFunction) => {
   try {
     db.transaction(() => {
-      db.prepare("DELETE FROM orders").run();
-      db.prepare("DELETE FROM daily_summaries").run();
+      stmts.deleteOrders.run();
+      stmts.deleteSummaries.run();
     })();
     broadcast({ type: "INITIAL_STATE", menu: getMenu(db), orders: [], kioskOpen, cards: [] });
     res.json({ success: true });
@@ -105,14 +115,14 @@ export const resetOrders = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const fetchSummaries = (req: Request, res: Response) => {
-  const summaries = db.prepare("SELECT * FROM daily_summaries ORDER BY date DESC LIMIT 30").all();
+  const summaries = stmts.fetchSummaries.all();
   res.json(summaries);
 };
 
 export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { date } = req.params;
-    const orders = db.prepare("SELECT items FROM orders WHERE date = ?").all(date) as any[];
+    const orders = stmts.fetchSummaryDetails.all(date) as any[];
     
     const itemMap: Record<string, { name: string, quantity: number, total: number, price: number, category: string }> = {};
     const sideMap: Record<string, { name: string, quantity: number }> = {};

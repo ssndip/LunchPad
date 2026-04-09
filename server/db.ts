@@ -124,3 +124,7 @@ export const seedInitialData = () => {
     console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering");
   }
 };
+
+// Initialize DB and seed initial data automatically
+initDb();
+seedInitialData();
