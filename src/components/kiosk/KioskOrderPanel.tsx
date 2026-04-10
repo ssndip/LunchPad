@@ -47,6 +47,8 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
         {selectedItems.length > 0 && (
           <button 
             onClick={onClearCart}
+            title={t('modals.cancel')}
+            aria-label={t('modals.cancel')}
             className="p-1.5 hover:bg-red-50 text-neutral-300 hover:text-red-500 rounded-lg transition-all active:scale-90"
           >
             <Trash2 className="w-3.5 h-3.5" />
