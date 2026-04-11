@@ -29,8 +29,8 @@ export const fetchOrders = (req: Request, res: Response) => {
 export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid, items: requestedItems } = req.body;
-    if (!rfid || !requestedItems || !Array.isArray(requestedItems)) {
-      return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+    if (!rfid || typeof rfid !== 'string' || !requestedItems || !Array.isArray(requestedItems)) {
+      return res.status(400).json({ error: "Invalid request: Missing or invalid RFID format or items" });
     }
     if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
 
@@ -169,10 +169,16 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
 
   if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
   if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
-  if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
+
+  if (rfid) {
+    if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid rfid format" });
+    sql += " AND rfid = ?"; params.push(rfid);
+  }
+
   if (ownerName) {
+    if (typeof ownerName !== 'string') return res.status(400).json({ error: "Invalid ownerName format" });
     sql += " AND ownerName LIKE ? ESCAPE '\\'";
-    const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
+    const escapedOwnerName = ownerName.replace(/[\\%_]/g, '\\$&');
     params.push(`%${escapedOwnerName}%`);
   }
 

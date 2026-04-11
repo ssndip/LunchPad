@@ -15,3 +15,8 @@
 **Vulnerability:** The `requireAuth` middleware in `server.ts` was accepting the admin PIN via the URL query string (`req.query.pin`), which can lead to the sensitive credential being logged in server access logs, proxy logs, and browser history.
 **Learning:** Accepting authentication credentials (such as PINs, tokens, or passwords) via URL parameters exposes them to unintended logging mechanisms and potential leakage to third parties. Credentials should always be transmitted via HTTP headers (e.g., Authorization or custom headers like `x-admin-pin`) or in the request body for POST requests.
 **Prevention:** Always enforce the use of HTTP headers for transmitting authentication credentials and remove fallback mechanisms that check URL query parameters.
+
+## 2024-05-24 - Unhandled Express TypeErrors via query/body arrays
+**Vulnerability:** Endpoints extracting user input (e.g., `rfid`, `ownerName`) from Express `req.query`, `req.body`, or `req.headers` were directly calling string methods like `.trim()`, `.replace()`, and `.toLowerCase()` without type validation.
+**Learning:** Express allows clients to send arrays or objects in query parameters (e.g., `?rfid[]=123`) or JSON bodies. If an array or object is passed, string methods will throw a `TypeError` (e.g., `rfid.trim is not a function`), potentially causing unhandled exceptions or resource exhaustion (DoS).
+**Prevention:** Always explicitly validate the data type (e.g., `typeof x === 'string'`) before calling string methods on client-provided, database-bound inputs from Express request objects.

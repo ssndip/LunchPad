@@ -31,15 +31,15 @@ export const isLocalOrigin = (origin?: string): boolean => {
 
 export const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const pin = req.headers['x-admin-pin'];
-  if (!pin) {
-    return res.status(401).json({ error: "Unauthorized: Missing PIN or Card" });
+  if (!pin || typeof pin !== 'string') {
+    return res.status(401).json({ error: "Unauthorized: Missing or invalid PIN format" });
   }
 
-  if (verifyAdminPin(String(pin))) {
+  if (verifyAdminPin(pin)) {
     return next();
   }
 
-  const cleanRfid = String(pin).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+  const cleanRfid = pin.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
   const adminCard = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ? AND isAdmin = 1").get(cleanRfid);
   
   if (adminCard) {
