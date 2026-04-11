@@ -5,3 +5,7 @@
 ## 2026-04-02 - Accessible Custom Toggle Switches
 **Learning:** Custom UI toggle buttons (created with `<div>` and CSS) fail to communicate their state to screen readers and often lack visible focus for keyboard users.
 **Action:** Always add `role="switch"`, an explicit `aria-checked={boolean}` property, and proper `focus-visible` utility classes to custom toggle components to ensure full accessibility.
+
+## 2024-06-25 - Localized ARIA Labels
+**Learning:** Using variables or functions (like a translation function `t()`) inside `aria-label` or `title` attributes requires ensuring that the translation context and keys are actually available and valid in the current component, otherwise it causes runtime crashes.
+**Action:** Always strictly verify the existence of translation keys (e.g., via `grep`) in the dictionary file (like `src/translations.ts`) and ensure the component receives the translation function before using them in accessibility attributes.

@@ -108,10 +108,20 @@ export const KioskView: React.FC<KioskViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button
+            onClick={() => setUserHistoryOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-neutral-900 outline-none"
+            aria-label={t('kiosk.user_balance')}
+            title={t('kiosk.user_balance')}
+          >
             <Users className="w-4 h-4" />
           </button>
-          <button onClick={onGoToManager} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button
+            onClick={onGoToManager}
+            className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-neutral-900 outline-none"
+            aria-label={t('navigation.admin_login')}
+            title={t('navigation.admin_login')}
+          >
             <Settings className="w-4 h-4" />
           </button>
         </div>
