@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Menu as MenuIcon,
   ShoppingBag,
@@ -9,12 +9,14 @@ import {
   LogOut,
   ChevronRight,
   TrendingUp,
-} from 'lucide-react';
-import { Language } from '../../translations';
+} from "lucide-react";
+import { Language } from "../../translations";
 
 interface ManagerDashboardProps {
-  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings';
-  onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings') => void;
+  activeTab: "menu" | "orders" | "history" | "cards" | "settings";
+  onTabChange: (
+    tab: "menu" | "orders" | "history" | "cards" | "settings",
+  ) => void;
   onLogout: () => void;
   lang: Language;
   t: (key: string) => string;
@@ -34,11 +36,11 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onToggleKiosk,
 }) => {
   const menuItems = [
-    { id: 'menu', icon: MenuIcon, label: t('navigation.menu_management') },
-    { id: 'orders', icon: TrendingUp, label: t('navigation.order_summary') },
-    { id: 'history', icon: History, label: t('navigation.history') },
-    { id: 'cards', icon: CreditCard, label: t('navigation.card_management') },
-    { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
+    { id: "menu", icon: MenuIcon, label: t("navigation.menu_management") },
+    { id: "orders", icon: TrendingUp, label: t("navigation.order_summary") },
+    { id: "history", icon: History, label: t("navigation.history") },
+    { id: "cards", icon: CreditCard, label: t("navigation.card_management") },
+    { id: "settings", icon: Settings, label: t("navigation.system_settings") },
   ];
 
   return (
@@ -50,7 +52,9 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white">
               <ShoppingBag className="w-5 h-5" />
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tighter">LunchPad</h2>
+            <h2 className="text-2xl font-black uppercase tracking-tighter">
+              LunchPad
+            </h2>
           </div>
           <p className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest ml-1">
             Manager Control
@@ -66,8 +70,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                 onClick={() => onTabChange(item.id as any)}
                 className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group ${
                   isActive
-                    ? 'bg-neutral-900 text-white shadow-xl shadow-neutral-100 invert-0'
-                    : 'text-neutral-400 hover:bg-neutral-50 hover:text-neutral-900'
+                    ? "bg-neutral-900 text-white shadow-xl shadow-neutral-100 invert-0"
+                    : "text-neutral-400 hover:bg-neutral-50 hover:text-neutral-900"
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -86,7 +90,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             className="w-full flex items-center gap-4 px-5 py-4 text-red-500 rounded-2xl hover:bg-red-50 transition-all font-bold text-sm"
           >
             <LogOut className="w-5 h-5" />
-            <span>{t('navigation.logout')}</span>
+            <span>{t("navigation.logout")}</span>
           </button>
         </div>
       </aside>
@@ -97,29 +101,33 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         <header className="h-20 bg-white/50 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-between px-10">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-neutral-100 shadow-sm">
-              <div className={`w-2 h-2 rounded-full animate-pulse ${kioskOpen ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div
+                className={`w-2 h-2 rounded-full animate-pulse ${kioskOpen ? "bg-green-500" : "bg-red-500"}`}
+              />
               <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
-                Kiosk: {kioskOpen ? 'Open' : 'Closed'}
+                Kiosk: {kioskOpen ? "Open" : "Closed"}
               </span>
               <button
                 onClick={() => onToggleKiosk(!kioskOpen)}
                 className={`ml-2 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  kioskOpen 
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                    : 'bg-green-50 text-green-600 hover:bg-green-100'
+                  kioskOpen
+                    ? "bg-red-50 text-red-600 hover:bg-red-100"
+                    : "bg-green-50 text-green-600 hover:bg-green-100"
                 }`}
               >
-                {kioskOpen ? 'Close' : 'Open'}
+                {kioskOpen ? "Close" : "Open"}
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
-              {lang === 'bg' ? 'Български' : 'English'}
+              {lang === "bg" ? "Български" : "English"}
             </span>
             <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
-              <span className="text-[10px] font-black text-neutral-900">{lang.toUpperCase()}</span>
+              <span className="text-[10px] font-black text-neutral-900">
+                {lang.toUpperCase()}
+              </span>
             </div>
           </div>
         </header>

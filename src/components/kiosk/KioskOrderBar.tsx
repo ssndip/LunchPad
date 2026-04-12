@@ -3,16 +3,16 @@
  * Feature 1: stays fixed / does not scroll
  * Feature 2: RFID input fires handleOrder on Enter
  */
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Trash2,
   CreditCard,
   ChevronRight,
   Loader2,
   CheckCircle2,
-} from 'lucide-react';
-import { CartItem } from '../../types';
+} from "lucide-react";
+import { CartItem } from "../../types";
 
 interface KioskOrderBarProps {
   selectedItems: CartItem[];
@@ -63,7 +63,10 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
           <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-neutral-200/80 px-5 py-4 flex flex-col gap-3">
             <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
               {selectedItems.map((item) => (
-                <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
+                <div
+                  key={item.id}
+                  className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0"
+                >
                   <div className="flex items-baseline justify-between">
                     <span className="text-sm font-bold text-neutral-900 truncate">
                       {item.name}
@@ -78,25 +81,37 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                     {item.side && (
                       <div className="flex items-center justify-between group">
                         <span className="text-[10px] text-neutral-400 font-medium">
-                          └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
-                          <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
+                          └─ {t("kiosk.side")}:{" "}
+                          <span className="text-neutral-600 font-bold">
+                            {item.side}
+                          </span>
+                          <span className="ml-1 text-[8px] opacity-70">
+                            ({t("kiosk.included")})
+                          </span>
                         </span>
                         {(item.requiresSideChoice || item.hasIncludedSide) && (
                           <button
                             onClick={() => onChangeSide(item)}
                             className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
                           >
-                            {t('kiosk.change')}
+                            {t("kiosk.change")}
                           </button>
                         )}
                       </div>
                     )}
-                    {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
-                      <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
-                        <span>└─ {fee.type}</span>
-                        <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
-                      </div>
-                    ))}
+                    {item.extraFees &&
+                      item.extraFees.length > 0 &&
+                      item.extraFees.map((fee, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-baseline justify-between text-[10px] text-neutral-400"
+                        >
+                          <span>└─ {fee.type}</span>
+                          <span className="font-mono">
+                            +{fee.amount.toFixed(2)}€
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               ))}
@@ -109,15 +124,18 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
-                  {t('orders.total')}
+                  {t("orders.total")}
                 </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-neutral-900 tracking-tighter">
                     €{totalPrice.toFixed(2)}
                   </span>
                   <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                    ({selectedItems.length}{' '}
-                    {selectedItems.length === 1 ? t('menu.item') : t('menu.items')})
+                    ({selectedItems.length}{" "}
+                    {selectedItems.length === 1
+                      ? t("menu.item")
+                      : t("menu.items")}
+                    )
                   </span>
                 </div>
               </div>
@@ -137,18 +155,20 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 <input
                   ref={rfidInputRef}
                   type="text"
-                  placeholder={t('cards.scan_to_register')}
-                  aria-label={t('cards.scan_to_register')}
+                  placeholder={t("cards.scan_to_register")}
+                  aria-label={t("cards.scan_to_register")}
                   value={rfid}
                   autoComplete="off"
                   onChange={(e) => setRfid(e.target.value)}
-                  onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                  onFocus={(e) => {
+                    if (e.target.value) e.target.select();
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       const clean = e.currentTarget.value
                         .trim()
-                        .replace(/[^\x20-\x7E]/g, '')
+                        .replace(/[^\x20-\x7E]/g, "")
                         .toLowerCase();
                       if (!clean) return;
                       setRfid(clean);
@@ -159,8 +179,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 />
                 {rfid && (
                   <button
-                    tabIndex={-1}
-                    onClick={() => setRfid('')}
+                    onClick={() => setRfid("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
                     aria-label="Clear RFID"
                   >
@@ -180,7 +199,9 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 ) : (
                   <ChevronRight className="w-4 h-4" />
                 )}
-                {testModeEnabled && !rfid ? 'Test Order' : t('kiosk.place_order')}
+                {testModeEnabled && !rfid
+                  ? "Test Order"
+                  : t("kiosk.place_order")}
               </button>
             </div>
           </div>
@@ -196,7 +217,10 @@ interface OrderSuccessProps {
   t: (key: string) => string;
 }
 
-export const OrderSuccessOverlay: React.FC<OrderSuccessProps> = ({ show, t }) => (
+export const OrderSuccessOverlay: React.FC<OrderSuccessProps> = ({
+  show,
+  t,
+}) => (
   <AnimatePresence>
     {show && (
       <motion.div
@@ -209,7 +233,9 @@ export const OrderSuccessOverlay: React.FC<OrderSuccessProps> = ({ show, t }) =>
           <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
             <CheckCircle2 className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-4xl font-bold mb-4">{t('kiosk.order_success')}</h2>
+          <h2 className="text-4xl font-bold mb-4">
+            {t("kiosk.order_success")}
+          </h2>
         </div>
       </motion.div>
     )}

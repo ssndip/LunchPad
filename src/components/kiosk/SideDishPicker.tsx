@@ -2,10 +2,10 @@
  * Feature 5 — Side Dish Picker Modal
  * Shown when a user selects a main dish that includes a side dish.
  */
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { X, CheckCircle2 } from 'lucide-react';
-import { MenuItem } from '../../types';
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { X, CheckCircle2 } from "lucide-react";
+import { MenuItem } from "../../types";
 
 interface SideDishPickerProps {
   /** The main dish the user tapped */
@@ -39,7 +39,7 @@ export const SideDishPicker: React.FC<SideDishPickerProps> = ({
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+          transition={{ type: "spring", damping: 26, stiffness: 260 }}
           className="bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
@@ -47,13 +47,15 @@ export const SideDishPicker: React.FC<SideDishPickerProps> = ({
           <div className="flex items-start justify-between mb-5">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">
-                {t('kiosk.choose_side')}
+                {t("kiosk.choose_side")}
               </p>
               <h3 className="text-lg font-black text-neutral-900 leading-tight">
                 {item.name}
               </h3>
               <p className="text-sm text-neutral-500 mt-0.5">
-                {isRequired ? t('kiosk.side_required') : t('kiosk.side_included')}
+                {isRequired
+                  ? t("kiosk.side_required")
+                  : t("kiosk.side_included")}
               </p>
             </div>
             {!isRequired && (
@@ -69,9 +71,10 @@ export const SideDishPicker: React.FC<SideDishPickerProps> = ({
 
           {/* Side dish options */}
           {(() => {
-            const allowedSides = item.sideChoices && item.sideChoices.length > 0
-              ? sides.filter(s => item.sideChoices?.includes(s.name))
-              : sides;
+            const allowedSides =
+              item.sideChoices && item.sideChoices.length > 0
+                ? sides.filter((s) => item.sideChoices?.includes(s.name))
+                : sides;
 
             return allowedSides.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 mb-4">
@@ -83,16 +86,18 @@ export const SideDishPicker: React.FC<SideDishPickerProps> = ({
                     className="flex flex-col items-start p-3 bg-neutral-50 hover:bg-neutral-900 hover:text-white rounded-2xl border border-neutral-200 hover:border-neutral-900 transition-all duration-150 text-left group"
                   >
                     <CheckCircle2 className="w-4 h-4 mb-2 text-neutral-300 group-hover:text-white transition-colors" />
-                    <span className="text-sm font-bold leading-tight">{side.name}</span>
+                    <span className="text-sm font-bold leading-tight">
+                      {side.name}
+                    </span>
                     <span className="text-[10px] font-mono mt-0.5 text-neutral-400 group-hover:text-neutral-300">
-                      {t('kiosk.included')}
+                      {t("kiosk.included")}
                     </span>
                   </motion.button>
                 ))}
               </div>
             ) : (
               <p className="text-sm text-neutral-400 italic mb-4 text-center py-4">
-                {t('kiosk.no_sides_available')}
+                {t("kiosk.no_sides_available")}
               </p>
             );
           })()}
@@ -103,7 +108,7 @@ export const SideDishPicker: React.FC<SideDishPickerProps> = ({
               onClick={() => onSelect(undefined)}
               className="w-full py-3 rounded-2xl border-2 border-dashed border-neutral-200 text-neutral-400 font-bold text-sm hover:border-neutral-400 hover:text-neutral-600 transition-all"
             >
-              {t('kiosk.no_side')}
+              {t("kiosk.no_side")}
             </button>
           )}
         </motion.div>

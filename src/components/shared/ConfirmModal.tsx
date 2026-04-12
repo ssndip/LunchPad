@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, HelpCircle } from 'lucide-react';
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { AlertTriangle, HelpCircle } from "lucide-react";
 
 export interface ConfirmConfig {
   title: string;
@@ -19,7 +19,7 @@ interface ConfirmModalProps {
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   config,
   onClose,
-  cancelLabel = 'Cancel',
+  cancelLabel = "Cancel",
 }) => {
   return (
     <AnimatePresence>
@@ -41,7 +41,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {/* Colour accent strip */}
             <div
               className={`absolute top-0 left-0 w-full h-1.5 ${
-                config.isDestructive ? 'bg-red-500' : 'bg-neutral-900'
+                config.isDestructive ? "bg-red-500" : "bg-neutral-900"
               }`}
             />
 
@@ -56,12 +56,18 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 </div>
               )}
               <div>
-                <h3 className="text-xl font-bold text-neutral-900">{config.title}</h3>
-                <p className="text-neutral-500 text-sm mt-1">Please confirm this action</p>
+                <h3 className="text-xl font-bold text-neutral-900">
+                  {config.title}
+                </h3>
+                <p className="text-neutral-500 text-sm mt-1">
+                  Please confirm this action
+                </p>
               </div>
             </div>
 
-            <p className="text-neutral-600 mb-8 leading-relaxed">{config.message}</p>
+            <p className="text-neutral-600 mb-8 leading-relaxed">
+              {config.message}
+            </p>
 
             <div className="flex gap-3">
               <button
@@ -77,11 +83,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 }}
                 className={`flex-1 py-3 px-6 rounded-2xl text-white font-bold transition-all shadow-lg text-sm ${
                   config.isDestructive
-                    ? 'bg-red-500 hover:bg-red-600 shadow-red-100'
-                    : 'bg-neutral-900 hover:bg-neutral-800 shadow-neutral-100'
+                    ? "bg-red-500 hover:bg-red-600 shadow-red-100"
+                    : "bg-neutral-900 hover:bg-neutral-800 shadow-neutral-100"
                 }`}
               >
-                {config.confirmText ?? 'Confirm'}
+                {config.confirmText ?? "Confirm"}
               </button>
             </div>
           </motion.div>

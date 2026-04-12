@@ -1,13 +1,13 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, Users } from 'lucide-react';
-import { MenuItem, CartItem } from '../../types';
-import { Language } from '../../translations';
-import { KioskCategorySidebar } from './KioskCategorySidebar';
-import { KioskItemList } from './KioskItemList';
-import { KioskOrderPanel, OrderSuccessOverlay } from './KioskOrderPanel';
-import { UserHistoryModal } from './UserHistoryModal';
-import { useRfidScanner } from '../../hooks/useRfidScanner';
+import React, { useState, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Settings, AlertCircle, LogOut, Users } from "lucide-react";
+import { MenuItem, CartItem } from "../../types";
+import { Language } from "../../translations";
+import { KioskCategorySidebar } from "./KioskCategorySidebar";
+import { KioskItemList } from "./KioskItemList";
+import { KioskOrderPanel, OrderSuccessOverlay } from "./KioskOrderPanel";
+import { UserHistoryModal } from "./UserHistoryModal";
+import { useRfidScanner } from "../../hooks/useRfidScanner";
 
 interface KioskViewProps {
   menu: MenuItem[];
@@ -63,10 +63,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
 }) => {
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
-  
+
   // Category Navigation
   const categories = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0] || '');
+  const [activeCategory, setActiveCategory] = useState<string>(
+    categories[0] || "",
+  );
 
   // Ensure activeCategory stays valid
   React.useEffect(() => {
@@ -75,7 +77,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
     }
   }, [categories, activeCategory]);
 
-  const activeItems = useMemo(() => groupedMenu[activeCategory] || [], [groupedMenu, activeCategory]);
+  const activeItems = useMemo(
+    () => groupedMenu[activeCategory] || [],
+    [groupedMenu, activeCategory],
+  );
 
   useRfidScanner({
     active: selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled,
@@ -87,10 +92,17 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   const displayDate = (() => {
     const now = new Date();
-    const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    const currentHHmm =
+      now.getHours().toString().padStart(2, "0") +
+      ":" +
+      now.getMinutes().toString().padStart(2, "0");
     const target = new Date(now);
-    if (kioskAutoTiming && currentHHmm >= kioskCloseTime) target.setDate(now.getDate() + 1);
-    return target.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: 'numeric', month: 'short' });
+    if (kioskAutoTiming && currentHHmm >= kioskCloseTime)
+      target.setDate(now.getDate() + 1);
+    return target.toLocaleDateString(lang === "bg" ? "bg-BG" : "en-US", {
+      day: "numeric",
+      month: "short",
+    });
   })();
 
   return (
@@ -99,7 +111,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       <header className="h-12 shrink-0 bg-white border-b border-neutral-200 px-4 flex items-center justify-between z-20 shadow-sm">
         <div className="flex items-center gap-3">
           <h1 className="text-base font-black text-neutral-900 tracking-tight uppercase">
-            {t('kiosk.daily_menu')}
+            {t("kiosk.daily_menu")}
           </h1>
           <div className="h-4 w-[1px] bg-neutral-200" />
           <span className="text-xs font-bold text-neutral-400 uppercase">
@@ -108,10 +120,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button
+            onClick={() => setUserHistoryOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
+          >
             <Users className="w-4 h-4" />
           </button>
-          <button onClick={onGoToManager} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button
+            onClick={onGoToManager}
+            className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
+          >
             <Settings className="w-4 h-4" />
           </button>
         </div>
@@ -121,7 +139,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Col 1: Categories (Narrow Sidebar on desktop, Top Tab Bar on tablet) */}
         <div className="flex shrink-0 md:w-40 bg-white border-b md:border-b-0 md:border-r border-neutral-200 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar">
-          <KioskCategorySidebar 
+          <KioskCategorySidebar
             categories={categories}
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
@@ -165,7 +183,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
       <OrderSuccessOverlay show={showSuccess} t={t} />
       <AnimatePresence>
         {error && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             className="fixed top-14 left-1/2 -translate-x-1/2 bg-red-600 text-white px-5 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 text-xs font-bold"
           >
             <AlertCircle className="w-3.5 h-3.5" />
@@ -174,23 +195,36 @@ export const KioskView: React.FC<KioskViewProps> = ({
         )}
       </AnimatePresence>
 
-      <UserHistoryModal isOpen={userHistoryOpen} onClose={() => setUserHistoryOpen(false)} t={t} />
+      <UserHistoryModal
+        isOpen={userHistoryOpen}
+        onClose={() => setUserHistoryOpen(false)}
+        t={t}
+      />
     </div>
   );
 };
 
-export const KioskClosed: React.FC<{ onGoToManager: () => void; t: (key: string) => string; }> = ({ onGoToManager, t }) => (
+export const KioskClosed: React.FC<{
+  onGoToManager: () => void;
+  t: (key: string) => string;
+}> = ({ onGoToManager, t }) => (
   <div className="h-screen w-screen overflow-hidden bg-neutral-50 flex items-center justify-center p-8 fixed-viewport">
     <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center max-w-md w-full border border-neutral-100">
       <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
         <LogOut className="w-10 h-10 text-red-500" />
       </div>
-      <h1 className="text-3xl font-black text-neutral-900 mb-2 uppercase tracking-tight">{t('kiosk.ordering_closed')}</h1>
-      <p className="text-neutral-400 text-sm">{t('kiosk.check_back_tomorrow')}</p>
-      <button onClick={onGoToManager} className="mt-8 w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all">
-        {t('navigation.admin_login')}
+      <h1 className="text-3xl font-black text-neutral-900 mb-2 uppercase tracking-tight">
+        {t("kiosk.ordering_closed")}
+      </h1>
+      <p className="text-neutral-400 text-sm">
+        {t("kiosk.check_back_tomorrow")}
+      </p>
+      <button
+        onClick={onGoToManager}
+        className="mt-8 w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all"
+      >
+        {t("navigation.admin_login")}
       </button>
     </div>
   </div>
 );
-

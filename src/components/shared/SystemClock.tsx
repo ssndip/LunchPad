@@ -1,5 +1,5 @@
-import React from 'react';
-import { Language } from '../../translations';
+import React from "react";
+import { Language } from "../../translations";
 
 interface SystemClockProps {
   lang: Language;
@@ -15,10 +15,10 @@ export const SystemClock: React.FC<SystemClockProps> = ({ lang }) => {
 
   return (
     <>
-      {time.toLocaleTimeString(lang === 'bg' ? 'bg-BG' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+      {time.toLocaleTimeString(lang === "bg" ? "bg-BG" : "en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
         hour12: false,
       })}
     </>

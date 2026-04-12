@@ -2,10 +2,10 @@
  * KioskMenuGrid — Feature 1 (viewport-locked scroll) + Feature 5 (side picker intercept)
  * Renders the grouped menu in a scrollable grid; fires onToggle which may open the side picker.
  */
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { AlertCircle, Clock, Utensils, CheckCircle2 } from 'lucide-react';
-import { MenuItem } from '../../types';
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { AlertCircle, Clock, Utensils, CheckCircle2 } from "lucide-react";
+import { MenuItem } from "../../types";
 
 interface KioskMenuGridProps {
   groupedMenu: Record<string, MenuItem[]>;
@@ -32,10 +32,10 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">
-            {t('kiosk.connection_restricted')}
+            {t("kiosk.connection_restricted")}
           </h3>
           <p className="text-neutral-500 text-sm leading-relaxed">
-            {t('kiosk.restricted_message')}
+            {t("kiosk.restricted_message")}
           </p>
         </div>
       </div>
@@ -50,10 +50,10 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
             <Utensils className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">
-            {t('kiosk.testing_mode')}
+            {t("kiosk.testing_mode")}
           </h3>
           <p className="text-neutral-400 text-sm leading-relaxed">
-            {t('kiosk.ordering_disabled')}
+            {t("kiosk.ordering_disabled")}
           </p>
         </div>
       </div>
@@ -68,10 +68,10 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
             <Clock className="w-8 h-8 text-neutral-400" />
           </div>
           <h3 className="text-xl font-bold text-neutral-900 mb-1">
-            {t('kiosk.no_items_available')}
+            {t("kiosk.no_items_available")}
           </h3>
           <p className="text-neutral-400 text-xs uppercase tracking-widest font-mono">
-            {t('kiosk.check_later')}
+            {t("kiosk.check_later")}
           </p>
         </div>
       </div>
@@ -110,17 +110,15 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                         layout
                         initial={false}
                         animate={{
-                          backgroundColor: isSelected ? '#111111' : '#ffffff',
-                          color: isSelected ? '#ffffff' : '#404040',
+                          backgroundColor: isSelected ? "#111111" : "#ffffff",
+                          color: isSelected ? "#ffffff" : "#404040",
                           scale: isSelected ? 1.01 : 1,
                         }}
                         transition={{ duration: 0.12 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => onToggle(item)}
                         className={`cursor-pointer flex justify-between items-center px-4 py-3.5 relative transition-all duration-150 ${
-                          isSelected
-                            ? 'shadow-inner'
-                            : 'hover:bg-neutral-50'
+                          isSelected ? "shadow-inner" : "hover:bg-neutral-50"
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -130,7 +128,11 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 400,
+                                  damping: 20,
+                                }}
                               >
                                 <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
                               </motion.div>
@@ -143,10 +145,12 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
                             {item.hasIncludedSide && (
                               <span
                                 className={`text-[9px] font-bold uppercase tracking-wider ${
-                                  isSelected ? 'text-neutral-400' : 'text-neutral-400'
+                                  isSelected
+                                    ? "text-neutral-400"
+                                    : "text-neutral-400"
                                 }`}
                               >
-                                + {t('kiosk.choose_side')}
+                                + {t("kiosk.choose_side")}
                               </span>
                             )}
                           </div>

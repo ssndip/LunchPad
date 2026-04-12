@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Lock, ArrowRight, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
-import * as api from '../../api';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Lock,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  ChevronLeft,
+} from "lucide-react";
+import * as api from "../../api";
 
 interface ManagerLoginProps {
   onLogin: (pin: string) => void;
@@ -9,8 +15,12 @@ interface ManagerLoginProps {
   t: (key: string) => string;
 }
 
-export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }) => {
-  const [pin, setPin] = useState('');
+export const ManagerLogin: React.FC<ManagerLoginProps> = ({
+  onLogin,
+  onBack,
+  t,
+}) => {
+  const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,16 +34,16 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
     try {
       // Verify PIN by attempting to fetch cards/orders
       const [cardsRes, ordersRes] = await api.verifyPin(pin);
-      
+
       if (cardsRes.status === 401 || ordersRes.status === 401) {
-        setError(t('settings.invalid_pin') || 'Invalid admin PIN');
+        setError(t("settings.invalid_pin") || "Invalid admin PIN");
       } else if (!cardsRes.ok || !ordersRes.ok) {
-        setError('Server error. Please try again.');
+        setError("Server error. Please try again.");
       } else {
         onLogin(pin);
       }
     } catch {
-      setError('Connection failed');
+      setError("Connection failed");
     } finally {
       setLoading(false);
     }
@@ -57,7 +67,9 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
           className="group mb-8 flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-widest">{t('modals.cancel')}</span>
+          <span className="text-xs font-bold uppercase tracking-widest">
+            {t("modals.cancel")}
+          </span>
         </button>
 
         <div className="bg-white rounded-[48px] p-10 shadow-2xl overflow-hidden relative">
@@ -111,7 +123,7 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
                   <>
-                    <span>{t('navigation.admin_login')}</span>
+                    <span>{t("navigation.admin_login")}</span>
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
