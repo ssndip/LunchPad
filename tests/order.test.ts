@@ -22,7 +22,7 @@ describe('POST /api/v1/order', () => {
   it('should return 400 if itemIds is not an array', async () => {
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: '1234567890', itemIds: 1 });
+      .send({ rfid: '1234567890', items: 1 });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('Invalid request: Missing RFID or items');
@@ -31,7 +31,7 @@ describe('POST /api/v1/order', () => {
   it('should return 404 if card is not found', async () => {
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: 'unknown_rfid', itemIds: [1] });
+      .send({ rfid: 'unknown_rfid', items: [{ id: 1 }] });
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/Card not found: unknown_rfid/);
@@ -40,7 +40,7 @@ describe('POST /api/v1/order', () => {
   it('should return 400 if no valid items are selected', async () => {
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: '1234567890', itemIds: [999] }); // Assuming 999 doesn't exist
+      .send({ rfid: '1234567890', items: [{ id: 999 }] }); // Assuming 999 doesn't exist
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('No valid items selected');
@@ -55,7 +55,7 @@ describe('POST /api/v1/order', () => {
     // 2. Process order
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: '1234567890', itemIds: [1, 2] }); // Items 1 and 2 seeded
+      .send({ rfid: '1234567890', items: [{ id: 1 }, { id: 2 }] }); // Items 1 and 2 seeded
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -78,10 +78,10 @@ describe('POST /api/v1/order', () => {
 
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: '1234567890', itemIds: [1] });
+      .send({ rfid: '1234567890', items: [{ id: 1 }] });
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe('Kiosk is closed. Please open it from the Admin panel.');
+    expect(res.body.error).toBe('Kiosk is closed.');
 
     // Re-open for other tests if any
     await request(app).post('/api/status').set('x-admin-pin', '0000').send({ open: true });
@@ -91,7 +91,7 @@ describe('POST /api/v1/order', () => {
     // Pass rfid with spaces and weird casing
     const res = await request(app)
       .post('/api/v1/order')
-      .send({ rfid: '  1234567890  ', itemIds: [1] });
+      .send({ rfid: '  1234567890  ', items: [{ id: 1 }] });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

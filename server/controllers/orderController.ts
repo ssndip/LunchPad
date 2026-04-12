@@ -29,7 +29,7 @@ export const fetchOrders = (req: Request, res: Response) => {
 export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid, items: requestedItems } = req.body;
-    if (!rfid || !requestedItems || !Array.isArray(requestedItems)) {
+    if (!rfid || typeof rfid !== 'string' || !requestedItems || !Array.isArray(requestedItems)) {
       return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
     }
     if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
@@ -164,6 +164,12 @@ export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunct
 
 export const fetchHistory = (req: Request, res: Response, next: NextFunction) => {
   const { startDate, endDate, rfid, ownerName } = req.query;
+
+  if (startDate && typeof startDate !== 'string') return res.status(400).json({ error: "Invalid startDate format" });
+  if (endDate && typeof endDate !== 'string') return res.status(400).json({ error: "Invalid endDate format" });
+  if (rfid && typeof rfid !== 'string') return res.status(400).json({ error: "Invalid rfid format" });
+  if (ownerName && typeof ownerName !== 'string') return res.status(400).json({ error: "Invalid ownerName format" });
+
   let sql = "SELECT * FROM orders WHERE 1=1";
   const params: any[] = [];
 

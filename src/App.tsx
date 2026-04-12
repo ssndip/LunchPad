@@ -138,7 +138,7 @@ export default function App() {
     s.setError(null);
 
     try {
-      const itemIds = s.selectedItems.map((i) => i.id);
+      const itemIds = s.selectedItems.map((i) => ({ id: i.id, side: i.selectedSide }));
       const res = await api.placeOrder(finalRfid || 'TEST-ADMIN', itemIds);
 
       if (!res.ok) {
