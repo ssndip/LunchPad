@@ -23,6 +23,7 @@ export interface MenuItem {
 export interface CartItem extends MenuItem {
   side?: string;     // name of the selected side dish
   sidePrice?: number; // always 0 for included sides
+  quantity: number;   // New field for multiple pieces
 }
 
 /** Strictly typed item for database persistence in the orders table */

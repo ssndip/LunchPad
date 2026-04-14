@@ -35,7 +35,7 @@ export const useTotalPrice = () => {
   return useMemo(() => {
     return selectedItems.reduce((sum, item) => {
       const extra = isPackagingFeeItem(item.category) ? packagingFee : 0;
-      return sum + item.price + extra;
+      return sum + (item.price + extra) * (item.quantity || 1);
     }, 0);
   }, [selectedItems, packagingFee]);
 };

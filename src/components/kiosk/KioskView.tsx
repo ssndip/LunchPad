@@ -30,6 +30,7 @@ interface KioskViewProps {
   lang: Language;
   onToggleItem: (item: MenuItem) => void;
   onAddWithSide: (item: MenuItem, side?: string) => void;
+  onUpdateQuantity: (id: number, delta: number) => void;
   onOrder: (rfidOverride?: string) => void;
   onClearCart: () => void;
   onGoToManager: () => void;
@@ -56,6 +57,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   lang,
   onToggleItem,
   onAddWithSide,
+  onUpdateQuantity,
   onOrder,
   onClearCart,
   onGoToManager,
@@ -137,6 +139,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           selectedItemIds={selectedItemIds}
           onToggle={onToggleItem}
           onAddWithSide={onAddWithSide}
+          onUpdateQuantity={onUpdateQuantity}
           orderButtonEnabled={orderButtonEnabled}
           connectionError={connectionError}
           t={t}
@@ -156,6 +159,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             onOrder={() => onOrder(rfid || undefined)}
             onClearCart={onClearCart}
             onUpdateSide={() => {}}
+            onUpdateQuantity={onUpdateQuantity}
             t={t}
           />
         </div>

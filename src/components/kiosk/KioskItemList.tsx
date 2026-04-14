@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, ChevronRight, AlertCircle, Utensils, Clock } from 'lucide-react';
+import { CheckCircle2, ChevronRight, AlertCircle, Utensils, Clock, Plus, Minus } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 
 interface KioskItemListProps {
@@ -10,6 +10,7 @@ interface KioskItemListProps {
   selectedItemIds: Set<number>;
   onToggle: (item: MenuItem) => void;
   onAddWithSide: (item: MenuItem, side?: string) => void;
+  onUpdateQuantity: (id: number, delta: number) => void;
   orderButtonEnabled: boolean;
   connectionError: string | null;
   t: (key: string) => string;
@@ -22,6 +23,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   selectedItemIds,
   onToggle,
   onAddWithSide,
+  onUpdateQuantity,
   orderButtonEnabled,
   connectionError,
   t,
@@ -54,11 +56,13 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isSelected ? 'bg-neutral-900 border-neutral-900' : 'border-neutral-200'
-                  }`}>
-                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                  </div>
+                  <QuantityControl 
+                    isSelected={isSelected}
+                    quantity={cartItem?.quantity || 1}
+                    onIncrement={() => onUpdateQuantity(item.id, 1)}
+                    onDecrement={() => onUpdateQuantity(item.id, -1)}
+                    onToggle={() => !isSelected && onToggle(item)}
+                  />
                   <div>
                     <h3 className={`text-base font-bold leading-tight ${isSelected ? 'text-neutral-900' : 'text-neutral-700'}`}>
                       {item.name}
@@ -123,6 +127,55 @@ const Placeholder: React.FC<{ icon: React.ReactNode, title: string, message: str
     <p className="text-xs text-neutral-400 max-w-[200px] leading-relaxed">{message}</p>
   </div>
 );
+
+const QuantityControl: React.FC<{
+  isSelected: boolean;
+  quantity: number;
+  onIncrement: () => void;
+  onDecrement: () => void;
+  onToggle: () => void;
+}> = ({ isSelected, quantity, onIncrement, onDecrement, onToggle }) => {
+  return (
+    <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+      <AnimatePresence mode="wait">
+        {!isSelected ? (
+          <motion.div
+            key="dot"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            onClick={onToggle}
+            className="w-8 h-8 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors"
+          />
+        ) : (
+          <motion.div
+            key="control"
+            initial={{ width: 32, opacity: 0 }}
+            animate={{ width: 'auto', opacity: 1 }}
+            exit={{ width: 32, opacity: 0 }}
+            className="flex items-center bg-neutral-900 rounded-full p-1.5 gap-5 overflow-hidden shadow-lg shadow-black/20"
+          >
+            <button
+              onClick={onDecrement}
+              className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+            >
+              <Minus className="w-5 h-5" />
+            </button>
+            <span className="text-lg font-black font-mono text-white min-w-[20px] text-center">
+              {quantity}
+            </span>
+            <button
+              onClick={onIncrement}
+              className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const SideDishInlinePicker: React.FC<{ item: MenuItem, sides: MenuItem[], selectedSide?: string, onSelect: (s?: string) => void, t: any }> = ({ item, sides, selectedSide, onSelect, t }) => {
   const allowedSides = item.sideChoices && item.sideChoices.length > 0

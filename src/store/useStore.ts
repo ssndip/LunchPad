@@ -117,6 +117,7 @@ interface AppState {
   loginManager: (pin: string) => void;
   logoutManager: () => void;
   resetCart: () => void;
+  updateItemQuantity: (id: number, delta: number) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -232,4 +233,14 @@ export const useStore = create<AppState>((set) => ({
     set({ token: null, isManagerLoggedIn: false, mode: 'kiosk' });
   },
   resetCart: () => set({ selectedItems: [], rfid: '' }),
+  updateItemQuantity: (id, delta) => set((state) => {
+    const updated = state.selectedItems.map((item) => {
+      if (item.id === id) {
+        const newQty = Math.max(0, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }).filter(i => i.quantity > 0);
+    return { selectedItems: updated };
+  }),
 }));

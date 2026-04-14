@@ -179,7 +179,7 @@ export default function App() {
           side = allowedSides[0].name;
         }
       }
-      const cartItem: CartItem = { ...item, side };
+      const cartItem: CartItem = { ...item, side, quantity: 1 };
       s.setSelectedItems([...s.selectedItems, cartItem]);
     }
   };
@@ -193,7 +193,7 @@ export default function App() {
       ));
     } else {
       // Add new
-      const cartItem: CartItem = { ...item, side };
+      const cartItem: CartItem = { ...item, side, quantity: 1 };
       s.setSelectedItems([...s.selectedItems, cartItem]);
     }
   };
@@ -213,8 +213,10 @@ export default function App() {
     s.setError(null);
 
     try {
-      // Map CartItems to simple ID+Side objects for the API
-      const items = s.selectedItems.map((i) => ({ id: i.id, side: i.side }));
+      // Map CartItems to simple ID+Side objects for the API, duplicating by quantity
+      const items = s.selectedItems.flatMap((i) => 
+        Array(i.quantity).fill({ id: i.id, side: i.side })
+      );
       
       const res = await api.placeOrder(finalRfid || 'TEST-ADMIN', items, s.menuVersion);
 
@@ -575,6 +577,7 @@ export default function App() {
       lang={s.lang}
       onToggleItem={handleToggleItem}
       onAddWithSide={handleAddWithSide}
+      onUpdateQuantity={s.updateItemQuantity}
       onOrder={handleOrder}
       onClearCart={s.resetCart}
       onGoToManager={() => s.setMode('manager')}

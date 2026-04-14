@@ -16,6 +16,7 @@ interface KioskOrderPanelProps {
   onOrder: () => void;
   onClearCart: () => void;
   onUpdateSide: (item: CartItem) => void;
+  onUpdateQuantity: (id: number, delta: number) => void;
   t: (key: string) => string;
 }
 
@@ -31,6 +32,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
   onOrder,
   onClearCart,
   onUpdateSide,
+  onUpdateQuantity,
   t,
 }) => {
   const packagingFee = useStore(s => s.packagingFee);
@@ -78,9 +80,14 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                 <span className="text-xs font-bold text-neutral-900 leading-tight">
                   {item.name}
                 </span>
-                <span className="text-xs font-mono font-black text-neutral-900 shrink-0">
-                  €{item.price.toFixed(2)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    {item.quantity} ×
+                  </span>
+                  <span className="text-xs font-mono font-black text-neutral-900 shrink-0">
+                    €{item.price.toFixed(2)}
+                  </span>
+                </div>
               </div>
               
               {/* Nested Details */}
@@ -128,7 +135,12 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
           </div>
           <div className="flex justify-between items-baseline leading-none opacity-60">
             <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">В лева (×1.95)</span>
-            <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}лв</span>
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}лв</span>
+              <span className="text-[9px] font-bold text-neutral-400">
+                ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)} {t('menu.items')})
+              </span>
+            </div>
           </div>
         </div>
 

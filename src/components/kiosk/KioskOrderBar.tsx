@@ -65,11 +65,12 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
               {selectedItems.map((item) => (
                 <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-sm font-bold text-neutral-900 truncate">
+                    <span className="text-sm font-bold text-neutral-900 truncate flex items-center gap-2">
+                      {item.quantity > 1 && <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-500 font-mono">x{item.quantity}</span>}
                       {item.name}
                     </span>
                     <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
-                      €{item.price.toFixed(2)}
+                      €{(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
 
@@ -116,8 +117,8 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                     €{totalPrice.toFixed(2)}
                   </span>
                   <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                    ({selectedItems.length}{' '}
-                    {selectedItems.length === 1 ? t('menu.item') : t('menu.items')})
+                    ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)}{' '}
+                    {selectedItems.reduce((acc, i) => acc + i.quantity, 0) === 1 ? t('menu.item') : t('menu.items')})
                   </span>
                 </div>
               </div>
