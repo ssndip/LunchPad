@@ -14,6 +14,12 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
   onSelect,
   t,
 }) => {
+  const isPackagingFeeItem = (category?: string) => {
+    if (!category) return false;
+    const c = category.toLowerCase();
+    return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
+  };
+
   return (
     <div className="flex-1 flex md:flex-col overflow-hidden">
       <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-y-auto custom-scrollbar p-1 md:p-2 gap-1 md:space-y-1">
@@ -38,6 +44,14 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
                   return translated !== `categories.${normalizedCat}` ? translated : cat;
                 })()}
               </span>
+              
+              {isPackagingFeeItem(cat) && (
+                <div className={`absolute top-1 right-1 px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-tighter z-10 ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-400'
+                }`}>
+                  {t('menu.packaging_fee') || 'Box'}
+                </div>
+              )}
               {isActive && (
                 <motion.div
                   layoutId="active-cat-pill"

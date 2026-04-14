@@ -39,6 +39,7 @@ export const translations = {
       edit_text: "Edit Text",
       apply_menu: "Apply Menu",
       delete_all: "Delete All Items",
+      packaging_fee: "Box Fee",
     },
     cards: {
       rfid: "RFID",
@@ -171,6 +172,11 @@ export const translations = {
       user_history_scan_prompt: "Waiting for RFID scan...",
       card_not_found: "Card not found",
       recent_orders: "Recent Orders",
+      detailed_last_order: "Last Order",
+      monthly_history: "Monthly History",
+      back: "Back",
+      detailed_order_title: "Order Details",
+      monthly_history_title: "Monthly History",
     },
     categories: {
       "MAIN DISHES": "MAIN DISHES",
@@ -224,6 +230,7 @@ export const translations = {
       edit_text: "Редактирай текста",
       apply_menu: "Приложи менюто",
       delete_all: "Изтрий всички",
+      packaging_fee: "Кутийка",
     },
     cards: {
       rfid: "RFID",
@@ -355,6 +362,11 @@ export const translations = {
       user_history_scan_prompt: "Изчакване на RFID сканиране...",
       card_not_found: "Картата не е намерена",
       recent_orders: "Последни поръчки",
+      detailed_last_order: "Последна поръчка",
+      monthly_history: "Месечна история",
+      back: "Назад",
+      detailed_order_title: "Детайли на поръчката",
+      monthly_history_title: "История за месеца",
     },
     categories: {
       "MAIN DISHES": "ОСНОВНИ ЯСТИЯ",

@@ -61,6 +61,8 @@ export default function App() {
       s.setPublicAccessCode(data.publicAccessCode || "");
       s.setOrderButtonEnabled(data.orderButtonEnabled);
       s.setTestModeEnabled(data.testModeEnabled);
+      if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
+      if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
       s.setMenuVersion(data.menuVersion);
       s.setConnectionError(null);
       s.setPublicAccessRequired(false);
@@ -75,6 +77,8 @@ export default function App() {
       if (data.testModeEnabled !== undefined) s.setTestModeEnabled(data.testModeEnabled);
       if (data.globalAccess !== undefined) s.setGlobalAccess(data.globalAccess);
       if (data.publicAccessCode !== undefined) s.setPublicAccessCode(data.publicAccessCode);
+      if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
+      if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
     },
     onCardsUpdate: () => {
       if (s.token) fetchCards();
@@ -152,6 +156,8 @@ export default function App() {
         s.setPublicAccessCode(res.publicAccessCode);
         s.setOrderButtonEnabled(res.orderButtonEnabled);
         s.setTestModeEnabled(res.testModeEnabled);
+        if (res.packagingFee !== undefined) s.setPackagingFee(res.packagingFee);
+        if (res.deliveryFee !== undefined) s.setDeliveryFee(res.deliveryFee);
       }).catch(console.error);
     }
   }, [s.isManagerLoggedIn, s.token, fetchCards, s.setOrders, s.setSummaries, s.setGlobalAccess, s.setPublicAccessCode, s.setOrderButtonEnabled, s.setTestModeEnabled]);
@@ -364,6 +370,7 @@ export default function App() {
               onRemoveItem={handleRemoveMenuItem}
               onDeleteAll={() => handleApplyMenu([])}
               onApplyMenu={handleApplyMenu}
+              confirm={setConfirmConfig}
               t={t}
             />
           )}

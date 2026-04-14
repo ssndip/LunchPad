@@ -7,6 +7,8 @@ import {
   setPublicAccessCodeConfig,
   setOrderButtonEnabledConfig, 
   setTestModeConfig,
+  setPackagingFeeConfig,
+  setDeliveryFeeConfig,
   hashAndSetAdminPin
 } from "../config";
 import { globalAccessGuard } from "../middleware/auth";
@@ -17,13 +19,15 @@ export const fetchSettings = (req: Request, res: Response) => {
     globalAccess: settings.globalAccess,
     publicAccessCode: settings.publicAccessCode,
     orderButtonEnabled: settings.orderButtonEnabled,
-    testModeEnabled: settings.testModeEnabled
+    testModeEnabled: settings.testModeEnabled,
+    packagingFee: settings.packagingFee,
+    deliveryFee: settings.deliveryFee
   });
 };
 
 export const updateSettings = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled } = req.body;
+    const { globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, packagingFee, deliveryFee } = req.body;
     
     if (globalAccess !== undefined) {
       if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
@@ -61,13 +65,31 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setTestModeConfig(testModeEnabled);
       broadcast({ type: "STATUS_UPDATE", data: { kioskOpen, orderButtonEnabled: settings.orderButtonEnabled, testModeEnabled: testModeEnabled, globalAccess: settings.globalAccess, publicAccessCode: settings.publicAccessCode } });
     }
+    
+    if (packagingFee !== undefined) {
+      if (typeof packagingFee !== 'number') return res.status(400).json({ error: "Invalid value for packagingFee" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("packaging_fee", String(packagingFee));
+      setPackagingFeeConfig(packagingFee);
+      // Broadcoast the update so the kiosk sees the new fee immediately
+      broadcast({ type: "STATUS_UPDATE", data: { packagingFee } });
+    }
+
+    if (deliveryFee !== undefined) {
+      if (typeof deliveryFee !== 'number') return res.status(400).json({ error: "Invalid value for deliveryFee" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("delivery_fee", String(deliveryFee));
+      setDeliveryFeeConfig(deliveryFee);
+      // Broadcoast the update
+      broadcast({ type: "STATUS_UPDATE", data: { deliveryFee } });
+    }
 
     res.json({ 
       success: true, 
       globalAccess: settings.globalAccess, 
       publicAccessCode: settings.publicAccessCode,
       orderButtonEnabled: settings.orderButtonEnabled, 
-      testModeEnabled: settings.testModeEnabled
+      testModeEnabled: settings.testModeEnabled,
+      packagingFee: settings.packagingFee,
+      deliveryFee: settings.deliveryFee
     });
   } catch (err: any) {
     next(err);

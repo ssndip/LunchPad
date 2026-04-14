@@ -8,6 +8,8 @@ export const settings = {
   orderButtonEnabled: true,
   testModeEnabled: false,
   menuVersion: 1,
+  packagingFee: 0.10,
+  deliveryFee: 5.00,
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
 };
@@ -17,6 +19,8 @@ export const setGlobalAccessConfig = (val: boolean) => settings.globalAccess = v
 export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
 export const setOrderButtonEnabledConfig = (val: boolean) => settings.orderButtonEnabled = val;
 export const setTestModeConfig = (val: boolean) => settings.testModeEnabled = val;
+export const setPackagingFeeConfig = (val: number) => settings.packagingFee = val;
+export const setDeliveryFeeConfig = (val: number) => settings.deliveryFee = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -86,6 +90,22 @@ export const initSettings = () => {
     settings.menuVersion = 1;
   } else {
     settings.menuVersion = parseInt(menuVer.value) || 1;
+  }
+
+  const packagingFeeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("packaging_fee") as { value: string } | undefined;
+  if (!packagingFeeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("packaging_fee", "0.10");
+    settings.packagingFee = 0.1;
+  } else {
+    settings.packagingFee = parseFloat(packagingFeeRecord.value) || 0.1;
+  }
+
+  const deliveryFeeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("delivery_fee") as { value: string } | undefined;
+  if (!deliveryFeeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("delivery_fee", "5.00");
+    settings.deliveryFee = 5.0;
+  } else {
+    settings.deliveryFee = parseFloat(deliveryFeeRecord.value) || 5.0;
   }
 
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

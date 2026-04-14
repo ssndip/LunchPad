@@ -3,11 +3,12 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu, ParseResult } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
 import { Truck } from 'lucide-react';
+import * as api from '../../../api';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -16,6 +17,7 @@ interface MenuTabProps {
   onRemoveItem: (id: number) => void;
   onDeleteAll: () => void;
   onApplyMenu: (items: MenuItem[]) => void;
+  confirm: (config: any) => void;
   t: (key: string) => string;
 }
 
@@ -26,6 +28,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   onRemoveItem,
   onDeleteAll,
   onApplyMenu,
+  confirm,
   t,
 }) => {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
@@ -34,11 +37,52 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
   const deliveryFee = useStore(s => s.deliveryFee);
   const setDeliveryFee = useStore(s => s.setDeliveryFee);
+  const packagingFee = useStore(s => s.packagingFee);
+  const setPackagingFee = useStore(s => s.setPackagingFee);
+  const token = useStore(s => s.token);
+  const updateSettings = useStore(s => s.updateSettings); // I might need to check if updateSettings is in useStore or passed as prop.
+  // Actually, App.tsx handles the API calls usually if passed as props.
+  // But MenuTab doesn't have it in props. Let's check how deliveryFee is updated.
 
   // Helper to identify side dish items reliably across languages
   const isSideDishCategory = (category?: string) => {
     if (!category) return false;
     return /side dishes|гарнитур/i.test(category);
+  };
+
+  const isBBQCategory = (category?: string) => {
+    if (!category) return false;
+    return /bbq|скара/i.test(category);
+  };
+
+  const handleApplyPackagingFee = async () => {
+    if (!token) return;
+    try {
+      await api.updateSettings(token, { packagingFee });
+      confirm({
+        title: t('modals.confirm') || 'Settings updated',
+        message: t('modals.confirm_text') || 'Settings saved successfully',
+        confirmText: 'OK',
+        onConfirm: () => {}
+      });
+    } catch (err) {
+      console.error('Failed to update packaging fee', err);
+    }
+  };
+
+  const handleApplyDeliveryFee = async () => {
+    if (!token) return;
+    try {
+      await api.updateSettings(token, { deliveryFee });
+      confirm({
+        title: t('modals.confirm') || 'Settings updated',
+        message: t('modals.confirm_text') || 'Settings saved successfully',
+        confirmText: 'OK',
+        onConfirm: () => {}
+      });
+    } catch (err) {
+      console.error('Failed to update delivery fee', err);
+    }
   };
 
   /**
@@ -99,7 +143,19 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const handleApply = () => {
     if (!parsed || parsed.items.length === 0) return;
     // Explicitly confirm overwriting if there is an existing menu
-    if (editingMenu.length > 0 && !window.confirm(t('modals.overwrite_warning'))) return;
+    if (editingMenu.length > 0) {
+      confirm({
+        title: t('modals.confirm') || 'Confirm',
+        message: t('modals.overwrite_warning') || 'This will replace the existing menu. Continue?',
+        onConfirm: () => {
+          onApplyMenu(parsed.items);
+          setIsPasteOpen(false);
+          setPasteText('');
+          setParsed(null);
+        }
+      });
+      return;
+    }
     onApplyMenu(parsed.items);
     setIsPasteOpen(false);
     setPasteText('');
@@ -148,9 +204,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           {editingMenu.length > 0 && (
             <button
               onClick={() => {
-                if (window.confirm(t('modals.reset_warning'))) {
-                  onDeleteAll();
-                }
+                confirm({
+                  title: t('modals.remove_item') || 'Reset Menu',
+                  message: t('modals.reset_warning') || 'Are you sure you want to delete all items?',
+                  isDestructive: true,
+                  onConfirm: () => onDeleteAll()
+                });
               }}
               tabIndex={-1}
               className="flex items-center gap-2 px-5 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all text-sm"
@@ -160,7 +219,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           )}
           <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
             <Truck className="w-4 h-4 text-neutral-400" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">Fee:</span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('orders.delivery_fee') || 'Default Fee'}:</span>
             <input 
               type="number" 
               step="0.1" 
@@ -169,6 +228,33 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
             />
             <span className="text-xs text-neutral-400">€</span>
+            <button 
+              onClick={handleApplyDeliveryFee}
+              className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+              title="Apply Default Fee"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
+            <Square className="w-4 h-4 text-neutral-400" />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('menu.packaging_fee') || 'Box'}:</span>
+            <input 
+              type="number" 
+              step="0.05" 
+              value={packagingFee}
+              onChange={(e) => setPackagingFee(parseFloat(e.target.value) || 0)}
+              className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+            />
+            <span className="text-xs text-neutral-400">€</span>
+            <button 
+              onClick={handleApplyPackagingFee}
+              className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+              title="Apply Fee"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
           </div>
           <button
             onClick={() => setIsPasteOpen(true)}

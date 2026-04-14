@@ -47,8 +47,8 @@ export const MENU_CONFIG: MenuConfig = {
     desserts: ["десерти"],
   },
   fees: {
-    defaultBox: 0.10,
-    defaultBbqContainer: 0.10,
+    defaultBox: 0,
+    defaultBbqContainer: 0,
   },
   settings: {
     applyBoxFee: {
@@ -65,14 +65,6 @@ export const MENU_CONFIG: MenuConfig = {
       match: (item) => (item.category === 'Side Dishes' || item.category === 'Salads'),
       apply: (item, config, sectionConfig) => {
         item.tags.push('autobox');
-        // Use extracted section box fee if available, else global default
-        const feeAmount = sectionConfig?.boxFee ?? config.fees.defaultBox;
-        const shouldApply = item.category === 'Side Dishes' ? config.settings.applyBoxFee.sides : config.settings.applyBoxFee.salads;
-        
-        if (shouldApply) {
-          item.extraFees.push({ type: 'Box', amount: feeAmount });
-          item.price = Number((item.price + feeAmount).toFixed(2));
-        }
       }
     },
     {
@@ -80,22 +72,13 @@ export const MENU_CONFIG: MenuConfig = {
       match: (item) => item.category === 'BBQ',
       apply: (item, config, sectionConfig) => {
         item.tags.push('bbq');
-        const feeAmount = sectionConfig?.boxFee ?? config.fees.defaultBbqContainer;
-        if (config.settings.applyBoxFee.bbq) {
-          item.extraFees.push({ type: 'BBQ Container', amount: feeAmount });
-          item.price = Number((item.price + feeAmount).toFixed(2));
-        }
       }
     },
     {
       id: 'main_with_side_logic',
       match: (item) => (item.category === 'Main Dishes' || item.category === 'BBQ') && item.hasIncludedSide,
       apply: (item, config, sectionConfig) => {
-        const feeAmount = sectionConfig?.boxFee ?? config.fees.defaultBox;
-        if (config.settings.applyBoxFee.mainsWithGarnish) {
-          item.extraFees.push({ type: 'Box', amount: feeAmount });
-          item.price = Number((item.price + feeAmount).toFixed(2));
-        }
+        // No fee addition here
       }
     }
   ]

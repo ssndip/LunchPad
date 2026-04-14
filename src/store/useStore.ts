@@ -13,6 +13,7 @@ interface AppState {
   orders: Order[];
   history: Order[];
   deliveryFee: number;
+  packagingFee: number;
   cards: Card[];
   summaries: DailySummary[];
   menuVersion: number;
@@ -75,6 +76,7 @@ interface AppState {
   setOrders: (orders: Order[]) => void;
   setCards: (cards: Card[]) => void;
   setDeliveryFee: (fee: number) => void;
+  setPackagingFee: (fee: number) => void;
   setSummaries: (summaries: DailySummary[]) => void;
   setMenuVersion: (v: number) => void;
   setSelectedItems: (items: CartItem[]) => void;
@@ -125,6 +127,7 @@ export const useStore = create<AppState>((set) => ({
   orders: [],
   history: [],
   deliveryFee: 0,
+  packagingFee: 0.1,
   cards: [],
   summaries: [],
   menuVersion: 1,
@@ -178,6 +181,7 @@ export const useStore = create<AppState>((set) => ({
   setOrders: (orders) => set({ orders }),
   setCards: (cards) => set({ cards }),
   setDeliveryFee: (deliveryFee) => set({ deliveryFee }),
+  setPackagingFee: (packagingFee) => set({ packagingFee }),
   setSummaries: (summaries) => set({ summaries }),
   setMenuVersion: (menuVersion) => set({ menuVersion }),
   setSelectedItems: (selectedItems) => set({ selectedItems }),

@@ -151,7 +151,7 @@ export const getCardProfile = (req: Request, res: Response, next: NextFunction) 
       ownerName: card.ownerName,
       balance: card.balance,
       isAdmin: card.isAdmin === 1,
-      recentOrders: parsedOrders
+      orders: parsedOrders
     });
   } catch (err: any) {
     next(err);

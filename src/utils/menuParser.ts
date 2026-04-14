@@ -85,12 +85,8 @@ export function parsePastedMenu(text: string): ParseResult {
       // Since advancedParser captures box overrides accurately per item, we simulate sectionConfig override:
       // Note: The rule applies +0.10 if match logic passes. We will manually tag the boxFee from the parsedItem
       if (parsedItem.boxFee > 0) {
-        // If the item had an explicit box fee, add it immediately to avoid relying purely on rules
-        // However, the menuConfig rules also run. Let's just pass this data down.
-        item.tags.push('explicit_box_fee');
-        // Let's store the boxFee temporarily so rules can use it if they want.
-        // Actually, advanced parser handles determining when a box fee exists.
-        // We can just add the box fee here directly. But if menuConfig rules duplicate it, we could have a pricing bug.
+        // Tag it but don't add to price anymore - dynamic fees take over
+        item.tags.push('has_custom_box');
       }
 
       tempItems.push(item);

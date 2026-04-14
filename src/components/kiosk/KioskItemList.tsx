@@ -26,7 +26,13 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   connectionError,
   t,
 }) => {
-  if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('kiosk.restricted_message')} />;
+  const isPackagingFeeItem = (category?: string) => {
+    if (!category) return false;
+    const c = category.toLowerCase();
+    return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
+  };
+
+  if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('restricted_message')} />;
   if (!orderButtonEnabled) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
@@ -64,9 +70,16 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                     )}
                   </div>
                 </div>
-                <span className="text-sm font-black font-mono text-neutral-900 ml-4">
-                  €{item.price.toFixed(2)}
-                </span>
+                <div className="flex flex-col items-end gap-1 ml-4 shrink-0">
+                  <span className="text-sm font-black font-mono text-neutral-900">
+                    €{item.price.toFixed(2)}
+                  </span>
+                  {isPackagingFeeItem(item.category) && (
+                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter">
+                      +{t('menu.packaging_fee') || 'Кутийка'}
+                    </span>
+                  )}
+                </div>
               </motion.div>
 
               {/* Inline Side Picker */}

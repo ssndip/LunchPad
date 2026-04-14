@@ -13,6 +13,13 @@ export const useGroupedMenu = () => {
   }, [menu]);
 };
 
+// Helper to identify items requiring packaging fee
+const isPackagingFeeItem = (category?: string) => {
+  if (!category) return false;
+  const c = category.toLowerCase();
+  return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
+};
+
 export const useSideItems = () => {
   const menu = useStore((state) => state.menu);
   return useMemo(() => {
@@ -24,9 +31,13 @@ export const useSideItems = () => {
 
 export const useTotalPrice = () => {
   const selectedItems = useStore((state) => state.selectedItems);
+  const packagingFee = useStore((state) => state.packagingFee);
   return useMemo(() => {
-    return selectedItems.reduce((sum, item) => sum + item.price, 0);
-  }, [selectedItems]);
+    return selectedItems.reduce((sum, item) => {
+      const extra = isPackagingFeeItem(item.category) ? packagingFee : 0;
+      return sum + item.price + extra;
+    }, 0);
+  }, [selectedItems, packagingFee]);
 };
 
 export const useSelectedItemIds = () => {
