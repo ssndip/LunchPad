@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ChevronRight, Plus } from 'lucide-react';
 import { DailySummary } from '../../../types';
+import { useStore } from '../../../store/useStore';
+import * as api from '../../../api';
+import { Truck, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
 
 interface OrdersTabProps {
   summaries: DailySummary[];
@@ -10,6 +12,7 @@ interface OrdersTabProps {
   onExpandDate: (date: string) => void;
   onCopySummary: (date: string, total: number) => void;
   t: (key: string) => string;
+  confirm: (config: any) => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -19,7 +22,44 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onExpandDate,
   onCopySummary,
   t,
+  confirm,
 }) => {
+  const token = useStore(s => s.token);
+  const globalDeliveryFee = useStore(s => s.deliveryFee);
+  const [dailyFees, setDailyFees] = React.useState<Record<string, string>>({});
+  const [distributing, setDistributing] = React.useState<string | null>(null);
+
+  const handleDistributeFee = async (date: string, fee: number) => {
+    if (!token) return;
+    
+    // Feature 10: Custom confirmation modal
+    confirm({
+      title: t('orders.distribute_fee'),
+      message: t('orders.distribute_confirm').replace('{{fee}}', fee.toString()).replace('{{count}}', summaries.find(s => s.date === date)?.orderCount || '0'),
+      onConfirm: async () => {
+        setDistributing(date);
+        try {
+          const res = await api.distributeFee(token, date, fee);
+          confirm({
+            title: t('modals.confirm'),
+            message: t('orders.distribute_success').replace('{{split}}', res.splitFee).replace('{{count}}', res.userCount),
+            confirmText: 'OK',
+            onConfirm: () => {}
+          });
+        } catch (err: any) {
+          confirm({
+            title: 'Error',
+            message: err.message,
+            isDestructive: true,
+            confirmText: 'OK',
+            onConfirm: () => {}
+          });
+        } finally {
+          setDistributing(null);
+        }
+      }
+    });
+  };
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
@@ -64,7 +104,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       </span>
                     </td>
                     <td className="p-6 text-right font-mono font-bold text-neutral-900">
-                      €{(Number(summary.totalSales) || 0).toFixed(2)}
+                      €{(Number(summary?.totalSales) || 0).toFixed(2)}
                     </td>
                   </tr>
 
@@ -84,12 +124,51 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                 {t('orders.items_breakdown')}
                               </h3>
                             </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onCopySummary(summary.date, summary.totalSales); }}
-                              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg active:scale-95"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> {t('orders.copy_summary')}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex flex-col gap-1.5 min-w-[140px]">
+                                <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400 ml-1">
+                                  {t('orders.delivery_fee')}
+                                </label>
+                                <div className="relative">
+                                  <input 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder={t('orders.fee_placeholder')}
+                                    value={dailyFees[summary.date] !== undefined ? dailyFees[summary.date] : globalDeliveryFee}
+                                    onChange={(e) => setDailyFees({ ...dailyFees, [summary.date]: e.target.value })}
+                                    className="w-full h-12 pl-4 pr-10 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                                  />
+                                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold text-xs">€</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-end gap-2 h-12 mt-auto">
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const fee = parseFloat(dailyFees[summary.date] || globalDeliveryFee.toString());
+                                    handleDistributeFee(summary.date, fee); 
+                                  }}
+                                  disabled={!!distributing}
+                                  className="h-full flex items-center gap-2 px-6 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
+                                >
+                                  {distributing === summary.date ? (
+                                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                                      <Truck className="w-3.5 h-3.5" />
+                                    </motion.div>
+                                  ) : (
+                                    <Truck className="w-3.5 h-3.5" />
+                                  )}
+                                  {t('orders.distribute_fee')}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onCopySummary(summary.date, Number(summary.totalSales) || 0); }}
+                                  className="h-full flex items-center gap-2 px-6 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 active:scale-95"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> {t('orders.copy_summary')}
+                                </button>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-xl">
@@ -114,15 +193,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                         {Number(item.quantity) || 0}
                                       </span>
                                     </td>
-                                    <td className="p-5 text-right font-mono text-neutral-500">€{(Number(item.price) || 0).toFixed(2)}</td>
-                                    <td className="p-5 text-right font-mono font-bold text-neutral-900">€{(Number(item.total) || 0).toFixed(2)}</td>
+                                    <td className="p-5 text-right font-mono text-neutral-500">€{(Number(item?.price) || 0).toFixed(2)}</td>
+                                    <td className="p-5 text-right font-mono font-bold text-neutral-900">€{(Number(item?.total) || 0).toFixed(2)}</td>
                                   </tr>
                                 ))}
                               </tbody>
                               <tfoot>
                                 <tr className="bg-neutral-900 text-white">
                                   <td colSpan={3} className="p-5 font-bold uppercase tracking-widest text-xs text-right">{t('orders.total')}</td>
-                                  <td className="p-5 text-right font-mono font-black text-lg">€{summary.totalSales.toFixed(2)}</td>
+                                  <td className="p-5 text-right font-mono font-black text-lg">€{(Number(summary?.totalSales) || 0).toFixed(2)}</td>
                                 </tr>
                               </tfoot>
                             </table>

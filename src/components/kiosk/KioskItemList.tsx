@@ -26,7 +26,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   connectionError,
   t,
 }) => {
-  if (connectionError) return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('kiosk.restricted_message')} />;
+  if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('kiosk.restricted_message')} />;
   if (!orderButtonEnabled) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 

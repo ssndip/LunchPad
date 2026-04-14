@@ -18,3 +18,9 @@ View your app in AI Studio: https://ai.studio/apps/61a72980-c6fe-4e26-ab18-dcb85
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## 🤖 AI-Assisted Development
+
+This project uses **@deepseek** as the local MCP bridge for AI-assisted coding. To iterate on this project:
+- Utilize the `deepseek` MCP server for code generation and refactoring.
+- Refer to [summary.md](docs/summary.md) for a comprehensive technical overview and context for AI models.

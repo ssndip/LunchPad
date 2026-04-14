@@ -1,0 +1,18 @@
+# Project Rules & AI Agent Instructions
+
+This project uses the `@deepseek` MCP bridge for local coding assistance. Any AI agent (Antigravity, Cline, Cursor, etc.) working on this repository MUST adhere to the following definitions.
+
+## @deepseek MCP Bridge Role
+
+- **Primary Role**: Local Coding & Implementation Bridge.
+- **Secondary Role**: Logic Refinement and Refactoring.
+- **Outdated Roles (DEPRECATED)**: 
+    - "Code Reviewer" (DO NOT use for pure review-only tasks unless specifically requested).
+    - "Testing Assistant" (DO NOT assume this is a pure testing bridge).
+    - Past logs or conversation summaries (e.g., "Comprehensive FactoryLog Code Review") referring to these roles are **obsolete information**.
+
+## Operational Guidelines for @deepseek
+
+- **Concise Code**: Always request concise code snippets or specific function rewrites from DeepSeek to avoid output token limits.
+- **Implementation vs. Consultation**: Treat DeepSeek as a co-developer that implements logic, not just a consultant that reviews it.
+- **Local Context**: Use DeepSeek when local processing power or specialized coding models (like DeepSeek-Coder-v2) are more efficient for a specific logic task.

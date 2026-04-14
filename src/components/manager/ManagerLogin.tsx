@@ -22,15 +22,13 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
     setError(null);
 
     try {
-      // Verify PIN by attempting to fetch cards/orders
-      const [cardsRes, ordersRes] = await api.verifyPin(pin);
+      // 1. Exchange PIN for JWT
+      const res = await api.login(pin);
       
-      if (cardsRes.status === 401 || ordersRes.status === 401) {
-        setError(t('settings.invalid_pin') || 'Invalid admin PIN');
-      } else if (!cardsRes.ok || !ordersRes.ok) {
-        setError('Server error. Please try again.');
+      if (res.success && res.token) {
+        onLogin(res.token);
       } else {
-        onLogin(pin);
+        setError(res.error || t('settings.invalid_pin') || 'Invalid admin PIN');
       }
     } catch {
       setError('Connection failed');

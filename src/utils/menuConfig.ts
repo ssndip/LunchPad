@@ -13,6 +13,7 @@ export interface MenuConfig {
     applyBoxFee: {
       sides: boolean;
       bbq: boolean;
+      salads: boolean;
       mainsWithGarnish: boolean;
     };
     sideDishTriggerKeyword: string;
@@ -28,6 +29,8 @@ export const MENU_CONFIG: MenuConfig = {
   categoryLabels: {
     soups: "Soups",
     mains: "Main Dishes",
+    salads: "Salads",
+    bread: "Bread",
     sides: "Side Dishes",
     bbq: "BBQ",
     other: "Other",
@@ -35,7 +38,9 @@ export const MENU_CONFIG: MenuConfig = {
   },
   categoryKeywords: {
     soups: ["супи"],
-    mains: ["основни ястия"],
+    mains: ["основно ястие", "основни ястия"],
+    salads: ["салати"],
+    bread: ["хляб"],
     sides: ["гарнитури"],
     bbq: ["скара"],
     other: ["други"],
@@ -49,19 +54,22 @@ export const MENU_CONFIG: MenuConfig = {
     applyBoxFee: {
       sides: true,
       bbq: true,
+      salads: true,
       mainsWithGarnish: false,
     },
     sideDishTriggerKeyword: "с гарнитура",
   },
   rules: [
     {
-      id: 'side_dish_logic',
-      match: (item) => item.category === 'Side Dishes',
+      id: 'box_fee_logic',
+      match: (item) => (item.category === 'Side Dishes' || item.category === 'Salads'),
       apply: (item, config, sectionConfig) => {
-        item.tags.push('standalone_side');
+        item.tags.push('autobox');
         // Use extracted section box fee if available, else global default
         const feeAmount = sectionConfig?.boxFee ?? config.fees.defaultBox;
-        if (config.settings.applyBoxFee.sides) {
+        const shouldApply = item.category === 'Side Dishes' ? config.settings.applyBoxFee.sides : config.settings.applyBoxFee.salads;
+        
+        if (shouldApply) {
           item.extraFees.push({ type: 'Box', amount: feeAmount });
           item.price = Number((item.price + feeAmount).toFixed(2));
         }

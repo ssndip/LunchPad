@@ -24,7 +24,9 @@ export const KioskMenuGrid: React.FC<KioskMenuGridProps> = ({
   connectionError,
   t,
 }) => {
-  if (connectionError) {
+  // Only show the blocked overlay for definitive, permanent access denials.
+  // 'Reconnecting...' is transient — don't hide the menu while WS retries.
+  if (connectionError === 'Global Access Disabled') {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <div className="bg-white p-12 rounded-[40px] border-2 border-dashed border-red-200 text-center shadow-lg max-w-md w-full">

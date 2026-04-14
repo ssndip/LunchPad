@@ -35,5 +35,25 @@ export const useSelectedItemIds = () => {
 };
 
 export const useComputedKioskOpen = () => {
-  return useStore((state) => state.kioskOpen);
+  const kioskOpen = useStore((state) => state.kioskOpen);
+  const kioskAutoTiming = useStore((state) => state.kioskAutoTiming);
+  const openTime = useStore((state) => state.kioskOpenTime);
+  const closeTime = useStore((state) => state.kioskCloseTime);
+
+  return useMemo(() => {
+    // 1. Manual override takes precedence? 
+    // Usually, if it's manually closed, it's closed.
+    // However, if Auto Timing is ON, we evaluate the window.
+    if (!kioskAutoTiming) return kioskOpen;
+
+    const now = new Date();
+    const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + 
+                        now.getMinutes().toString().padStart(2, '0');
+
+    // Simple time range check (assumes same-day window like 08:00 - 11:00)
+    // If closeTime < openTime, it crosses midnight (not handled here yet, but based on UI it's morning hours)
+    const isWithinWindow = currentHHmm >= openTime && currentHHmm < closeTime;
+    
+    return isWithinWindow;
+  }, [kioskOpen, kioskAutoTiming, openTime, closeTime]);
 };

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu, ParseResult } from '../../../utils/menuParser';
+import { useStore } from '../../../store/useStore';
+import { Truck } from 'lucide-react';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -29,6 +31,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<ParseResult | null>(null);
+
+  const deliveryFee = useStore(s => s.deliveryFee);
+  const setDeliveryFee = useStore(s => s.setDeliveryFee);
 
   // Helper to identify side dish items reliably across languages
   const isSideDishCategory = (category?: string) => {
@@ -153,6 +158,18 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
             </button>
           )}
+          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
+            <Truck className="w-4 h-4 text-neutral-400" />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">Fee:</span>
+            <input 
+              type="number" 
+              step="0.1" 
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
+              className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+            />
+            <span className="text-xs text-neutral-400">€</span>
+          </div>
           <button
             onClick={() => setIsPasteOpen(true)}
             tabIndex={-1}

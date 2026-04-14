@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { broadcast } from "../broadcast";
+import { incrementMenuVersion, settings } from "../config";
 
 export const getMenu = (database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
@@ -9,7 +10,8 @@ export const getMenu = (database = db) => {
     available: i.available === 1,
     requiresSideChoice: i.requiresSideChoice === 1,
     hasIncludedSide: i.hasIncludedSide === 1,
-    sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : []
+    sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
+    menuVersion: settings.menuVersion
   }));
 };
 
@@ -45,9 +47,10 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         i.hasIncludedSide ? 1 : 0
       ));
     })();
+    const newVersion = incrementMenuVersion();
     const updated = getMenu(db);
-    broadcast({ type: "MENU_UPDATE", data: updated });
-    res.json({ success: true, menu: updated });
+    broadcast({ type: "MENU_UPDATE", data: updated, menuVersion: newVersion });
+    res.json({ success: true, menu: updated, menuVersion: newVersion });
   } catch (err: any) {
     next(err);
   }

@@ -8,6 +8,7 @@ interface SettingsTabProps {
   lang: Language;
   setLang: (l: Language) => void;
   globalAccess: boolean;
+  publicAccessCode: string;
   orderButtonEnabled: boolean;
   testModeEnabled: boolean;
   newPin: string;
@@ -19,16 +20,23 @@ interface SettingsTabProps {
     access: boolean,
     orderBtn: boolean,
     testMode?: boolean,
+    publicCode?: string,
   ) => void;
   onUpdatePin: () => void;
   t: (key: string) => string;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
-  lang, setLang, globalAccess, orderButtonEnabled, testModeEnabled,
+  lang, setLang, globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   onUpdateSettings, onUpdatePin, t,
 }) => {
+  const [localPublicCode, setLocalPublicCode] = React.useState(publicAccessCode);
+  
+  React.useEffect(() => {
+    setLocalPublicCode(publicAccessCode);
+  }, [publicAccessCode]);
+
   const Toggle = ({
     checked, onChange, color = 'bg-neutral-900', label,
   }: { checked: boolean; onChange: () => void; color?: string; label: string }) => (
@@ -91,6 +99,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <AlertCircle className="w-5 h-5 text-neutral-400 mt-0.5 shrink-0" />
               <p className="text-xs text-neutral-500 leading-relaxed font-serif italic">{t('settings.global_access_warning')}</p>
             </div>
+          </div>
+          
+          {/* Public Access Code Field (Only relevant if Global Access is ON) */}
+          <div className="mt-6 pt-6 border-t border-neutral-100">
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Public Web Access Code</label>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={localPublicCode}
+                onChange={(e) => setLocalPublicCode(e.target.value)}
+                placeholder="Leave empty for open access"
+                className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm"
+              />
+              <button
+                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, localPublicCode)}
+                disabled={localPublicCode === publicAccessCode}
+                className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
+              >
+                Update
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] text-neutral-400 italic">If set, remote users must enter this code to access the kiosk. Local users will bypass it.</p>
           </div>
         </div>
 

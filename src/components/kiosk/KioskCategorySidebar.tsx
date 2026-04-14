@@ -32,7 +32,11 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
               <span className={`text-[10px] md:text-xs font-black uppercase tracking-wider relative z-10 transition-colors whitespace-nowrap ${
                 isActive ? 'text-white' : 'group-hover:text-neutral-900'
               }`}>
-                {cat}
+                {(() => {
+                  const normalizedCat = cat.trim().toUpperCase();
+                  const translated = t(`categories.${normalizedCat}`);
+                  return translated !== `categories.${normalizedCat}` ? translated : cat;
+                })()}
               </span>
               {isActive && (
                 <motion.div

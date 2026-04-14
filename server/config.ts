@@ -1,23 +1,36 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 
-// --- Settings Cache ---
-export let globalAccessConfig = true;
-export let orderButtonEnabledConfig = true;
-export let testModeConfig = false;
-export let adminPinConfig = process.env.ADMIN_PIN || "0000";
+// --- Settings Object (Ensures live bindings across modules) ---
+export const settings = {
+  globalAccess: true,
+  publicAccessCode: "",
+  orderButtonEnabled: true,
+  testModeEnabled: false,
+  menuVersion: 1,
+  adminPin: process.env.ADMIN_PIN || "0000",
+  jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
+};
 
-export const setGlobalAccessConfig = (val: boolean) => globalAccessConfig = val;
-export const setOrderButtonEnabledConfig = (val: boolean) => orderButtonEnabledConfig = val;
-export const setTestModeConfig = (val: boolean) => testModeConfig = val;
-export const setAdminPinConfig = (val: string) => adminPinConfig = val;
+// --- Setters ---
+export const setGlobalAccessConfig = (val: boolean) => settings.globalAccess = val;
+export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
+export const setOrderButtonEnabledConfig = (val: boolean) => settings.orderButtonEnabled = val;
+export const setTestModeConfig = (val: boolean) => settings.testModeEnabled = val;
+
+export const incrementMenuVersion = () => {
+  settings.menuVersion += 1;
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run("menu_version", String(settings.menuVersion));
+  return settings.menuVersion;
+};
 
 /**
  * Verifies if the provided PIN matches the hashed admin PIN.
  */
 export const verifyAdminPin = (pin: string): boolean => {
   try {
-    return bcrypt.compareSync(pin, adminPinConfig);
+    return bcrypt.compareSync(pin, settings.adminPin);
   } catch (err) {
     console.error("[Auth] PIN verification error", err);
     return false;
@@ -30,7 +43,7 @@ export const verifyAdminPin = (pin: string): boolean => {
 export const hashAndSetAdminPin = (newPin: string) => {
   const salt = bcrypt.genSaltSync(10);
   const hash = bcrypt.hashSync(newPin, salt);
-  adminPinConfig = hash;
+  settings.adminPin = hash;
   db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_pin", hash);
 };
 
@@ -38,29 +51,45 @@ export const initSettings = () => {
   const globalAccess = db.prepare("SELECT value FROM settings WHERE key = ?").get("global_access") as { value: string } | undefined;
   if (!globalAccess) {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("global_access", "1");
-    globalAccessConfig = true;
+    settings.globalAccess = true;
   } else {
-    globalAccessConfig = globalAccess.value === "1";
+    settings.globalAccess = globalAccess.value === "1";
+  }
+
+  const publicAccess = db.prepare("SELECT value FROM settings WHERE key = ?").get("public_access_code") as { value: string } | undefined;
+  if (!publicAccess) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("public_access_code", "");
+    settings.publicAccessCode = "";
+  } else {
+    settings.publicAccessCode = publicAccess.value;
   }
 
   const orderButton = db.prepare("SELECT value FROM settings WHERE key = ?").get("order_button_enabled") as { value: string } | undefined;
   if (!orderButton) {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("order_button_enabled", "1");
-    orderButtonEnabledConfig = true;
+    settings.orderButtonEnabled = true;
   } else {
-    orderButtonEnabledConfig = orderButton.value === "1";
+    settings.orderButtonEnabled = orderButton.value === "1";
   }
 
   const testMode = db.prepare("SELECT value FROM settings WHERE key = ?").get("test_mode_enabled") as { value: string } | undefined;
   if (!testMode) {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("test_mode_enabled", "0");
-    testModeConfig = false;
+    settings.testModeEnabled = false;
   } else {
-    testModeConfig = testMode.value === "1";
+    settings.testModeEnabled = testMode.value === "1";
+  }
+
+  const menuVer = db.prepare("SELECT value FROM settings WHERE key = ?").get("menu_version") as { value: string } | undefined;
+  if (!menuVer) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("menu_version", "1");
+    settings.menuVersion = 1;
+  } else {
+    settings.menuVersion = parseInt(menuVer.value) || 1;
   }
 
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
-  let currentPin = adminPinRecord ? adminPinRecord.value : adminPinConfig;
+  let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
 
   // Auto-migration: If PIN is not hashed, hash it now
   const isHashed = currentPin.startsWith("$2a$") || currentPin.startsWith("$2b$");
@@ -71,5 +100,5 @@ export const initSettings = () => {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_pin", currentPin);
   }
   
-  adminPinConfig = currentPin;
+  settings.adminPin = currentPin;
 };

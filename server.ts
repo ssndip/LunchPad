@@ -4,14 +4,15 @@ import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 
 // Modular Imports
 import { db, initDb, seedInitialData } from "./server/db";
-import { initSettings, globalAccessConfig, orderButtonEnabledConfig, testModeConfig } from "./server/config";
+import { initSettings, settings, incrementMenuVersion } from "./server/config";
 import { setWssInstance } from "./server/broadcast";
-import { isLocalOrigin } from "./server/middleware/auth";
+import { isLocalOrigin, globalAccessGuard } from "./server/middleware/auth";
 
 // Controllers (for init/broadcast)
 import { getMenu } from "./server/controllers/menuController";
@@ -23,6 +24,9 @@ import menuRoutes from "./server/routes/menuRoutes";
 import cardRoutes from "./server/routes/cardRoutes";
 import orderRoutes from "./server/routes/orderRoutes";
 import settingsRoutes from "./server/routes/settingsRoutes";
+import authRoutes from "./server/routes/authRoutes";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,14 +48,27 @@ export async function startServer() {
   const PORT = process.env.PORT || 3400;
 
   // CORS Middleware
-  app.use(cors({
-    origin: (origin, callback) => {
-      if (globalAccessConfig) return callback(null, true);
-      if (isLocalOrigin(origin)) return callback(null, true);
-      console.warn(`[CORS] REJECTED: origin="${origin}".`);
-      callback(new Error('Access Denied: Global Access is disabled.'), false);
-    }
+  app.use(cors());
+
+  // Global Access & Security Middleware
+  // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
+  app.use("/api", (req, res, next) => {
+    // Always allow login/unlock so admins can log in and remote users can authenticate
+    // Always allow init so the kiosk can bootstrap even before authentication
+    if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
+    return globalAccessGuard(req, res, next);
+  });
+
+  app.use(helmet({
+    contentSecurityPolicy: false, // Allow Vite dev server
   }));
+
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   app.use(express.json({ limit: '500kb' }));
 
@@ -62,19 +79,21 @@ export async function startServer() {
   app.use("/api/menu", menuRoutes);
   app.use("/api/cards", cardRoutes);
   app.use("/api/settings", settingsRoutes);
+  app.use("/api/auth", authRoutes);
   
   // Orders & History (special case for backward compatibility of /api/v1/order)
   app.use("/api", orderRoutes); 
-  // Wait, the router has /v1/order, so it should be mounted at /api. Correct.
-
-  // Init route for frontend
+  
+  // Init route for frontend - always public so kiosk can bootstrap
   app.get("/api/init", (req, res) => {
     res.json({
       menu: getMenu(),
+      menuVersion: settings.menuVersion, // ← Critical: fix for 409 Conflict errors
       kioskOpen,
-      globalAccess: globalAccessConfig,
-      orderButtonEnabled: orderButtonEnabledConfig,
-      testModeEnabled: testModeConfig
+      globalAccess: settings.globalAccess,
+      publicAccessCode: settings.publicAccessCode ? "__REQUIRED__" : "", // Tell client a code is needed, but don't reveal it
+      orderButtonEnabled: settings.orderButtonEnabled,
+      testModeEnabled: settings.testModeEnabled
     });
   });
 
@@ -91,17 +110,76 @@ export async function startServer() {
   // --- WebSocket ---
   wss.on("connection", (ws, req) => {
     const origin = req.headers.origin;
-    if (!globalAccessConfig && !isLocalOrigin(origin)) {
-      ws.close(4003, "Access Denied");
+    
+    // Extract token from query string (e.g. ws://host?token=xxx)
+    const url = new URL(req.url || "", `http://${req.headers.host || "localhost"}`);
+    const token = url.searchParams.get("token");
+    
+    let isAdmin = false;
+    let isPublicSession = false;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, settings.jwtSecret) as any;
+        if (decoded && decoded.role === "admin") isAdmin = true;
+        if (decoded && decoded.role === "public") isPublicSession = true;
+      } catch (err) {
+        // Token invalid
+      }
+    }
+
+    const isLocal = isLocalOrigin(origin);
+    
+    // Core Access Logic:
+    // 1. Admin/Local ALWAYS allowed
+    // 2. If Global Access is ON:
+    //    - Allowed if no Public Access Code is set
+    //    - Allowed if a valid Public Session Token is provided
+    const isAllowed = isAdmin || isLocal || (
+      settings.globalAccess && 
+      (!settings.publicAccessCode || settings.publicAccessCode.trim() === "" || isPublicSession)
+    );
+
+    console.log(`[WS] Connection attempt: origin=${origin}, gAccess=${settings.globalAccess}, local=${isLocal}, admin=${isAdmin}, public=${isPublicSession} -> ${isAllowed ? 'ALLOWED' : 'REJECTED'}`);
+
+    if (!isAllowed) {
+      // Use 4001 for "Access Code Required" to distinguish from 4003 "Global Access Disabled"
+      const code = (settings.globalAccess && settings.publicAccessCode) ? 4001 : 4003;
+      ws.close(code, "Access Denied");
       return;
     }
+
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
       menu: getMenu(),
       orders: [], 
       kioskOpen,
-      cards: [] 
+      cards: [],
+      menuVersion: settings.menuVersion,
+      globalAccess: settings.globalAccess,
+      publicAccessCode: settings.publicAccessCode,
+      orderButtonEnabled: settings.orderButtonEnabled,
+      testModeEnabled: settings.testModeEnabled
     }));
+
+    ws.on("pong", () => {
+      (ws as any).isAlive = true;
+    });
+  });
+
+  // --- WebSocket Heartbeat (30s) ---
+  const interval = setInterval(() => {
+    wss.clients.forEach((ws: any) => {
+      if (ws.isAlive === false) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+      // Also send a JSON ping for clients that don't handle binary pings easily
+      ws.send(JSON.stringify({ type: "PING", ts: Date.now() }));
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(interval);
   });
 
   // --- Static Files & Vite ---
@@ -111,10 +189,18 @@ export async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else if (process.env.NODE_ENV === "production") {
+  } else {
     const distPath = path.join(__dirname, "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
+    app.use((req, res, next) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      next();
+    }, express.static(distPath));
+    app.get("*", (req, res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.sendFile(path.join(distPath, "index.html"));
+    });
   }
 
   if (process.env.NODE_ENV !== "test") {

@@ -25,11 +25,16 @@ export interface CartItem extends MenuItem {
   sidePrice?: number; // always 0 for included sides
 }
 
+/** Strictly typed item for database persistence in the orders table */
+export interface PersistedOrderItem extends MenuItem {
+  side?: string;
+}
+
 export interface Order {
   id: number;
   rfid: string;
   ownerName?: string;
-  items: MenuItem[];
+  items: PersistedOrderItem[];
   totalPrice: number;
   timestamp: string;
   date: string;

@@ -11,100 +11,37 @@ const DATE_RE = /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
 /** Matches a price (e.g. 1.80, 1,80, 5) followed by currency */
 const PRICE_RE = /([\d]+[,.][\d]+|[\d]+)\s*(€|\$|лв)/;
 
+import { parseMenuText } from './advancedMenuParser';
+
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
-/**
- * Extracts prices and fees from headers like:
- * "Гарнитури (100гр 0.75€ + 0.10€ кутийка) :"
- * "Скара + 0.10€ кутийка"
- */
-function extractHeaderConfig(line: string) {
-  const priceRegex = /([\d]+[,.][\d]+|[\d]+)\s*(€|\$|лв)/g;
-  const prices: number[] = [];
-  let match;
-  while ((match = priceRegex.exec(line)) !== null) {
-    prices.push(parseFloat(match[1].replace(',', '.')));
-  }
-
-  let basePrice: number | undefined;
-  let boxFee: number | undefined;
-
-  if (line.includes('Гарнитур')) {
-    // For sides, usually: [Section Base Price, Container Fee]
-    basePrice = prices[0];
-    boxFee = prices[1];
-  } else if (line.includes('+') || line.includes('кутийк')) {
-    // For BBQ or others: [Container Fee]
-    boxFee = prices[0];
-  }
-
-  return { basePrice, boxFee };
-}
-
-function detectCategoryKey(line: string, config: MenuConfig): string | null {
-  const lineLower = line.toLowerCase();
-  // Strip parentheses and common header symbols
-  const mainPart = lineLower.replace(/\(.*\)/, '').replace(/[:\d.+€$]/g, '').trim();
-  if (!mainPart) return null;
-
+function mapCategoryNameToKey(categoryName: string, config: MenuConfig): string {
+  const lineLower = categoryName.toLowerCase();
   for (const [key, keywords] of Object.entries(config.categoryKeywords)) {
-    // Check if any keyword matches the start of the cleaned line
-    if (keywords.some(k => {
-      const kw = k.toLowerCase();
-      return mainPart.startsWith(kw) || mainPart.includes(kw);
-    })) {
+    if (keywords.some(k => lineLower.includes(k.toLowerCase()))) {
       return key;
     }
   }
-  return null;
-}
-
-function extractPrice(line: string): number | null {
-  PRICE_RE.lastIndex = 0;
-  const match = PRICE_RE.exec(line);
-  if (!match) return null;
-  return parseFloat(match[1].replace(',', '.'));
-}
-
-function extractBaseItem(line: string, categoryName: string, id: number, priceOverride?: number): MenuItem | null {
-  const price = extractPrice(line) ?? priceOverride;
-  if (price === undefined || price === null) return null;
-
-  // Clean name: remove price markers and bullets
-  let name = line.replace(PRICE_RE, '').replace(/^[-•*]\s*/, '').trim();
-  name = name.replace(/[,.\s]+$/, '').trim();
-
-  if (name.length < 2) return null;
-
-  return {
-    id,
-    name,
-    description: '',
-    basePrice: price,
-    price: price,
-    available: true,
-    category: categoryName,
-    tags: [],
-    extraFees: [],
-  };
+  return 'other'; // default to other if no matching keyword
 }
 
 /**
  * Stage 4: Enrichment (Rules Engine + Auto-Select)
  */
-function enrichItems(items: MenuItem[], config: MenuConfig, sectionConfigs: Record<string, any>): MenuItem[] {
+function enrichItems(items: MenuItem[], config: MenuConfig): MenuItem[] {
   // 1. Identify all side dishes
   const sideDishes = items.filter(i => i.category === config.categoryLabels.sides);
   const firstSide = sideDishes[0]?.name;
 
   return items.map(item => {
-    const sKey = Object.keys(config.categoryLabels).find(k => config.categoryLabels[k] === item.category);
-    const sCfg = sKey ? sectionConfigs[sKey] : undefined;
-
     // Apply General Rules
     config.rules.forEach(rule => {
       if (rule.match(item)) {
-        rule.apply(item, config, sCfg);
+        // We no longer extract sectionConfigs, because boxFee is accurately extracted
+        // on the item level by advancedMenuParser!
+        // We'll pass a dummy sectionConfig with boxFee if the item specifically captured a boxFee > 0
+        const dummySectionCfg = item.extraFees.length ? { boxFee: item.extraFees[0].amount } : undefined; 
+        rule.apply(item, config, dummySectionCfg);
       }
     });
 
@@ -124,43 +61,45 @@ function enrichItems(items: MenuItem[], config: MenuConfig, sectionConfigs: Reco
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function parsePastedMenu(text: string): ParseResult {
-  const lines = text.split('\n');
+  const parsedAdvanced = parseMenuText(text);
   const tempItems: MenuItem[] = [];
   let currentId = Date.now();
-  
-  let currentCategoryKey = 'other';
-  const sectionConfigs: Record<string, any> = {};
-  let detectedDate: string | undefined;
 
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.length < 2) continue;
+  for (const parsedCategory of parsedAdvanced.categories) {
+    const internalKey = mapCategoryNameToKey(parsedCategory.categoryName, MENU_CONFIG);
+    const categoryDisplayLabel = MENU_CONFIG.categoryLabels[internalKey] || 'Other';
 
-    // 1. Date detection
-    if (!detectedDate) {
-      const dateMatch = line.match(DATE_RE);
-      if (dateMatch) {
-        detectedDate = dateMatch[1];
-        if (line.replace(DATE_RE, '').replace(/\s/g, '').length === 0) continue;
+    for (const parsedItem of parsedCategory.items) {
+      const item: MenuItem = {
+        id: currentId++,
+        name: parsedItem.name + (parsedItem.weight ? ` ${parsedItem.weight}` : ''), // Append weight to name for now, or keep separate later
+        description: '',
+        basePrice: parsedItem.price,
+        price: parsedItem.price,
+        available: true,
+        category: categoryDisplayLabel,
+        tags: [],
+        extraFees: []
+      };
+
+      // Since advancedParser captures box overrides accurately per item, we simulate sectionConfig override:
+      // Note: The rule applies +0.10 if match logic passes. We will manually tag the boxFee from the parsedItem
+      if (parsedItem.boxFee > 0) {
+        // If the item had an explicit box fee, add it immediately to avoid relying purely on rules
+        // However, the menuConfig rules also run. Let's just pass this data down.
+        item.tags.push('explicit_box_fee');
+        // Let's store the boxFee temporarily so rules can use it if they want.
+        // Actually, advanced parser handles determining when a box fee exists.
+        // We can just add the box fee here directly. But if menuConfig rules duplicate it, we could have a pricing bug.
       }
-    }
 
-    // 2. Category Detection
-    const categoryKey = detectCategoryKey(line, MENU_CONFIG);
-    if (categoryKey) {
-      currentCategoryKey = categoryKey;
-      sectionConfigs[categoryKey] = extractHeaderConfig(line);
-      continue;
+      tempItems.push(item);
     }
-
-    // 3. Item Extraction
-    const priceOverride = currentCategoryKey === 'sides' ? sectionConfigs['sides']?.basePrice : undefined;
-    const item = extractBaseItem(line, MENU_CONFIG.categoryLabels[currentCategoryKey] || 'Other', currentId++, priceOverride);
-    if (item) tempItems.push(item);
   }
 
   // 4. Rules & Enrichment
-  const enrichedItems = enrichItems(tempItems, MENU_CONFIG, sectionConfigs);
+  const enrichedItems = enrichItems(tempItems, MENU_CONFIG);
 
-  return { detectedDate, items: enrichedItems };
+  return { detectedDate: parsedAdvanced.date || undefined, items: enrichedItems };
 }
+

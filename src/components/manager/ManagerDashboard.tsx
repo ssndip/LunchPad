@@ -13,8 +13,8 @@ import {
 import { Language } from '../../translations';
 
 interface ManagerDashboardProps {
-  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings';
-  onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings') => void;
+  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics';
+  onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics') => void;
   onLogout: () => void;
   lang: Language;
   t: (key: string) => string;
@@ -38,6 +38,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     { id: 'orders', icon: TrendingUp, label: t('navigation.order_summary') },
     { id: 'history', icon: History, label: t('navigation.history') },
     { id: 'cards', icon: CreditCard, label: t('navigation.card_management') },
+    { id: 'analytics', icon: TrendingUp, label: t('navigation.analytics') },
     { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
   ];
 
@@ -53,7 +54,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             <h2 className="text-2xl font-black uppercase tracking-tighter">LunchPad</h2>
           </div>
           <p className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest ml-1">
-            Manager Control
+            {t('navigation.dashboard')}
           </p>
         </div>
 
@@ -99,7 +100,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-neutral-100 shadow-sm">
               <div className={`w-2 h-2 rounded-full animate-pulse ${kioskOpen ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
-                Kiosk: {kioskOpen ? 'Open' : 'Closed'}
+                {t('settings.kiosk_status')}: {kioskOpen ? t('modals.open') : t('modals.close')}
               </span>
               <button
                 onClick={() => onToggleKiosk(!kioskOpen)}
@@ -109,7 +110,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                     : 'bg-green-50 text-green-600 hover:bg-green-100'
                 }`}
               >
-                {kioskOpen ? 'Close' : 'Open'}
+                {kioskOpen ? t('modals.close') : t('modals.open')}
               </button>
             </div>
           </div>

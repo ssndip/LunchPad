@@ -7,7 +7,15 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Force unregister all service workers to clear stale cache
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          for (const reg of regs) reg.unregister();
+        });
+      }
+    </script>
+    <script type="module" src="/src/main.tsx?v=2"></script>
   </body>
 </html>
 

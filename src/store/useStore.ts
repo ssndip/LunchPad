@@ -5,14 +5,17 @@ import { Language } from '../translations';
 interface AppState {
   // --- View State ---
   mode: 'kiosk' | 'manager';
-  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings';
+  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics';
   lang: Language;
   
   // --- Data ---
   menu: MenuItem[];
   orders: Order[];
+  history: Order[];
+  deliveryFee: number;
   cards: Card[];
   summaries: DailySummary[];
+  menuVersion: number;
   
   // --- Kiosk Ordering ---
   selectedItems: CartItem[];
@@ -23,9 +26,11 @@ interface AppState {
   connectionError: string | null;
   
   // --- Manager ---
-  adminPin: string | null;
+  token: string | null;
   isManagerLoggedIn: boolean;
   editingMenu: MenuItem[];
+  publicAccessCode: string;
+  publicAccessToken: string | null;
   
   // --- Forms ---
   newCardRfid: string;
@@ -56,6 +61,7 @@ interface AppState {
   newPin: string;
   confirmPin: string;
   pinUpdateStatus: 'idle' | 'loading' | 'success' | 'error';
+  publicAccessRequired: boolean;
   
   // --- Summaries ---
   expandedDate: string | null;
@@ -63,19 +69,21 @@ interface AppState {
 
   // --- Actions ---
   setMode: (mode: 'kiosk' | 'manager') => void;
-  setActiveTab: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings') => void;
+  setActiveTab: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics') => void;
   setLang: (lang: Language) => void;
   setMenu: (menu: MenuItem[]) => void;
   setOrders: (orders: Order[]) => void;
   setCards: (cards: Card[]) => void;
+  setDeliveryFee: (fee: number) => void;
   setSummaries: (summaries: DailySummary[]) => void;
+  setMenuVersion: (v: number) => void;
   setSelectedItems: (items: CartItem[]) => void;
   setRfid: (rfid: string) => void;
   setIsScanning: (v: boolean) => void;
   setShowSuccess: (v: boolean) => void;
   setError: (v: string | null) => void;
   setConnectionError: (v: string | null) => void;
-  setAdminPin: (pin: string | null) => void;
+  setToken: (token: string | null) => void;
   setIsManagerLoggedIn: (v: boolean) => void;
   setEditingMenu: (menu: MenuItem[]) => void;
   setNewCardRfid: (v: string) => void;
@@ -94,9 +102,12 @@ interface AppState {
   setKioskOpenTime: (v: string) => void;
   setKioskCloseTime: (v: string) => void;
   setKioskCloseDay: (v: number) => void;
+  setPublicAccessCode: (v: string) => void;
+  setPublicAccessToken: (v: string | null) => void;
   setNewPin: (v: string) => void;
   setConfirmPin: (v: string) => void;
   setPinUpdateStatus: (v: 'idle' | 'loading' | 'success' | 'error') => void;
+  setPublicAccessRequired: (v: boolean) => void;
   setExpandedDate: (v: string | null) => void;
   setDailyDetails: (v: any[]) => void;
   
@@ -112,17 +123,22 @@ export const useStore = create<AppState>((set) => ({
   lang: (localStorage.getItem('lang') as Language) || 'bg',
   menu: [],
   orders: [],
+  history: [],
+  deliveryFee: 0,
   cards: [],
   summaries: [],
+  menuVersion: 1,
   selectedItems: [],
   rfid: '',
   isScanning: false,
   showSuccess: false,
   error: null,
   connectionError: null,
-  adminPin: sessionStorage.getItem('adminPin'),
-  isManagerLoggedIn: !!sessionStorage.getItem('adminPin'),
+  token: sessionStorage.getItem('token'),
+  isManagerLoggedIn: !!sessionStorage.getItem('token'),
   editingMenu: [],
+  publicAccessCode: '',
+  publicAccessToken: localStorage.getItem('public_access_token'),
   newCardRfid: '',
   newCardOwner: '',
   newCardIsAdmin: false,
@@ -147,6 +163,7 @@ export const useStore = create<AppState>((set) => ({
   newPin: '',
   confirmPin: '',
   pinUpdateStatus: 'idle',
+  publicAccessRequired: false,
   expandedDate: null,
   dailyDetails: [],
 
@@ -160,14 +177,16 @@ export const useStore = create<AppState>((set) => ({
   setMenu: (menu) => set({ menu }),
   setOrders: (orders) => set({ orders }),
   setCards: (cards) => set({ cards }),
+  setDeliveryFee: (deliveryFee) => set({ deliveryFee }),
   setSummaries: (summaries) => set({ summaries }),
+  setMenuVersion: (menuVersion) => set({ menuVersion }),
   setSelectedItems: (selectedItems) => set({ selectedItems }),
   setRfid: (rfid) => set({ rfid }),
   setIsScanning: (isScanning) => set({ isScanning }),
   setShowSuccess: (showSuccess) => set({ showSuccess }),
   setError: (error) => set({ error }),
   setConnectionError: (connectionError) => set({ connectionError }),
-  setAdminPin: (adminPin) => set({ adminPin }),
+  setToken: (token) => set({ token }),
   setIsManagerLoggedIn: (isManagerLoggedIn) => set({ isManagerLoggedIn }),
   setEditingMenu: (editingMenu) => set({ editingMenu }),
   setNewCardRfid: (newCardRfid) => set({ newCardRfid }),
@@ -186,20 +205,27 @@ export const useStore = create<AppState>((set) => ({
   setKioskOpenTime: (kioskOpenTime) => set({ kioskOpenTime }),
   setKioskCloseTime: (kioskCloseTime) => set({ kioskCloseTime }),
   setKioskCloseDay: (kioskCloseDay) => set({ kioskCloseDay }),
+  setPublicAccessCode: (publicAccessCode) => set({ publicAccessCode }),
+  setPublicAccessToken: (token) => {
+    if (token) localStorage.setItem('public_access_token', token);
+    else localStorage.removeItem('public_access_token');
+    set({ publicAccessToken: token });
+  },
   setNewPin: (newPin) => set({ newPin }),
   setConfirmPin: (confirmPin) => set({ confirmPin }),
   setPinUpdateStatus: (pinUpdateStatus) => set({ pinUpdateStatus }),
+  setPublicAccessRequired: (v) => set({ publicAccessRequired: v }),
   setExpandedDate: (expandedDate) => set({ expandedDate }),
   setDailyDetails: (dailyDetails) => set({ dailyDetails }),
 
   // Complex Actions
-  loginManager: (pin) => {
-    sessionStorage.setItem('adminPin', pin);
-    set({ adminPin: pin, isManagerLoggedIn: true });
+  loginManager: (token) => {
+    sessionStorage.setItem('token', token);
+    set({ token, isManagerLoggedIn: true });
   },
   logoutManager: () => {
-    sessionStorage.removeItem('adminPin');
-    set({ adminPin: null, isManagerLoggedIn: false, mode: 'kiosk' });
+    sessionStorage.removeItem('token');
+    set({ token: null, isManagerLoggedIn: false, mode: 'kiosk' });
   },
   resetCart: () => set({ selectedItems: [], rfid: '' }),
 }));
