@@ -1,5 +1,5 @@
 import { MenuItem } from '../types';
-import { ParserConfig, ParserProfile, ParserVersion, ParserFixture } from '../../src/types/parserConfig';
+import { ParserConfig, SectionDetectionRule, PreprocessingRule, IgnoredLineRule } from '../types/parserConfig';
 
 export interface ParseResult {
   date: string | null;
@@ -13,7 +13,7 @@ export interface ParseResult {
  */
 function safeFloat(value: any, fallback: number = 0): number {
   if (value === null || value === undefined) return fallback;
-  const str = String(value).replace(',', '.');
+  const str = String(value).replace(',', '.').trim();
   const num = parseFloat(str);
   return isNaN(num) ? fallback : num;
 }
@@ -76,20 +76,16 @@ export class MenuParserEngine {
           boxFee: detectedCategory.applyBoxFeeByDefault ? 0.3 : 0
         };
         
+        // Some sections might have context in the header line itself
         this.updateDefaultsFromLine(line, categoryDefaults);
         continue;
       }
 
       // 4. Item Extraction
-      const isItem = line.match(new RegExp(this.config.entityExtraction.itemPrefixPattern));
-      if (isItem) {
-        const item = this.extractItem(line, currentCategory?.categoryName || this.config.fallbackCategory, categoryDefaults);
+      const isItemLine = new RegExp(this.config.entityExtraction.itemPrefixPattern).test(line);
+      if (isItemLine) {
+        const item = this.extractItem(line, currentCategory?.categoryName || this.config.fallbackCategory, categoryDefaults, currentCategory);
         if (item) {
-          item._debug = {
-            matchedLine: line,
-            ruleId: currentCategory?.id,
-            ruleType: 'section'
-          };
           this.enrichItem(item);
           result.items.push(item);
         } else {
@@ -98,6 +94,7 @@ export class MenuParserEngine {
         continue;
       }
 
+      // 5. Check if it's a context update line (e.g. "100гр 1.50€")
       if (this.updateDefaultsFromLine(line, categoryDefaults)) {
         continue;
       }
@@ -148,42 +145,45 @@ export class MenuParserEngine {
     return null;
   }
 
-  private extractItem(line: string, category: string, defaults: any): MenuItem | null {
+  private extractItem(line: string, category: string, defaults: any, sectionRule: SectionDetectionRule | null): MenuItem | null {
     let name = line.replace(new RegExp(this.config.entityExtraction.itemPrefixPattern), '').trim();
     let price: number | null = null;
     let weight: string | null = null;
     let boxFee: number = defaults.boxFee;
 
-    // Weight
+    // 1. Extract Weight
     const weightMatch = name.match(new RegExp(this.config.entityExtraction.weightPattern, 'i'));
     if (weightMatch) {
       weight = weightMatch[1];
       name = name.replace(weightMatch[0], '').trim();
     }
 
-    // Box Fee Specific
+    // 2. Extract Box Fee Specific (e.g. "+ 0.10€ кутийка")
     const boxFeeMatch = name.match(new RegExp(this.config.entityExtraction.boxFeePattern, 'i'));
     if (boxFeeMatch) {
       boxFee = safeFloat(boxFeeMatch[1]);
       name = name.replace(boxFeeMatch[0], '').trim();
     } else if (new RegExp(this.config.entityExtraction.boxKeywordPattern, 'i').test(name)) {
       name = name.replace(new RegExp(this.config.entityExtraction.boxKeywordPattern, 'i'), '').trim();
-      // Use category default if keyword found but no specific price
+      // If we found the box keyword but no specific fee, we use the category default (already in boxFee)
     }
 
-    // Price
+    // 3. Extract Price
     const priceMatch = name.match(new RegExp(this.config.entityExtraction.pricePattern, 'i'));
     if (priceMatch) {
       price = safeFloat(priceMatch[1]);
       name = name.replace(priceMatch[0], '').trim();
     }
 
-    // Noise removal
+    // Fallback to defaults
+    const finalPrice = price !== null ? price : (defaults.price || 0);
+
+    // 4. Noise removal (BGN info)
     if (this.config.entityExtraction.bgnNoisePattern) {
       name = name.replace(new RegExp(this.config.entityExtraction.bgnNoisePattern, 'gi'), '');
     }
 
-    // Clean name
+    // 5. Final Name Cleanup
     name = name
       .replace(/\(\s*\)/g, '')
       .replace(/[()+\-.:, /]+$/, '')
@@ -194,21 +194,20 @@ export class MenuParserEngine {
 
     return {
       id: Math.floor(Math.random() * 1000000),
-      name: nameMatch[1].trim(),
-      price: parseFloat(priceMatch[1].replace(',', '.')),
-      basePrice: parseFloat(priceMatch[1].replace(',', '.')),
-      category: context.currentSection || 'Uncategorized',
+      name: name,
+      price: finalPrice,
+      basePrice: finalPrice,
+      category: category,
       available: true,
       hasIncludedSide: false,
       sideChoices: [],
       extraFees: [],
       tags: [],
-      description: descMatch ? descMatch[1].trim() : '',
-      packagingFee: packagingFee,
+      packagingFee: boxFee,
       _debug: {
         matchedLine: line.trim(),
-        ruleId: rule.id,
-        ruleType: 'entity'
+        ruleId: sectionRule?.id,
+        ruleType: 'section'
       }
     };
   }
@@ -216,11 +215,15 @@ export class MenuParserEngine {
   private enrichItem(item: MenuItem) {
     for (const rule of this.config.enrichmentRules) {
       let match = true;
-      if (rule.condition.category && !rule.condition.category.includes(item.category || '')) {
-        match = false;
+      if (rule.condition.category && rule.condition.category.length > 0) {
+        if (!rule.condition.category.includes(item.category || '')) {
+          match = false;
+        }
       }
-      if (rule.condition.nameContains && !item.name.toLowerCase().includes(rule.condition.nameContains.toLowerCase())) {
-        match = false;
+      if (rule.condition.nameContains) {
+        if (!item.name.toLowerCase().includes(rule.condition.nameContains.toLowerCase())) {
+          match = false;
+        }
       }
 
       if (match) {
@@ -239,21 +242,26 @@ export class MenuParserEngine {
 
   private updateDefaultsFromLine(line: string, defaults: any): boolean {
     let updated = false;
+
+    // Weight
     const weightMatch = line.match(new RegExp(this.config.entityExtraction.weightPattern, 'i'));
     if (weightMatch) {
       defaults.weight = weightMatch[1];
       updated = true;
     }
 
-    const priceMatch = line.replace(new RegExp(this.config.entityExtraction.boxFeePattern, 'i'), '').match(new RegExp(this.config.entityExtraction.pricePattern, 'i'));
-    if (priceMatch) {
-      defaults.price = safeFloat(priceMatch[1]);
-      updated = true;
-    }
-
+    // Box Fee (check before price to avoid confusion if both match)
     const boxMatch = line.match(new RegExp(this.config.entityExtraction.boxFeePattern, 'i'));
     if (boxMatch) {
       defaults.boxFee = safeFloat(boxMatch[1]);
+      updated = true;
+    }
+
+    // Price (strip box fee pattern first to avoid double matching)
+    const lineWithoutBox = line.replace(new RegExp(this.config.entityExtraction.boxFeePattern, 'i'), '');
+    const priceMatch = lineWithoutBox.match(new RegExp(this.config.entityExtraction.pricePattern, 'i'));
+    if (priceMatch) {
+      defaults.price = safeFloat(priceMatch[1]);
       updated = true;
     }
 
