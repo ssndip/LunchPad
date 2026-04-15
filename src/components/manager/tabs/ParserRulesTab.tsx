@@ -268,11 +268,11 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
     if (!active) return;
     
     confirm({
-      title: 'Duplicate Preset',
-      message: 'Enter a name for the new template based on the current rules:',
+      title: t('parser.duplicate_preset'),
+      message: t('parser.duplicate_desc'),
       isPrompt: true,
       initialValue: `${active.name} (Copy)`,
-      confirmText: 'Duplicate',
+      confirmText: t('parser.duplicate_button'),
       onConfirm: (name) => {
         if (!name) return;
         const now = new Date().toISOString();
@@ -333,18 +333,12 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               <BookOpen className="w-4 h-4 text-white" />
             </div>
             <div className="text-left">
-              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Category Settings</h2>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Toggle autobox and side-dish detection per category</p>
+              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{t('parser.category_settings')}</h2>
+              <p className="text-[10px] text-neutral-400 mt-0.5">{t('parser.category_settings_desc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <AnimatePresence>
-              {savedToast && (
-                <motion.span
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
-                  className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl"
-                >
-                  <Check className="w-3 h-3" /> Saved!
+                  <Check className="w-3 h-3" /> {t('parser.saved')}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -352,7 +346,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               onClick={() => handleSaveSettings()}
               className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
             >
-              <Save className="w-3.5 h-3.5" /> Save Settings
+              <Save className="w-3.5 h-3.5" /> {t('parser.save_settings')}
             </button>
           </div>
         </div>
@@ -360,9 +354,9 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
         <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Header row */}
           <div className="col-span-full grid grid-cols-[1fr_auto_auto] gap-4 px-3 pb-1 border-b border-neutral-100">
-            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Category</span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 w-24 text-center flex items-center gap-1 justify-center"><Package className="w-3 h-3" /> Auto Box</span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 w-24 text-center flex items-center gap-1 justify-center"><Layers className="w-3 h-3" /> Side Dish</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('menu.category')}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 w-24 text-center flex items-center gap-1 justify-center"><Package className="w-3 h-3" /> {t('parser.auto_box')}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 w-24 text-center flex items-center gap-1 justify-center"><Layers className="w-3 h-3" /> {t('parser.side_dish')}</span>
           </div>
 
           {Object.entries(MENU_CONFIG.categoryLabels).map(([key, label]) => {
@@ -375,7 +369,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               >
                 <div className="flex items-center gap-2.5">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`} />
-                  <span className={`text-sm font-bold ${colors.text}`}>{label}</span>
+                  <span className={`text-sm font-bold ${colors.text}`}>{t(`categories.${key}`)}</span>
                   <span className="text-[9px] font-mono text-neutral-400">{key}</span>
                 </div>
 
@@ -388,7 +382,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                       : 'bg-white text-neutral-400 border-neutral-200 hover:border-amber-300'
                   }`}
                 >
-                  {setting.autoBox ? '✓ On' : 'Off'}
+                  {setting.autoBox ? `✓ ${t('modals.open')}` : t('modals.close')}
                 </button>
 
                 {/* Side Dish Toggle */}
@@ -400,7 +394,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                       : 'bg-white text-neutral-400 border-neutral-200 hover:border-indigo-300'
                   }`}
                 >
-                  {setting.hasSideDish ? '✓ On' : 'Off'}
+                  {setting.hasSideDish ? `✓ ${t('modals.open')}` : t('modals.close')}
                 </button>
               </div>
             );
@@ -411,7 +405,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
             <div className="flex flex-col gap-2 max-w-md">
               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
                 <Zap className="w-3 h-3 text-amber-500" />
-                Side Dish Trigger Keyword
+                {t('parser.trigger_keyword')}
               </label>
               <div className="flex gap-2">
                 <input 
@@ -423,8 +417,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                 />
               </div>
               <p className="text-[9px] text-neutral-400 leading-relaxed italic">
-                Items containing this phrase will <span className="font-bold text-neutral-900 underline">always</span> trigger the side-dish selector. 
-                Use the <span className="font-bold text-neutral-900">Side Dish toggle</span> (above) if you want to enable side-dishes for <span className="font-bold text-neutral-900">all</span> items in a category regardless of keywords.
+                {t('parser.trigger_desc')}
               </p>
             </div>
           </div>
@@ -439,8 +432,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               <Play className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Live Parser Preview</h2>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Test any menu text and inspect the results</p>
+              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{t('parser.live_preview')}</h2>
+              <p className="text-[10px] text-neutral-400 mt-0.5">{t('parser.live_preview_desc')}</p>
             </div>
           </div>
         </div>
@@ -456,12 +449,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                 className="w-full h-80 p-5 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200 focus:border-neutral-400 focus:outline-none font-mono text-xs resize-none text-neutral-700 placeholder:text-neutral-300"
               />
               <div className="flex gap-3">
-                <button
-                  onClick={handleParse}
-                  disabled={!previewText.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 transition-all disabled:opacity-40 shadow-xl shadow-neutral-200"
-                >
-                  <Play className="w-4 h-4" /> Parse Menu
+                  <Play className="w-4 h-4" /> {t('parser.parse_button')}
                 </button>
                 <button
                   onClick={handleNormalize}
@@ -469,7 +457,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-40 shadow-xl shadow-indigo-100"
                 >
                   <Sparkles className="w-4 h-4" />
-                  {isNormalizing ? 'Normalizing...' : '✨ Auto-Format'}
+                  {isNormalizing ? t('parser.normalizing') : `✨ ${t('parser.auto_format')}`}
                 </button>
               </div>
             </div>
@@ -478,7 +466,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
             <div className="flex-1 flex flex-col gap-4 min-w-0">
               {!parseResult && (
                 <div className="h-full flex items-center justify-center text-center p-8 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
-                  <p className="text-xs text-neutral-300 font-bold">Results will appear here</p>
+                  <p className="text-xs text-neutral-300 font-bold">{t('parser.results_placeholder')}</p>
                 </div>
               )}
               {parseResult && (
@@ -491,11 +479,11 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                       </div>
                     )}
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-xl text-[10px] font-bold text-green-800">
-                      <CheckCircle2 className="w-3 h-3" /> {parseResult.items.length} items
+                      <CheckCircle2 className="w-3 h-3" /> {parseResult.items.length} {t('parser.items')}
                     </div>
                     {parseResult.unmatchedLines.length > 0 && (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-[10px] font-bold text-red-700">
-                        <AlertTriangle className="w-3 h-3" /> {parseResult.unmatchedLines.length} unmatched
+                        <AlertTriangle className="w-3 h-3" /> {parseResult.unmatchedLines.length} {t('parser.unmatched')}
                       </div>
                     )}
                   </div>
@@ -507,15 +495,15 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                       <div key={cat} className={`rounded-2xl border overflow-hidden ${colors.border}`}>
                         <div className={`px-4 py-2 flex items-center gap-2 ${colors.bg}`}>
                           <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${colors.text}`}>{cat}</span>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${colors.text}`}>{t(`categories.${key}`)}</span>
                           <span className="ml-auto text-[9px] font-bold opacity-60">{items.length}</span>
                         </div>
                         {items.map((item, i) => (
                           <div key={i} className="flex flex-col border-t border-neutral-50 px-4 py-2 hover:bg-neutral-50 transition-colors group">
                             <div className="flex items-center gap-2 text-xs">
                               <span className="flex-1 font-bold text-neutral-900 truncate">{item.name}</span>
-                              {item.hasIncludedSide && <Layers className="w-3 h-3 text-indigo-500 shrink-0 title='Included Side'" />}
-                              {item.tags?.includes('autobox') && <Package className="w-3 h-3 text-amber-500 shrink-0 title='Auto Box'" />}
+                              {item.hasIncludedSide && <Layers className="w-3 h-3 text-indigo-500 shrink-0" title={t('parser.side_dish')} />}
+                              {item.tags?.includes('autobox') && <Package className="w-3 h-3 text-amber-500 shrink-0" title={t('parser.auto_box')} />}
                               <span className="font-mono font-black text-neutral-800 shrink-0">{item.price.toFixed(2)}€</span>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                 <button
@@ -542,7 +530,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                                 <button
                                   onClick={() => addRemoveItemRule(item.name)}
                                   className="p-1 text-neutral-400 hover:text-red-500 rounded"
-                                  title="Remove item"
+                                  title={t('menu.remove')}
                                 >
                                   ❌
                                 </button>
@@ -558,7 +546,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                                   className="overflow-hidden"
                                 >
                                   <div className="mt-2 pt-2 border-t border-neutral-100 flex flex-wrap gap-1.5 pb-1">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase mr-1 flex items-center">Remap to:</span>
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase mr-1 flex items-center">{t('parser.remap_to')}</span>
                                     {Object.entries(MENU_CONFIG.categoryLabels).map(([optKey, optLabel]) => (
                                       <button
                                         key={optKey}
@@ -580,7 +568,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                                   className="overflow-hidden"
                                 >
                                   <div className="mt-2 pt-2 border-t border-neutral-100 flex items-center gap-2 pb-1">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase">Rename to:</span>
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase">{t('parser.rename_to')}</span>
                                     <input
                                       type="text"
                                       value={renameItem.newName}
@@ -742,8 +730,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Format Presets</h2>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Saved rulesets for adapting different menu text formats</p>
+              <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{t('parser.presets')}</h2>
+              <p className="text-[10px] text-neutral-400 mt-0.5">{t('parser.presets_desc')}</p>
             </div>
           </div>
         </div>
@@ -803,11 +791,11 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                     onClick={() => setActivePresetId(activePresetId === preset.id ? null : preset.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-neutral-200 rounded-xl text-[10px] font-bold hover:bg-neutral-50 transition-all"
                   >
-                    {activePresetId === preset.id ? 'Deactivate' : 'Activate'}
+                    {activePresetId === preset.id ? t('parser.deactivate') : t('parser.activate')}
                   </button>
                   <button
-                    onClick={() => confirm({ title: 'Delete preset?', message: `Delete "${preset.name}"?`, isDestructive: true, onConfirm: () => deletePreset(preset.id) })}
-                    className="p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    onClick={() => confirm({ title: t('parser.delete_preset'), message: `${t('modals.delete_warning')} "${preset.name}"?`, isDestructive: true, onConfirm: () => deletePreset(preset.id) })}
+                    className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

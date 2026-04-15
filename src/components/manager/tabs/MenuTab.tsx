@@ -421,13 +421,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     </div>
                     {presets.length > 0 && (
                       <div className="mt-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-neutral-100 shadow-sm">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Format Preset:</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('parser.format_preset')}</span>
                         <select
                           value={selectedPresetId}
                           onChange={e => setSelectedPresetId(e.target.value)}
                           className="flex-1 bg-neutral-50 border border-neutral-200 text-sm font-bold text-neutral-800 rounded-lg py-1.5 px-3 focus:outline-none focus:border-indigo-400 hover:border-neutral-300 transition-colors"
                         >
-                          <option value="none">No Preset (Raw Text)</option>
+                          <option value="none">{t('parser.no_preset')}</option>
                           {presets.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}

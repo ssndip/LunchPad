@@ -549,6 +549,7 @@ export default function App() {
         <ConfirmModal
           config={confirmConfig}
           onClose={() => setConfirmConfig(null)}
+          t={t}
           cancelLabel={t('modals.cancel')}
         />
       </div>

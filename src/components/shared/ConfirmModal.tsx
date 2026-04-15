@@ -16,12 +16,15 @@ export interface ConfirmConfig {
 interface ConfirmModalProps {
   config: ConfirmConfig | null;
   onClose: () => void;
+  lang?: string;
+  t: (key: string) => string;
   cancelLabel?: string;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   config,
   onClose,
+  t,
   cancelLabel = 'Cancel',
 }) => {
   const [inputValue, setInputValue] = React.useState('');
@@ -75,7 +78,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <div>
                 <h3 className="text-xl font-bold text-neutral-900">{config.title}</h3>
                 <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mt-1">
-                  {config.isPrompt ? 'Awaiting Input' : 'Please confirm this action'}
+                  {config.isPrompt ? t('modals.awaiting_input') : t('modals.confirm_action_header')}
                 </p>
               </div>
             </div>

@@ -39,9 +39,22 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
                 isActive ? 'text-white' : 'group-hover:text-neutral-900'
               }`}>
                 {(() => {
-                  const normalizedCat = cat.trim().toUpperCase();
-                  const translated = t(`categories.${normalizedCat}`);
-                  return translated !== `categories.${normalizedCat}` ? translated : cat;
+                  const normalizedCat = cat.trim().toLowerCase();
+                  // Try matching common English labels to our lowercase keys
+                  const keyMap: Record<string, string> = {
+                    'main dishes': 'mains',
+                    'side dishes': 'sides',
+                    'soups': 'soups',
+                    'salads': 'salads',
+                    'bread': 'bread',
+                    'bbq': 'bbq',
+                    'desserts': 'desserts',
+                    'drinks': 'drinks',
+                    'other': 'other'
+                  };
+                  const key = keyMap[normalizedCat] || normalizedCat;
+                  const translated = t(`categories.${key}`);
+                  return translated !== `categories.${key}` ? translated : cat;
                 })()}
               </span>
               
