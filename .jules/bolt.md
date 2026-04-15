@@ -1,0 +1,4 @@
+
+## 2024-05-18 - Database Indexes for Query with LOWER() and ORDER BY
+**Learning:** In `server/controllers/cardController.ts`, the order lookup query uses `LOWER(rfid) = ?` combined with `ORDER BY timestamp DESC`. While there was an index on `timestamp DESC` and `LOWER(rfid)` was separately indexed in the `cards` table, the `orders` table lacked a compound index covering both the expression and the sort order. This forced SQLite to do an index scan using the timestamp index, filtering every record by the `LOWER(rfid)` condition instead of a direct O(log N) lookup.
+**Action:** When writing queries that combine a `WHERE` condition (especially one using expressions like `LOWER()`) with an `ORDER BY` on a different column, create a compound expression index covering both: e.g., `CREATE INDEX ON table(LOWER(column), timestamp DESC)`. This achieves O(log N) lookups.

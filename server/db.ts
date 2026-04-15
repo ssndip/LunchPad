@@ -85,6 +85,9 @@ export const initDb = () => {
     -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
     CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
 
+    -- ⚡ Bolt: Compound index for O(1) lookup of lowercased RFID with O(1) sort by timestamp
+    CREATE INDEX IF NOT EXISTS idx_orders_lower_rfid_timestamp ON orders(LOWER(rfid), timestamp DESC);
+
     -- Parser System Tables
     CREATE TABLE IF NOT EXISTS parser_profiles (
       id TEXT PRIMARY KEY,
