@@ -1,5 +1,6 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
@@ -11,7 +12,7 @@ export const settings = {
   packagingFee: 0.10,
   deliveryFee: 5.00,
   adminPin: process.env.ADMIN_PIN || "0000",
-  jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
+  jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex") // 🛡️ Sentinel: Removed hardcoded fallback secret to prevent token forgery
 };
 
 // --- Setters ---

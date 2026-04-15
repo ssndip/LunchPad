@@ -80,7 +80,7 @@ export async function startServer() {
   app.use("/api/menu", menuRoutes);
   app.use("/api/cards", cardRoutes);
   app.use("/api/settings", settingsRoutes);
-  app.use("/api/auth", authRoutes);
+  app.use("/api/auth", limiter, authRoutes); // 🛡️ Sentinel: Apply rate limiting to auth endpoints to prevent brute-force attacks
   app.use("/api/parser", parserRoutes);
   
   // Orders & History (special case for backward compatibility of /api/v1/order)

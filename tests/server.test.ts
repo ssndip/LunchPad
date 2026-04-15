@@ -17,6 +17,12 @@ describe('POST /api/menu', () => {
   });
 
   it('should return 500 when database transaction fails', async () => {
+    // Make sure we have a valid auth token to pass requireAuth middleware
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ pin: '0000' });
+    const authToken = loginRes.body.token;
+
     // Mock db.transaction to throw an error
     const errorMessage = 'Database transaction failed';
     vi.spyOn(db, 'transaction').mockImplementation(() => {
@@ -29,7 +35,7 @@ describe('POST /api/menu', () => {
 
     const response = await request(app)
       .post('/api/menu')
-      .set('x-admin-pin', '0000')
+      .set('Authorization', `Bearer ${authToken}`)
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);
