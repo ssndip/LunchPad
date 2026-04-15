@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, ChevronRight, AlertCircle, Utensils, Clock, Plus, Minus } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { isItemAutoBox } from '../../utils/categoryAutobox';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface KioskItemListProps {
   items: MenuItem[];
@@ -29,6 +30,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   connectionError,
   t,
 }) => {
+  const [expandedItemId, setExpandedItemId] = React.useState<number | null>(null);
   const isPackagingFeeItem = (item: MenuItem) => isItemAutoBox(item);
 
   if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('restricted_message')} />;
@@ -36,48 +38,66 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-      <div className="divide-y divide-neutral-100">
+    <div className="flex-1 overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 md:p-4">
+      <div className="flex flex-col divide-y divide-neutral-100 bg-white rounded-2xl md:rounded-3xl shadow-sm border border-neutral-100 mb-32 md:mb-6">
         {items.filter(i => i.available).map((item) => {
           const isSelected = selectedItemIds.has(item.id);
           const cartItem = selectedItems.find(i => i.id === item.id);
           const needsSide = !!(item.requiresSideChoice || item.hasIncludedSide);
 
           return (
-            <div key={item.id} className="flex flex-col">
+            <div key={item.id} className={`flex flex-col transition-colors overflow-hidden ${isSelected ? 'bg-neutral-50/50' : 'bg-white hover:bg-neutral-50/30'}`}>
               <motion.div
-                whileTap={{ backgroundColor: '#F9FAFB' }}
-                onClick={() => onToggle(item)}
-                className={`flex items-center justify-between px-6 py-4 cursor-pointer transition-colors ${
-                  isSelected ? 'bg-neutral-50' : 'bg-white hover:bg-neutral-50/50'
-                }`}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => {
+                  triggerHaptic('light');
+                  if (needsSide) {
+                    // Always expand/collapse picker for side-dish items, don't auto-add to cart
+                    setExpandedItemId(expandedItemId === item.id ? null : item.id);
+                  } else {
+                    onToggle(item);
+                  }
+                }}
+                className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 cursor-pointer"
               >
-                <div className="flex items-center gap-4 flex-1">
-                  <QuantityControl 
-                    isSelected={isSelected}
-                    quantity={cartItem?.quantity || 1}
-                    onIncrement={() => onUpdateQuantity(item.id, 1)}
-                    onDecrement={() => onUpdateQuantity(item.id, -1)}
-                    onToggle={() => !isSelected && onToggle(item)}
-                  />
-                  <div>
-                    <h3 className={`text-base font-bold leading-tight ${isSelected ? 'text-neutral-900' : 'text-neutral-700'}`}>
+                <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-4">
+                  <div className="shrink-0">
+                    <QuantityControl 
+                      isSelected={isSelected}
+                      quantity={cartItem?.quantity || 1}
+                      onIncrement={() => onUpdateQuantity(item.id, 1)}
+                      onDecrement={() => onUpdateQuantity(item.id, -1)}
+                      onToggle={() => !isSelected && onToggle(item)}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-[var(--fluid-base)] font-bold leading-snug tracking-tight line-clamp-2 ${isSelected ? 'text-neutral-900' : 'text-neutral-700'}`}>
                       {item.name}
                     </h3>
-                    {needsSide && !isSelected && (
-                      <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
-                        {t('kiosk.choose_side')}
-                      </p>
+                    {needsSide && (
+                      <div className="mt-1">
+                        {!isSelected ? (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-violet-50 text-violet-600 rounded text-[9px] font-black uppercase tracking-widest animate-pulse">
+                            {t('kiosk.choose_side')}
+                          </span>
+                        ) : cartItem?.side && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[10px] font-bold uppercase tracking-tight">
+                            {cartItem.side}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 ml-4 shrink-0">
-                  <span className="text-sm font-black font-mono text-neutral-900">
+
+                {/* Price fixed directly right inline */}
+                <div className="flex flex-col items-end shrink-0 gap-0.5">
+                  <span className="text-[var(--fluid-lg)] font-black font-mono text-neutral-900">
                     €{item.price.toFixed(2)}
                   </span>
-                   {isPackagingFeeItem(item) && (
-                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter">
-                      +{t('menu.packaging_fee') || 'Кутийка'}
+                  {isPackagingFeeItem(item) && (
+                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">
+                      +{t('menu.packaging_fee') || 'Box'}
                     </span>
                   )}
                 </div>
@@ -85,22 +105,26 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
 
               {/* Inline Side Picker */}
               <AnimatePresence>
-                {isSelected && needsSide && (
+                {needsSide && (expandedItemId === item.id || (isSelected && !cartItem?.side)) && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden bg-neutral-50 px-6 pb-4"
+                    className="overflow-hidden bg-neutral-50 border-t border-neutral-100"
                   >
-                    <div className="pl-9 pt-1">
-                      <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-2">
+                    <div className="p-5 md:p-6 bg-violet-50/30">
+                      <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                        <ChevronRight className="w-3 h-3 text-violet-500" />
                         {t('kiosk.choose_side')}
                       </p>
                       <SideDishInlinePicker 
                         item={item}
                         sides={sideItems}
                         selectedSide={cartItem?.side}
-                        onSelect={(side) => onAddWithSide(item, side)}
+                        onSelect={(side) => {
+                          onAddWithSide(item, side);
+                          setExpandedItemId(null); // auto-collapse on select
+                        }}
                         t={t}
                       />
                     </div>
@@ -141,7 +165,7 @@ const QuantityControl: React.FC<{
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            onClick={onToggle}
+            onClick={(e) => { triggerHaptic('light'); onToggle(); }}
             className="w-8 h-8 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors"
           />
         ) : (
@@ -153,7 +177,7 @@ const QuantityControl: React.FC<{
             className="flex items-center bg-neutral-900 rounded-full p-1.5 gap-5 overflow-hidden shadow-lg shadow-black/20"
           >
             <button
-              onClick={onDecrement}
+              onClick={() => { triggerHaptic('light'); onDecrement(); }}
               className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
             >
               <Minus className="w-5 h-5" />
@@ -162,7 +186,7 @@ const QuantityControl: React.FC<{
               {quantity}
             </span>
             <button
-              onClick={onIncrement}
+              onClick={() => { triggerHaptic('light'); onIncrement(); }}
               className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
             >
               <Plus className="w-5 h-5" />
@@ -186,8 +210,8 @@ const SideDishInlinePicker: React.FC<{ item: MenuItem, sides: MenuItem[], select
         return (
           <button
             key={side.id}
-            onClick={(e) => { e.stopPropagation(); onSelect(side.name); }}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+            onClick={(e) => { e.stopPropagation(); triggerHaptic('medium'); onSelect(side.name); }}
+            className={`px-3 py-2 touch:px-5 touch:py-3 rounded-xl text-[var(--fluid-base)] font-bold transition-all border active:scale-95 ${
               isActive 
                 ? 'bg-neutral-900 text-white border-neutral-900 shadow-sm' 
                 : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400'

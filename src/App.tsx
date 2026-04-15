@@ -170,16 +170,6 @@ export default function App() {
       s.setSelectedItems(s.selectedItems.filter((i) => i.id !== item.id));
     } else {
       let side: string | undefined = item.selectedSide;
-      
-      // Feature 7: Auto-select fallback if required but not pre-selected
-      if (!side && item.requiresSideChoice && sideItems.length > 0) {
-        const allowedSides = item.sideChoices && item.sideChoices.length > 0
-          ? sideItems.filter(s => item.sideChoices?.includes(s.name))
-          : sideItems;
-        if (allowedSides.length > 0) {
-          side = allowedSides[0].name;
-        }
-      }
       const cartItem: CartItem = { ...item, side, quantity: 1 };
       s.setSelectedItems([...s.selectedItems, cartItem]);
     }

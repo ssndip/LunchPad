@@ -4,6 +4,8 @@ import { ShoppingCart, Trash2, CheckCircle2, Loader2, ArrowRight } from 'lucide-
 import { CartItem, MenuItem } from '../../types';
 import { useStore } from '../../store/useStore';
 import { isItemAutoBox } from '../../utils/categoryAutobox';
+import { useResponsive } from '../../hooks/useResponsive';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface KioskOrderPanelProps {
   selectedItems: CartItem[];
@@ -37,14 +39,119 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
   t,
 }) => {
   const packagingFee = useStore(s => s.packagingFee);
-  
-
+  const { isPhone } = useResponsive();
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const bgTotal = (totalPrice * 1.95).toFixed(2);
   const orderDisabled = !selectedItems.length || (!rfid && !testModeEnabled) || isScanning || !computedKioskOpen;
+  const itemCount = selectedItems.reduce((acc, i) => acc + i.quantity, 0);
 
+  // Phone Sticky Bottom Layout
+  if (isPhone) {
+    return (
+      <div className={`fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl transition-all duration-300 ease-in-out border-t border-neutral-200 ${isExpanded ? 'h-[85vh] flex flex-col' : 'h-auto'}`}>
+        {/* Toggle/Handle */}
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-center pt-3 pb-2 focus:outline-none"
+        >
+          <div className="w-12 h-1.5 bg-neutral-200 rounded-full mb-2" />
+        </button>
+
+        <div className="px-5 pb-5 pt-2 flex items-center justify-between">
+          <div onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-3 cursor-pointer">
+            <div className="relative">
+              <ShoppingCart className={`w-6 h-6 ${selectedItems.length > 0 ? 'text-neutral-900' : 'text-neutral-300'}`} />
+              {selectedItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
+                  {itemCount}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">{t('orders.total')}</span>
+              <span className="text-lg font-black text-neutral-900 leading-tight">€{totalPrice.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <button
+            onClick={(e) => {
+              if (!isExpanded && selectedItems.length > 0) {
+                setIsExpanded(true);
+                return;
+              }
+              onOrder();
+            }}
+            disabled={orderDisabled}
+            className={`px-8 py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-transform active:scale-95 ${orderDisabled ? 'bg-neutral-100 text-neutral-400' : 'bg-neutral-900 text-white shadow-xl shadow-neutral-900/20'}`}
+          >
+            {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : (!rfid && !testModeEnabled && isExpanded ? t('kiosk.please_scan_card') : (isExpanded ? t('modals.confirm') : t('kiosk.view_cart')))}
+          </button>
+        </div>
+
+        {/* Expanded Area */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="flex-1 flex flex-col overflow-hidden border-t border-neutral-100 bg-neutral-50"
+            >
+              <div className="p-4 flex items-center justify-between bg-white border-b border-neutral-100">
+                <span className="text-xs font-black uppercase tracking-widest text-neutral-400">{t('orders.items')}</span>
+                {selectedItems.length > 0 && (
+                  <button onClick={onClearCart} className="text-red-500 text-xs font-bold uppercase tracking-widest p-2 active:scale-90">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+                {selectedItems.map((item, idx) => (
+                  <div key={`${item.id}-${idx}`} className="bg-white p-4 rounded-2xl shadow-sm border border-neutral-100">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                       <span className="text-sm font-bold text-neutral-900 leading-tight">{item.name}</span>
+                       <span className="text-sm font-black text-neutral-900 shrink-0">€{item.price.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 font-bold active:scale-90">-</button>
+                      <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
+                      <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 font-bold active:scale-90">+</button>
+                    </div>
+                    {/* Nested details exactly as desktop... */}
+                     <div className="pl-2 border-l-2 border-neutral-100 space-y-1 mt-2">
+                        {item.side && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-bold uppercase">
+                            <span>{item.side}</span>
+                            <span className="text-[8px] bg-neutral-100 px-1 py-0.5 rounded text-neutral-400">{t('kiosk.included')}</span>
+                          </div>
+                        )}
+                        {item.extraFees?.map((fee, fIdx) => (
+                          <div key={fIdx} className="flex justify-between items-center text-[10px] text-neutral-500 font-bold uppercase">
+                            <span>{fee.type}</span>
+                            <span className="font-mono">+€{fee.amount.toFixed(2)}</span>
+                          </div>
+                        ))}
+                        {isItemAutoBox(item) && (
+                          <div className="flex justify-between items-center text-[10px] text-neutral-500 font-bold uppercase">
+                            <span>{t('menu.packaging_fee') || 'Box'}</span>
+                            <span className="font-mono">+€{packagingFee.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // Desktop / Tablet Persistent Side Panel
   return (
-    <div className="w-80 shrink-0 bg-white border-l border-neutral-200 flex flex-col overflow-hidden z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+    <div className="w-full h-full bg-white flex flex-col overflow-hidden z-10">
       {/* Header */}
       <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/30">
         <div className="flex items-center gap-2">

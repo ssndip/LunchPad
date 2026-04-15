@@ -10,6 +10,17 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['Fira Code', 'monospace'],
       },
+      screens: {
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        'touch': {'raw': '(pointer: coarse)'},
+      },
+      spacing: {
+        'safe-nav': 'env(safe-area-inset-bottom, 20px)',
+        'safe-top': 'env(safe-area-inset-top, 20px)',
+      },
       colors: {
         neutral: {
           50: '#F9FAFB',

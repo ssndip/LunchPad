@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Dynamic Scale Factor: 1.0 on mobile, shifts upwards gently on tablets/desktop */
+  --scale-factor: 1;
+  /* Base typography */
+  --fluid-base: clamp(14px, 2vw, 16px);
+  --fluid-lg: clamp(16px, 2.5vw, 18px);
+  --fluid-xl: clamp(18px, 3vw, 24px);
+  --fluid-2xl: clamp(24px, 4vw, 32px);
+  /* App sizing limits */
+  --app-max-width: 1440px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --scale-factor: 1.05;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --scale-factor: 1.1;
+  }
+}
+
+@layer base {
+  html {
+    font-size: var(--fluid-base);
+  }
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -15,6 +45,15 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.15);
+  }
+
+  /* Invisible scrollbars that preserve functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;            /* Chrome, Safari and Opera */
   }
 
   /* Prevent body scrolling / rubber banding on tablets */

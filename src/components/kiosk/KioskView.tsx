@@ -8,6 +8,8 @@ import { KioskItemList } from './KioskItemList';
 import { KioskOrderPanel, OrderSuccessOverlay } from './KioskOrderPanel';
 import { UserHistoryModal } from './UserHistoryModal';
 import { useRfidScanner } from '../../hooks/useRfidScanner';
+import { useResponsive } from '../../hooks/useResponsive';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface KioskViewProps {
   menu: MenuItem[];
@@ -70,6 +72,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   // Category Navigation
   const categories = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
   const [activeCategory, setActiveCategory] = useState<string>(categories[0] || '');
+  const { isPhone, isTablet } = useResponsive();
 
   // Ensure activeCategory stays valid
   React.useEffect(() => {
@@ -96,8 +99,31 @@ export const KioskView: React.FC<KioskViewProps> = ({
     return target.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: 'numeric', month: 'short' });
   })();
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const touchEnd = e.changedTouches[0].clientY;
+    const distance = touchEnd - touchStart;
+    
+    // If user pulls down more than 150px, reload app
+    if (distance > 150) {
+      triggerHaptic('success');
+      window.location.reload();
+    }
+    setTouchStart(null);
+  };
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch">
+    <div 
+      className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* 1. Header — Compact 48px */}
       <header className="h-12 shrink-0 bg-white border-b border-neutral-200 px-4 flex items-center justify-between z-20 shadow-sm">
         <div className="flex items-center gap-3">
@@ -121,9 +147,9 @@ export const KioskView: React.FC<KioskViewProps> = ({
       </header>
 
       {/* 2. Main Area — 3 Columns (Responsive) */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Col 1: Categories (Narrow Sidebar on desktop, Top Tab Bar on tablet) */}
-        <div className="flex shrink-0 md:w-40 bg-white border-b md:border-b-0 md:border-r border-neutral-200 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* Col 1: Categories (Horizontal Top Bar on Phone, Vertical Sidebar on Tablet/Desktop) */}
+        <div className="flex shrink-0 md:w-[20%] xl:w-40 bg-white border-b md:border-b-0 md:border-r border-neutral-200 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar">
           <KioskCategorySidebar 
             categories={categories}
             activeCategory={activeCategory}
@@ -133,22 +159,24 @@ export const KioskView: React.FC<KioskViewProps> = ({
           />
         </div>
 
-        {/* Col 2: Items (Flexible) */}
-        <KioskItemList
-          items={activeItems}
-          sideItems={sideItems}
-          selectedItems={selectedItems}
-          selectedItemIds={selectedItemIds}
-          onToggle={onToggleItem}
-          onAddWithSide={onAddWithSide}
-          onUpdateQuantity={onUpdateQuantity}
-          orderButtonEnabled={orderButtonEnabled}
-          connectionError={connectionError}
-          t={t}
-        />
+        {/* Col 2: Items (Flexible Grid on Tablet, List on Phone) */}
+        <div className="flex-1 overflow-hidden relative">
+          <KioskItemList
+            items={activeItems}
+            sideItems={sideItems}
+            selectedItems={selectedItems}
+            selectedItemIds={selectedItemIds}
+            onToggle={onToggleItem}
+            onAddWithSide={onAddWithSide}
+            onUpdateQuantity={onUpdateQuantity}
+            orderButtonEnabled={orderButtonEnabled}
+            connectionError={connectionError}
+            t={t}
+          />
+        </div>
 
-        {/* Col 3: Order Panel (Fixed Width) */}
-        <div className="hidden sm:flex md:w-80 border-t md:border-t-0 md:border-l border-neutral-200">
+        {/* Col 3: Order Panel (Fixed Right Panel Tablet/Desktop, Bottom Sheet Phone) */}
+        <div className="md:w-[35%] lg:w-80 md:border-t-0 md:border-l border-neutral-200">
           <KioskOrderPanel
             selectedItems={selectedItems}
             totalPrice={totalPrice}
