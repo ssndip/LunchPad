@@ -23,12 +23,6 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface FormatPreset {
-  id: string;
-  name: string;
-  preprocessRules: { find: string; replace: string; isRegex: boolean }[];
-  createdAt: string;
-}
 
 type ClassifyAction = 'category' | 'item' | 'ignore';
 
