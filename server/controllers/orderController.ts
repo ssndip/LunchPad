@@ -93,7 +93,22 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
 
     if (enrichedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
 
-    const total = enrichedItems.reduce((sum: number, i) => sum + (Number(i.price) || 0), 0);
+    const total = enrichedItems.reduce((sum: number, i) => {
+      const basePrice = Number(i.price) || 0;
+      // Mirror the frontend logic: Tag-aware packaging fee
+      const tags = i.tags || [];
+      const isAutobox = tags.some((t: string) => t === 'autobox' || t === 'has_custom_box' || t === 'bbq');
+      const category = (i.category || '').toLowerCase();
+      const isCategorizedBox = category.includes('side dishes') || category.includes('гарнитури') || category.includes('bbq') || category.includes('скара');
+      
+      const itemFee = (i.packagingFee !== undefined && i.packagingFee !== null) 
+        ? i.packagingFee 
+        : ((isAutobox || isCategorizedBox) ? (settings.packagingFee || 0.1) : 0);
+
+      const itemTotal = basePrice + itemFee;
+      return sum + itemTotal;
+    }, 0);
+
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const orderId = `ORD-${Date.now()}`;
@@ -103,7 +118,7 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       rfid: card.rfid, 
       ownerName: card.ownerName,
       items: enrichedItems,
-      totalPrice: total,
+      totalPrice: Number(total.toFixed(2)),
       timestamp: now.toISOString(),
       date: dateStr,
       status: "completed"

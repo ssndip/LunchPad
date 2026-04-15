@@ -1,6 +1,7 @@
 import { useStore } from './useStore';
 import { useMemo } from 'react';
 import { MenuItem } from '../types';
+import { isItemAutoBox } from '../utils/categoryAutobox';
 
 export const useGroupedMenu = () => {
   const menu = useStore((state) => state.menu);
@@ -13,12 +14,6 @@ export const useGroupedMenu = () => {
   }, [menu]);
 };
 
-// Helper to identify items requiring packaging fee
-const isPackagingFeeItem = (category?: string) => {
-  if (!category) return false;
-  const c = category.toLowerCase();
-  return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
-};
 
 export const useSideItems = () => {
   const menu = useStore((state) => state.menu);
@@ -34,8 +29,12 @@ export const useTotalPrice = () => {
   const packagingFee = useStore((state) => state.packagingFee);
   return useMemo(() => {
     return selectedItems.reduce((sum, item) => {
-      const extra = isPackagingFeeItem(item.category) ? packagingFee : 0;
-      return sum + (item.price + extra) * (item.quantity || 1);
+      // Priority: 
+      // 1. Explicit item packaging fee (extracted from text)
+      // 2. Global packaging fee if tagged or categorized
+      const isFeeItem = isItemAutoBox(item);
+      const fee = (item.packagingFee !== undefined && item.packagingFee !== null) ? item.packagingFee : (isFeeItem ? packagingFee : 0);
+      return sum + (item.price + fee) * (item.quantity || 1);
     }, 0);
   }, [selectedItems, packagingFee]);
 };

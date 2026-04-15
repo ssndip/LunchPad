@@ -38,6 +38,7 @@ interface KioskViewProps {
 }
 
 export const KioskView: React.FC<KioskViewProps> = ({
+  menu,
   groupedMenu,
   sideItems,
   selectedItems,
@@ -127,6 +128,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             categories={categories}
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
+            menu={menu}
             t={t}
           />
         </div>

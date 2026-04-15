@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, ChevronRight, AlertCircle, Utensils, Clock, Plus, Minus } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
+import { isItemAutoBox } from '../../utils/categoryAutobox';
 
 interface KioskItemListProps {
   items: MenuItem[];
@@ -28,11 +29,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   connectionError,
   t,
 }) => {
-  const isPackagingFeeItem = (category?: string) => {
-    if (!category) return false;
-    const c = category.toLowerCase();
-    return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
-  };
+  const isPackagingFeeItem = (item: MenuItem) => isItemAutoBox(item);
 
   if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('restricted_message')} />;
   if (!orderButtonEnabled) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
@@ -78,7 +75,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                   <span className="text-sm font-black font-mono text-neutral-900">
                     €{item.price.toFixed(2)}
                   </span>
-                  {isPackagingFeeItem(item.category) && (
+                   {isPackagingFeeItem(item) && (
                     <span className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter">
                       +{t('menu.packaging_fee') || 'Кутийка'}
                     </span>

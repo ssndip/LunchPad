@@ -157,6 +157,8 @@ export async function startServer() {
       orders: [], 
       kioskOpen,
       cards: [],
+      deliveryFee: settings.deliveryFee || 0,
+      packagingFee: settings.packagingFee || 0.1,
       menuVersion: settings.menuVersion,
       globalAccess: settings.globalAccess,
       publicAccessCode: settings.publicAccessCode,

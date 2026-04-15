@@ -11,6 +11,8 @@ export const getMenu = (database = db) => {
     requiresSideChoice: i.requiresSideChoice === 1,
     hasIncludedSide: i.hasIncludedSide === 1,
     sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
+    tags: i.tags ? JSON.parse(i.tags) : [],
+    packagingFee: i.packagingFee,
     menuVersion: settings.menuVersion
   }));
 };
@@ -31,8 +33,9 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
       const insert = db.prepare(`
         INSERT INTO menu (
           id, name, description, price, available, category, 
-          requiresSideChoice, sideChoices, selectedSide, hasIncludedSide
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          requiresSideChoice, sideChoices, selectedSide, hasIncludedSide,
+          tags, packagingFee
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       items.forEach((i: any) => insert.run(
         i.id, 
@@ -44,7 +47,9 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         i.requiresSideChoice ? 1 : 0,
         i.sideChoices ? JSON.stringify(i.sideChoices) : null,
         i.selectedSide || null,
-        i.hasIncludedSide ? 1 : 0
+        i.hasIncludedSide ? 1 : 0,
+        i.tags ? JSON.stringify(i.tags) : JSON.stringify([]),
+        i.packagingFee || null
       ));
     })();
     const newVersion = incrementMenuVersion();

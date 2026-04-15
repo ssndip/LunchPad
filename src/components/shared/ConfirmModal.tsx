@@ -5,9 +5,12 @@ import { AlertTriangle, HelpCircle } from 'lucide-react';
 export interface ConfirmConfig {
   title: string;
   message: string;
-  onConfirm: () => void;
+  onConfirm: (value?: string) => void;
   isDestructive?: boolean;
   confirmText?: string;
+  isPrompt?: boolean;
+  initialValue?: string;
+  placeholder?: string;
 }
 
 interface ConfirmModalProps {
@@ -21,6 +24,20 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onClose,
   cancelLabel = 'Cancel',
 }) => {
+  const [inputValue, setInputValue] = React.useState('');
+
+  React.useEffect(() => {
+    if (config?.isPrompt) {
+      setInputValue(config.initialValue || '');
+    }
+  }, [config]);
+
+  const handleConfirm = () => {
+    if (!config) return;
+    config.onConfirm(config.isPrompt ? inputValue : undefined);
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {config && (
@@ -57,25 +74,39 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               )}
               <div>
                 <h3 className="text-xl font-bold text-neutral-900">{config.title}</h3>
-                <p className="text-neutral-500 text-sm mt-1">Please confirm this action</p>
+                <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mt-1">
+                  {config.isPrompt ? 'Awaiting Input' : 'Please confirm this action'}
+                </p>
               </div>
             </div>
 
-            <p className="text-neutral-600 mb-8 leading-relaxed">{config.message}</p>
+            <p className="text-neutral-600 mb-6 leading-relaxed text-sm">{config.message}</p>
+
+            {config.isPrompt && (
+              <div className="mb-8">
+                <input
+                  type="text"
+                  autoFocus
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={config.placeholder}
+                  onKeyDown={(e) => e.key === 'Enter' && inputValue.trim() && handleConfirm()}
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
+                />
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-3 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
+                className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
               >
                 {cancelLabel}
               </button>
               <button
-                onClick={() => {
-                  config.onConfirm();
-                  onClose();
-                }}
-                className={`flex-1 py-3 px-6 rounded-2xl text-white font-bold transition-all shadow-lg text-sm ${
+                onClick={handleConfirm}
+                disabled={config.isPrompt && !inputValue.trim()}
+                className={`flex-1 py-3.5 px-6 rounded-2xl text-white font-bold transition-all shadow-lg text-sm disabled:opacity-30 ${
                   config.isDestructive
                     ? 'bg-red-500 hover:bg-red-600 shadow-red-100'
                     : 'bg-neutral-900 hover:bg-neutral-800 shadow-neutral-100'

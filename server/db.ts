@@ -38,13 +38,26 @@ export const initDb = () => {
     // Column already exists
   }
 
-  try {
-    db.exec("ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0");
-    db.exec("ALTER TABLE menu ADD COLUMN sideChoices TEXT");
-    db.exec("ALTER TABLE menu ADD COLUMN selectedSide TEXT");
-    db.exec("ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0");
-    console.log("[DB] Added side-dish columns to menu table");
-  } catch (e) {}
+  // Individual migrations for menu table
+  const menuMigrations = [
+    "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0",
+    "ALTER TABLE menu ADD COLUMN sideChoices TEXT",
+    "ALTER TABLE menu ADD COLUMN selectedSide TEXT",
+    "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0",
+    "ALTER TABLE menu ADD COLUMN tags TEXT",
+    "ALTER TABLE menu ADD COLUMN packagingFee REAL"
+  ];
+
+  menuMigrations.forEach(migration => {
+    try {
+      db.exec(migration);
+      console.log(`[DB] Migration successful: ${migration.split('ADD COLUMN ')[1]}`);
+    } catch (e) {
+      // Column likely already exists
+    }
+  });
+
+  console.log("[DB] Menu table schema verification complete");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS menu (

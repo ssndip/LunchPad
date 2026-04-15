@@ -3,14 +3,12 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle } from 'lucide-react';
 import { MenuItem } from '../../../types';
-import { MenuParserEngine, ParseResult as NewParseResult } from '../../../utils/parserEngine';
-import { ParserConfig } from '../../../types/parserConfig';
-import { DEFAULT_PARSER_CONFIG } from '../../../utils/defaultParserConfig';
+import { parsePastedMenu } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
-import { Truck, AlertTriangle } from 'lucide-react';
 import * as api from '../../../api';
+import { getActivePreset, getAllPresets, FormatPreset, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -36,29 +34,17 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<any | null>(null);
-  const [activeConfig, setActiveConfig] = useState<ParserConfig>(DEFAULT_PARSER_CONFIG);
   const { token } = useStore();
 
-  React.useEffect(() => {
-    if (token) {
-      loadActiveConfig();
-    }
-  }, [token]);
+  const [presets, setPresets] = React.useState<FormatPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = React.useState<string>('none');
 
-  const loadActiveConfig = async () => {
-    try {
-      const profiles = await api.getParserProfiles(token!);
-      const active = profiles.find((p: any) => p.isActive);
-      if (active) {
-        const versions = await api.getParserVersions(token!, active.id);
-        if (versions.length > 0) {
-          setActiveConfig(JSON.parse(versions[0].configJson));
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load active parser config, using default", err);
-    }
-  };
+  React.useEffect(() => {
+    const loaded = getAllPresets();
+    setPresets(loaded);
+    const active = getActivePreset();
+    if (active) setSelectedPresetId(active.id);
+  }, []);
 
   const deliveryFee = useStore(s => s.deliveryFee);
   const setDeliveryFee = useStore(s => s.setDeliveryFee);
@@ -80,8 +66,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     try {
       await api.updateSettings(token, { packagingFee });
       confirm({
-        title: t('modals.confirm') || 'Settings updated',
-        message: t('modals.confirm_text') || 'Settings saved successfully',
+        title: t('modals.confirm'),
+        message: t('modals.confirm_packaging_fee'),
         confirmText: 'OK',
         onConfirm: () => {}
       });
@@ -95,8 +81,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     try {
       await api.updateSettings(token, { deliveryFee });
       confirm({
-        title: t('modals.confirm') || 'Settings updated',
-        message: t('modals.confirm_text') || 'Settings saved successfully',
+        title: t('modals.confirm'),
+        message: t('modals.confirm_delivery_fee'),
         confirmText: 'OK',
         onConfirm: () => {}
       });
@@ -156,26 +142,15 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
   const handleParse = () => {
     if (!pasteText.trim()) return;
-    const engine = new MenuParserEngine(activeConfig);
-    const result = engine.parse(pasteText);
-    setParsed(result);
-
-    // If there ARE unmatched lines, LOG THEM for common analysis
-    if (result.unmatchedLines.length > 0 && token) {
-      // Background call, don't block UI
-      fetch('/api/parser/logs', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ 
-          rawInput: pasteText, 
-          unmatchedLines: result.unmatchedLines,
-          configId: 'active' 
-        })
-      }).catch(err => console.error("Failed to log parser fail", err));
-    }
+    const selectedPreset = presets.find(p => p.id === selectedPresetId) || null;
+    const normalizedText = normalizeMenuText(pasteText, selectedPreset);
+    const result = parsePastedMenu(normalizedText);
+    const finalItems = applyItemOverrides(result.items, selectedPreset);
+    setParsed({
+      items: finalItems,
+      date: result.detectedDate || null,
+      unmatchedLines: result.unmatchedLines || []
+    });
   };
 
   const handleApply = () => {
@@ -444,7 +419,22 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       />
                       <FileText className="absolute top-4 right-4 w-4 h-4 text-neutral-300" />
                     </div>
-                    <div className="flex justify-end gap-3">
+                    {presets.length > 0 && (
+                      <div className="mt-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-neutral-100 shadow-sm">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Format Preset:</span>
+                        <select
+                          value={selectedPresetId}
+                          onChange={e => setSelectedPresetId(e.target.value)}
+                          className="flex-1 bg-neutral-50 border border-neutral-200 text-sm font-bold text-neutral-800 rounded-lg py-1.5 px-3 focus:outline-none focus:border-indigo-400 hover:border-neutral-300 transition-colors"
+                        >
+                          <option value="none">No Preset (Raw Text)</option>
+                          {presets.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className="flex justify-end gap-3 mt-4">
                       <button onClick={handleClose} className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
                         {t('modals.cancel')}
                       </button>

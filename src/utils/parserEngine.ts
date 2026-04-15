@@ -138,7 +138,7 @@ export class MenuParserEngine {
     // Clean line of non-text for discovery
     const cleanLine = line.replace(/[+():]/g, '').trim();
     for (const rule of this.config.sectionDetection) {
-      if (new RegExp(rule.pattern, 'i').test(cleanLine)) {
+      if (new RegExp(`^(${rule.pattern})$`, 'i').test(cleanLine)) {
         return rule;
       }
     }

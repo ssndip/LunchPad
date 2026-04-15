@@ -13,6 +13,7 @@ export interface ParsedCategory {
 export interface ParsedMenu {
   date: string | null;
   categories: ParsedCategory[];
+  unmatchedLines: string[];
 }
 
 // --- Regex Matchers & Configuration ---
@@ -64,7 +65,7 @@ function cleanItemName(name: string): string {
 export function parseMenuText(rawText: string): ParsedMenu {
   const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  const parsedOutput: ParsedMenu = { date: null, categories: [] };
+  const parsedOutput: ParsedMenu = { date: null, categories: [], unmatchedLines: [] };
   let currentCategory: ParsedCategory | null = null;
   
   // Contextual State values
@@ -163,6 +164,13 @@ export function parseMenuText(rawText: string): ParsedMenu {
 
       const linePriceMatch = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
       if (linePriceMatch) currentCategoryDefaultPrice = safeFloat(linePriceMatch[1]);
+    }
+
+    // 4. If nothing matched and line has no known pattern → unmatched
+    const hasKnownPattern = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line) || RegexConfig.BOX_FEE.test(line) || RegexConfig.DATE.test(line);
+    if (!isDedicatedContext && !hasKnownPattern && !currentCategory) {
+      // Context lines before any category are truly unmatched
+      parsedOutput.unmatchedLines.push(line);
     }
   }
 

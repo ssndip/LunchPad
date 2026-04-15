@@ -1,17 +1,17 @@
-import { MenuItem, ExtraFee } from '../types';
+import { MenuItem } from '../types';
 import { MENU_CONFIG, MenuConfig } from './menuConfig';
+import { parseMenuText } from './advancedMenuParser';
+import { loadCategorySettings, ParserPersistence } from './parserLocalSettings';
 
 export interface ParseResult {
   detectedDate?: string;
   items: MenuItem[];
+  unmatchedLines: string[];
 }
 
 // ─── Regex ────────────────────────────────────────────────────────────────────
 const DATE_RE = /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
-/** Matches a price (e.g. 1.80, 1,80, 5) followed by currency */
 const PRICE_RE = /([\d]+[,.][\d]+|[\d]+)\s*(€|\$|лв)/;
-
-import { parseMenuText } from './advancedMenuParser';
 
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
@@ -22,31 +22,43 @@ function mapCategoryNameToKey(categoryName: string, config: MenuConfig): string 
       return key;
     }
   }
-  return 'other'; // default to other if no matching keyword
+  return 'other';
 }
 
 /**
  * Stage 4: Enrichment (Rules Engine + Auto-Select)
+ * Accepts per-category settings overrides from localStorage.
  */
-function enrichItems(items: MenuItem[], config: MenuConfig): MenuItem[] {
-  // 1. Identify all side dishes
+function enrichItems(items: MenuItem[], config: MenuConfig, settings: ParserPersistence): MenuItem[] {
+  const catSettings = settings.categories;
   const sideDishes = items.filter(i => i.category === config.categoryLabels.sides);
   const firstSide = sideDishes[0]?.name;
 
-  return items.map(item => {
-    // Apply General Rules
-    config.rules.forEach(rule => {
-      if (rule.match(item)) {
-        // We no longer extract sectionConfigs, because boxFee is accurately extracted
-        // on the item level by advancedMenuParser!
-        // We'll pass a dummy sectionConfig with boxFee if the item specifically captured a boxFee > 0
-        const dummySectionCfg = item.extraFees.length ? { boxFee: item.extraFees[0].amount } : undefined; 
-        rule.apply(item, config, dummySectionCfg);
-      }
-    });
+  // Build a reverse lookup: display label → category key
+  const labelToKey: Record<string, string> = {};
+  for (const [key, label] of Object.entries(config.categoryLabels)) {
+    labelToKey[label] = key;
+  }
 
-    // Reinforced Auto-Select Logic
-    if (item.name.toLowerCase().includes(config.settings.sideDishTriggerKeyword.toLowerCase())) {
+  return items.map(item => {
+    const catKey = labelToKey[item.category || ''] || 'other';
+    const catOverride = catSettings[catKey] || { autoBox: false, hasSideDish: false };
+
+    // Apply auto-box tag based on per-category setting
+    if (catOverride.autoBox) {
+      item.tags.push('autobox');
+    }
+
+    // Apply BBQ tag (always — it's a BBQ-specific behaviour not an admin toggle)
+    if (item.category === 'BBQ') {
+      item.tags.push('bbq');
+    }
+
+    // Side Dish Trigger: triggers if WHOLE category is ON or if individual item matches keyword
+    const hasSideTrigger = catOverride.hasSideDish || 
+      item.name.toLowerCase().includes(settings.sideDishKeyword.toLowerCase());
+
+    if (hasSideTrigger) {
       item.requiresSideChoice = true;
       item.hasIncludedSide = true;
       if (firstSide) {
@@ -54,13 +66,21 @@ function enrichItems(items: MenuItem[], config: MenuConfig): MenuItem[] {
       }
     }
 
+    // Preserve any custom box fee tagged by advancedParser
+    // (the has_custom_box tag keeps dynamic fee logic intact)
+    
     return item;
   });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+/**
+ * Parse pasted menu text using the category settings from localStorage.
+ * Category settings control autobox and side dish trigger per category.
+ */
 export function parsePastedMenu(text: string): ParseResult {
+  const settings = loadCategorySettings();
   const parsedAdvanced = parseMenuText(text);
   const tempItems: MenuItem[] = [];
   let currentId = Date.now();
@@ -72,7 +92,7 @@ export function parsePastedMenu(text: string): ParseResult {
     for (const parsedItem of parsedCategory.items) {
       const item: MenuItem = {
         id: currentId++,
-        name: parsedItem.name + (parsedItem.weight ? ` ${parsedItem.weight}` : ''), // Append weight to name for now, or keep separate later
+        name: parsedItem.name + (parsedItem.weight ? ` ${parsedItem.weight}` : ''),
         description: '',
         basePrice: parsedItem.price,
         price: parsedItem.price,
@@ -82,20 +102,20 @@ export function parsePastedMenu(text: string): ParseResult {
         extraFees: []
       };
 
-      // Since advancedParser captures box overrides accurately per item, we simulate sectionConfig override:
-      // Note: The rule applies +0.10 if match logic passes. We will manually tag the boxFee from the parsedItem
       if (parsedItem.boxFee > 0) {
-        // Tag it but don't add to price anymore - dynamic fees take over
         item.tags.push('has_custom_box');
+        item.packagingFee = parsedItem.boxFee;
       }
 
       tempItems.push(item);
     }
   }
 
-  // 4. Rules & Enrichment
-  const enrichedItems = enrichItems(tempItems, MENU_CONFIG);
+  const enrichedItems = enrichItems(tempItems, MENU_CONFIG, settings);
 
-  return { detectedDate: parsedAdvanced.date || undefined, items: enrichedItems };
+  return {
+    detectedDate: parsedAdvanced.date || undefined,
+    items: enrichedItems,
+    unmatchedLines: parsedAdvanced.unmatchedLines || []
+  };
 }
-

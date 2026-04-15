@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { isCategoryAutoBox } from '../../utils/categoryAutobox';
 
 interface KioskCategorySidebarProps {
   categories: string[];
   activeCategory: string;
   onSelect: (cat: string) => void;
+  menu: import('../../types').MenuItem[];
   t: (key: string) => string;
 }
 
@@ -12,13 +14,11 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
   categories,
   activeCategory,
   onSelect,
+  menu,
   t,
 }) => {
-  const isPackagingFeeItem = (category?: string) => {
-    if (!category) return false;
-    const c = category.toLowerCase();
-    return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
-  };
+  // Reads live from parser settings in localStorage — no re-parse needed
+  const isPackagingFeeItem = (category: string) => isCategoryAutoBox(category);
 
   return (
     <div className="flex-1 flex md:flex-col overflow-hidden">

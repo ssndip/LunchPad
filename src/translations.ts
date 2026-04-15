@@ -133,6 +133,8 @@ export const translations = {
       remove: "Remove",
       overwrite_warning: "This will overwrite your current menu with the new items. Are you sure?",
       menu_updated: "The menu has been updated. Please review your cart before ordering.",
+      confirm_delivery_fee: "Delivery fee updated successfully",
+      confirm_packaging_fee: "Packaging fee updated successfully",
     },
     filters: {
       start_date: "Start Date",
@@ -323,6 +325,8 @@ export const translations = {
       remove: "Премахни",
       overwrite_warning: "Това ще замени текущото меню с новите артикули. Сигурни ли сте?",
       menu_updated: "Менюто беше актуализирано. Моля, прегледайте количката си преди поръчка.",
+      confirm_delivery_fee: "Таксата за доставка е актуализирана успешно",
+      confirm_packaging_fee: "Таксата за кутийка е актуализирана успешно",
     },
     filters: {
       start_date: "Начална дата",

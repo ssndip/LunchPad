@@ -12,12 +12,12 @@ export const DEFAULT_PARSER_CONFIG: ParserConfig = {
     { id: 'empty', pattern: '^\\s*$' }
   ],
   sectionDetection: [
-    { id: 'soups', categoryName: 'Soups', pattern: 'супи', applyBoxFeeByDefault: false },
+    { id: 'soups', categoryName: 'Soups', pattern: 'супа|супи', applyBoxFeeByDefault: false },
     { id: 'mains', categoryName: 'Main Dishes', pattern: 'основни ястия|основно ястие', applyBoxFeeByDefault: false },
-    { id: 'salads', categoryName: 'Salads', pattern: 'салати', applyBoxFeeByDefault: true },
+    { id: 'salads', categoryName: 'Salads', pattern: 'салата|салати', applyBoxFeeByDefault: true },
     { id: 'bread', categoryName: 'Bread', pattern: 'хляб', applyBoxFeeByDefault: false },
-    { id: 'desserts', categoryName: 'Desserts', pattern: 'десерти', applyBoxFeeByDefault: false },
-    { id: 'sides', categoryName: 'Side Dishes', pattern: 'гарнитури', applyBoxFeeByDefault: true },
+    { id: 'desserts', categoryName: 'Desserts', pattern: 'десерт|десерти', applyBoxFeeByDefault: false },
+    { id: 'sides', categoryName: 'Side Dishes', pattern: 'гарнитур|гарнитури', applyBoxFeeByDefault: true },
     { id: 'bbq', categoryName: 'BBQ', pattern: 'скара', applyBoxFeeByDefault: true }
   ],
   entityExtraction: {

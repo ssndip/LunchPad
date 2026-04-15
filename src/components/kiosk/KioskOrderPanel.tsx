@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, Trash2, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
-import { CartItem } from '../../types';
+import { CartItem, MenuItem } from '../../types';
 import { useStore } from '../../store/useStore';
+import { isItemAutoBox } from '../../utils/categoryAutobox';
 
 interface KioskOrderPanelProps {
   selectedItems: CartItem[];
@@ -37,11 +38,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
 }) => {
   const packagingFee = useStore(s => s.packagingFee);
   
-  const isPackagingFeeItem = (category?: string) => {
-    if (!category) return false;
-    const c = category.toLowerCase();
-    return c.includes('side dishes') || c.includes('гарнитури') || c.includes('bbq') || c.includes('скара');
-  };
+
 
   const bgTotal = (totalPrice * 1.95).toFixed(2);
   const orderDisabled = !selectedItems.length || (!rfid && !testModeEnabled) || isScanning || !computedKioskOpen;
@@ -111,7 +108,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                   </div>
                 ))}
                 
-                {isPackagingFeeItem(item.category) && (
+                {isItemAutoBox(item) && (
                   <div className="flex justify-between items-center text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
                     <div className="flex items-center gap-1.5">
                       <span className="opacity-40">└</span>
