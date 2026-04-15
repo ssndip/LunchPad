@@ -209,12 +209,76 @@ export const distributeFee = async (token: string, date: string, fee: number) =>
   return res.json();
 };
 
-// ─── Auth Verification ────────────────────────────────────────────────────────
-export const verifyPin = async (
-  pin: string,
-): Promise<[Response, Response]> => {
-  return Promise.all([
-    fetch('/api/cards', { headers: authHeaders(pin) }),
-    fetch('/api/orders', { headers: authHeaders(pin) }),
-  ]) as Promise<[Response, Response]>;
+
+// ─── Parser API ───────────────────────────────────────────────────────────────
+export const createParserProfile = async (token: string, profile: { name: string, description: string, config: any }) => {
+  const res = await fetch('/api/parser/profiles', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(profile),
+  });
+  if (!res.ok) throw new Error('Failed to create parser profile');
+  return res.json();
+};
+
+export const duplicateParserProfile = async (token: string, profileId: string) => {
+  const res = await fetch(`/api/parser/profiles/${profileId}/duplicate`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to duplicate parser profile');
+  return res.json();
+};
+
+export const getParserProfiles = async (token: string) => {
+  const res = await fetch('/api/parser/profiles', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch parser profiles');
+  return res.json();
+};
+
+export const getParserVersions = async (token: string, profileId: string) => {
+  const res = await fetch(`/api/parser/profiles/${profileId}/versions`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch parser versions');
+  return res.json();
+};
+
+export const publishParserVersion = async (token: string, profileId: string, config: any, changeNote: string) => {
+  const res = await fetch(`/api/parser/profiles/${profileId}/publish`, {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ config, changeNote }),
+  });
+  if (!res.ok) throw new Error('Failed to publish parser version');
+  return res.json();
+};
+
+export const activateParserProfile = async (token: string, profileId: string) => {
+  const res = await fetch(`/api/parser/profiles/${profileId}/activate`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to activate parser profile');
+  return res.json();
+};
+
+export const getParserFixtures = async (token: string) => {
+  const res = await fetch('/api/parser/fixtures', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch parser fixtures');
+  return res.json();
+};
+
+export const saveParserFixture = async (token: string, fixture: any) => {
+  const res = await fetch('/api/parser/fixtures', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(fixture),
+  });
+  if (!res.ok) throw new Error('Failed to save parser fixture');
+  return res.json();
+};
+
+export const getParserLogs = async (token: string) => {
+  const res = await fetch('/api/parser/logs', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch parser logs');
+  return res.json();
 };

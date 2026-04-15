@@ -5,9 +5,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, Settings, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw } from 'lucide-react';
 import { MenuItem } from '../../../types';
-import { parsePastedMenu, ParseResult } from '../../../utils/menuParser';
+import { MenuParserEngine, ParseResult as NewParseResult } from '../../../utils/parserEngine';
+import { ParserConfig } from '../../../types/parserConfig';
+import { DEFAULT_PARSER_CONFIG } from '../../../utils/defaultParserConfig';
 import { useStore } from '../../../store/useStore';
-import { Truck } from 'lucide-react';
+import { Truck, AlertTriangle } from 'lucide-react';
 import * as api from '../../../api';
 
 interface MenuTabProps {
@@ -33,17 +35,35 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 }) => {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
-  const [parsed, setParsed] = useState<ParseResult | null>(null);
+  const [parsed, setParsed] = useState<any | null>(null);
+  const [activeConfig, setActiveConfig] = useState<ParserConfig>(DEFAULT_PARSER_CONFIG);
+  const { token } = useStore();
+
+  React.useEffect(() => {
+    if (token) {
+      loadActiveConfig();
+    }
+  }, [token]);
+
+  const loadActiveConfig = async () => {
+    try {
+      const profiles = await api.getParserProfiles(token!);
+      const active = profiles.find((p: any) => p.isActive);
+      if (active) {
+        const versions = await api.getParserVersions(token!, active.id);
+        if (versions.length > 0) {
+          setActiveConfig(JSON.parse(versions[0].configJson));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load active parser config, using default", err);
+    }
+  };
 
   const deliveryFee = useStore(s => s.deliveryFee);
   const setDeliveryFee = useStore(s => s.setDeliveryFee);
   const packagingFee = useStore(s => s.packagingFee);
   const setPackagingFee = useStore(s => s.setPackagingFee);
-  const token = useStore(s => s.token);
-  const updateSettings = useStore(s => s.updateSettings); // I might need to check if updateSettings is in useStore or passed as prop.
-  // Actually, App.tsx handles the API calls usually if passed as props.
-  // But MenuTab doesn't have it in props. Let's check how deliveryFee is updated.
-
   // Helper to identify side dish items reliably across languages
   const isSideDishCategory = (category?: string) => {
     if (!category) return false;
@@ -136,8 +156,26 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
   const handleParse = () => {
     if (!pasteText.trim()) return;
-    const result = parsePastedMenu(pasteText);
+    const engine = new MenuParserEngine(activeConfig);
+    const result = engine.parse(pasteText);
     setParsed(result);
+
+    // If there ARE unmatched lines, LOG THEM for common analysis
+    if (result.unmatchedLines.length > 0 && token) {
+      // Background call, don't block UI
+      fetch('/api/parser/logs', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ 
+          rawInput: pasteText, 
+          unmatchedLines: result.unmatchedLines,
+          configId: 'active' 
+        })
+      }).catch(err => console.error("Failed to log parser fail", err));
+    }
   };
 
   const handleApply = () => {
@@ -420,14 +458,23 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     </div>
                   </>
                 ) : (
-                  /* ── Phase 2: Preview ── */
                   <>
-                    {parsed.detectedDate && (
+                    {parsed.date && (
                       <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
                         <Calendar className="w-4 h-4 shrink-0" />
                         <span className="text-sm font-medium">
-                          {t('menu.detected_date') || 'Detected date'}: <strong>{parsed.detectedDate}</strong>
+                          {t('menu.detected_date') || 'Detected date'}: <strong>{parsed.date}</strong>
                         </span>
+                      </div>
+                    )}
+
+                    {parsed.unmatchedLines.length > 0 && (
+                      <div className="flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                           <span className="text-xs font-bold block mb-1">Unmatched Lines Detection ({parsed.unmatchedLines.length})</span>
+                           <p className="text-[10px] opacity-80 leading-relaxed font-mono truncate">{parsed.unmatchedLines.join(', ')}</p>
+                        </div>
                       </div>
                     )}
 

@@ -84,6 +84,41 @@ export const initDb = () => {
 
     -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
     CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
+
+    -- Parser System Tables
+    CREATE TABLE IF NOT EXISTS parser_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'draft',
+      isActive INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS parser_versions (
+      id TEXT PRIMARY KEY,
+      profileId TEXT NOT NULL,
+      versionNumber INTEGER NOT NULL,
+      configJson TEXT NOT NULL,
+      changeNote TEXT,
+      createdAt TEXT,
+      FOREIGN KEY(profileId) REFERENCES parser_profiles(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS parser_fixtures (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      rawInput TEXT NOT NULL,
+      expectedOutputJson TEXT,
+      createdAt TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS parser_logs (
+      id TEXT PRIMARY KEY,
+      timestamp TEXT,
+      rawInput TEXT,
+      unmatchedLines TEXT,
+      configId TEXT
+    );
   `);
 };
 
@@ -122,5 +157,54 @@ export const seedInitialData = () => {
     db.prepare("INSERT INTO cards (rfid, ownerName, balance, isAdmin, lastUpdated) VALUES (?, ?, ?, ?, ?)")
       .run("TEST-ADMIN", "Test Administrator", 999.00, 1, new Date().toISOString());
     console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering");
+  }
+
+  // Seed Default Parser Profile
+  const countProfiles = db.prepare("SELECT COUNT(*) as count FROM parser_profiles").get() as { count: number };
+  if (countProfiles.count === 0) {
+    const profileId = 'default-profile-uuid';
+    const versionId = 'default-version-uuid';
+    const defaultConfig = {
+      version: 1,
+      language: 'bg',
+      preprocessing: [
+        { id: 'trim', type: 'trim' },
+        { id: 'norm_ws', type: 'normalize_whitespace' },
+        { id: 'bgn_noise', type: 'remove', pattern: '[\\d]+[,.][\\d]+\\s*(?:лв|лева|лв\\.)' }
+      ],
+      ignoreRules: [{ id: 'empty', pattern: '^\\s*$' }],
+      sectionDetection: [
+        { id: 'soups', categoryName: 'Soups', pattern: 'супи', applyBoxFeeByDefault: false },
+        { id: 'mains', categoryName: 'Main Dishes', pattern: 'основни ястия|основно ястие', applyBoxFeeByDefault: false },
+        { id: 'salads', categoryName: 'Salads', pattern: 'салати', applyBoxFeeByDefault: true },
+        { id: 'bread', categoryName: 'Bread', pattern: 'хляб', applyBoxFeeByDefault: false },
+        { id: 'desserts', categoryName: 'Desserts', pattern: 'десерти', applyBoxFeeByDefault: false },
+        { id: 'sides', categoryName: 'Side Dishes', pattern: 'гарнитури', applyBoxFeeByDefault: true },
+        { id: 'bbq', categoryName: 'BBQ', pattern: 'скара', applyBoxFeeByDefault: true }
+      ],
+      entityExtraction: {
+        datePattern: '(\\d{1,2}[.\\-/]\\d{1,2}[.\\-/]\\d{2,4})',
+        weightPattern: '(\\d+\\s*(?:гр|g|gr|мл|ml))',
+        pricePattern: '([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$)',
+        boxFeePattern: '([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$)?\\s*кутийка',
+        itemPrefixPattern: '^[-•*]\\s*',
+        boxKeywordPattern: 'кутийка',
+        bgnNoisePattern: '[\\d]+[,.][\\d]+\\s*(?:лв|лева|лв\\.)'
+      },
+      enrichmentRules: [
+        { id: 'autobox_sides', condition: { category: ['Side Dishes', 'Salads'] }, action: { addTag: 'autobox' } },
+        { id: 'bbq_tag', condition: { category: ['BBQ'] }, action: { addTag: 'bbq' } }
+      ],
+      fallbackCategory: 'Other'
+    };
+
+    db.transaction(() => {
+      db.prepare("INSERT INTO parser_profiles (id, name, description, status, isActive) VALUES (?, ?, ?, 'published', 1)")
+        .run(profileId, 'Default Profile', 'Standard menu parsing rules (BG)');
+      
+      db.prepare("INSERT INTO parser_versions (id, profileId, versionNumber, configJson, changeNote, createdAt) VALUES (?, ?, 1, ?, 'Initial system seed', ?)")
+        .run(versionId, profileId, JSON.stringify(defaultConfig), new Date().toISOString());
+    })();
+    console.log("[DB] Seeded Default Parser Profile");
   }
 };

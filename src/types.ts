@@ -13,10 +13,16 @@ export interface MenuItem {
   category: string;
   tags: string[];           // Feature 7: tag-based rules (e.g. "bbq", "side")
   extraFees: ExtraFee[];    // Feature 7: breakout of fees (e.g. container fee)
+  packagingFee?: number;    // Single item packaging fee
   hasIncludedSide?: boolean;
   requiresSideChoice?: boolean; // Feature 7: trigger side dish selection
   selectedSide?: string;        // Feature 7: pre-selected side dish name
   sideChoices?: string[];
+  _debug?: {                    // Match metadata for UI debugging
+    matchedLine: string;
+    ruleId?: string;
+    ruleType?: 'section' | 'extraction' | 'enrichment';
+  };
 }
 
 // Feature 5: Cart item extends MenuItem with an optional chosen side dish

@@ -85,7 +85,6 @@ export const translations = {
       item_usage: "Item Usage",
       side_dishes_breakdown: "Side Dishes Breakdown",
       no_sides_recorded: "No side dishes recorded for this day",
-      no_sides_recorded: "No side dishes recorded for this day",
       distribute_fee: "Distribute Fee",
       delivery_fee: "Delivery Fee",
       fee_placeholder: "e.g. 5.00",

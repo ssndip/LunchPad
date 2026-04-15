@@ -26,6 +26,7 @@ import { OrdersTab } from './components/manager/tabs/OrdersTab';
 import { HistoryTab } from './components/manager/tabs/HistoryTab';
 import { CardsTab } from './components/manager/tabs/CardsTab';
 import { SettingsTab } from './components/manager/tabs/SettingsTab';
+import { ParserRulesTab } from './components/manager/tabs/ParserRulesTab';
 import { AnalyticsTab } from './components/manager/tabs/AnalyticsTab';
 
 export default function App() {
@@ -539,6 +540,9 @@ export default function App() {
           )}
           {s.activeTab === 'analytics' && (
             <AnalyticsTab t={t} />
+          )}
+          {s.activeTab === 'parser_rules' && (
+            <ParserRulesTab t={t} confirm={setConfirmConfig} />
           )}
         </ManagerDashboard>
 

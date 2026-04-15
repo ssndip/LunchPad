@@ -5,7 +5,7 @@ import { Language } from '../translations';
 interface AppState {
   // --- View State ---
   mode: 'kiosk' | 'manager';
-  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics';
+  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
   lang: Language;
   
   // --- Data ---
@@ -70,7 +70,7 @@ interface AppState {
 
   // --- Actions ---
   setMode: (mode: 'kiosk' | 'manager') => void;
-  setActiveTab: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics') => void;
+  setActiveTab: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules') => void;
   setLang: (lang: Language) => void;
   setMenu: (menu: MenuItem[]) => void;
   setOrders: (orders: Order[]) => void;

@@ -9,12 +9,13 @@ import {
   LogOut,
   ChevronRight,
   TrendingUp,
+  Terminal,
 } from 'lucide-react';
 import { Language } from '../../translations';
 
 interface ManagerDashboardProps {
-  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics';
-  onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics') => void;
+  activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
+  onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules') => void;
   onLogout: () => void;
   lang: Language;
   t: (key: string) => string;
@@ -39,6 +40,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     { id: 'history', icon: History, label: t('navigation.history') },
     { id: 'cards', icon: CreditCard, label: t('navigation.card_management') },
     { id: 'analytics', icon: TrendingUp, label: t('navigation.analytics') },
+    { id: 'parser_rules', icon: Terminal, label: 'Parser Rules' },
     { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
   ];
 
