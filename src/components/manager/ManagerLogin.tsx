@@ -28,10 +28,10 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
       if (res.success && res.token) {
         onLogin(res.token);
       } else {
-        setError(res.error || t('settings.invalid_pin') || 'Invalid admin PIN');
+        setError(res.error || t('settings.invalid_pin'));
       }
     } catch {
-      setError('Connection failed');
+      setError(t('navigation.connection_failed'));
     } finally {
       setLoading(false);
     }
@@ -67,10 +67,10 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }
               <Lock className="w-8 h-8 text-neutral-900" />
             </div>
             <h1 className="text-3xl font-black text-neutral-900 uppercase tracking-tighter mb-2">
-              Manager Access
+              {t('navigation.manager_access')}
             </h1>
             <p className="text-neutral-500 text-sm font-medium">
-              Enter your administrative PIN to continue
+              {t('navigation.enter_pin_desc')}
             </p>
           </div>
 

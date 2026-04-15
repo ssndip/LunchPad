@@ -108,12 +108,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     };
 
     if (available.length === 0) {
-      return <p className="text-[10px] text-red-400 italic">No side dishes found</p>;
+      return <p className="text-[10px] text-red-400 italic">{t('menu.no_sides_found')}</p>;
     }
 
     return (
       <div className="flex flex-col gap-1.5 mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 max-h-40 overflow-y-auto custom-scrollbar">
-        <p className="text-[10px] font-bold text-neutral-400 mb-1 uppercase tracking-tight">Allowed Sides:</p>
+        <p className="text-[10px] font-bold text-neutral-400 mb-1 uppercase tracking-tight">{t('menu.allowed_sides')}</p>
         {available.map(item => (
           <button
             key={item.id}
@@ -144,6 +144,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     if (!pasteText.trim()) return;
     const selectedPreset = presets.find(p => p.id === selectedPresetId) || null;
     const normalizedText = normalizeMenuText(pasteText, selectedPreset);
+    
+    // Visually update the text area so the user can see what the normalizer did
+    if (normalizedText !== pasteText) {
+      setPasteText(normalizedText);
+    }
+
     const result = parsePastedMenu(normalizedText);
     const finalItems = applyItemOverrides(result.items, selectedPreset);
     setParsed({
@@ -462,7 +468,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       <div className="flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                         <div className="flex-1">
-                           <span className="text-xs font-bold block mb-1">Unmatched Lines Detection ({parsed.unmatchedLines.length})</span>
+                           <span className="text-xs font-bold block mb-1">{t('menu.unmatched_lines_detection')} ({parsed.unmatchedLines.length})</span>
                            <p className="text-[10px] opacity-80 leading-relaxed font-mono truncate">{parsed.unmatchedLines.join(', ')}</p>
                         </div>
                       </div>

@@ -228,7 +228,7 @@ export default function App() {
           return;
         }
         const err = await res.json();
-        s.setError(err.error || 'Order failed');
+        s.setError(err.error || t('menu.order_failed'));
       } else {
         s.setShowSuccess(true);
         s.resetCart();
@@ -250,9 +250,9 @@ export default function App() {
       s.setMenu(items);
     } catch {
       setConfirmConfig({
-        title: 'Error',
-        message: 'Failed to update menu',
-        confirmText: 'OK',
+        title: t('menu.Error'),
+        message: t('menu.failed_update'),
+        confirmText: t('menu.OK'),
         onConfirm: () => {}
       });
     }
@@ -287,9 +287,9 @@ export default function App() {
       if (publicCode !== undefined) s.setPublicAccessCode(publicCode);
     } catch {
       setConfirmConfig({
-        title: 'Error',
-        message: 'Failed to update settings',
-        confirmText: 'OK',
+        title: t('menu.Error'),
+        message: t('settings.failed_update'),
+        confirmText: t('menu.OK'),
         onConfirm: () => {}
       });
     }
@@ -302,9 +302,9 @@ export default function App() {
       s.setKioskOpen(open);
     } catch {
       setConfirmConfig({
-        title: 'Error',
-        message: 'Failed to update kiosk status',
-        confirmText: 'OK',
+        title: t('menu.Error'),
+        message: t('settings.failed_kiosk_toggle'),
+        confirmText: t('menu.OK'),
         onConfirm: () => {}
       });
     }
@@ -327,7 +327,7 @@ export default function App() {
 
   // ─── Render Logic ──────────────────────────────────────────────────────────
   if (s.publicAccessRequired) {
-    return <PublicAccessCodeEntry onUnlock={handleUnlock} lang={s.lang} />;
+    return <PublicAccessCodeEntry onUnlock={handleUnlock} lang={s.lang} t={t} />;
   }
 
   if (s.mode === 'manager') {
@@ -400,8 +400,8 @@ export default function App() {
                 navigator.clipboard.writeText(text);
                 setConfirmConfig({
                   title: t('navigation.order_summary'),
-                  message: 'Summary copied to clipboard',
-                  confirmText: 'OK',
+                  message: t('navigation.copy_success'),
+                  confirmText: t('menu.OK'),
                   onConfirm: () => {}
                 });
               }}

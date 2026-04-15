@@ -131,9 +131,9 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
             <span className="text-2xl font-black text-neutral-900 font-mono">€{totalPrice.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-baseline leading-none opacity-60">
-            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">В лева (×1.95)</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{t('kiosk.in_leva')} (×1.95)</span>
             <div className="flex flex-col items-end">
-              <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}лв</span>
+              <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}{t('kiosk.currency_bg')}</span>
               <span className="text-[9px] font-bold text-neutral-400">
                 ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)} {t('menu.items')})
               </span>
@@ -155,7 +155,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
             {isScanning ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm font-black uppercase tracking-widest">Processing...</span>
+                <span className="text-sm font-black uppercase tracking-widest">{t('kiosk.processing')}</span>
               </>
             ) : (
               <>

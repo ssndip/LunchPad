@@ -6,9 +6,10 @@ import { FileJson, ListFilter, Scissors, CreditCard, Crosshair } from 'lucide-re
 interface EntityExtractionEditorProps {
   rules: EntityExtractionRules;
   onChange: (rules: EntityExtractionRules) => void;
+  t: (key: string) => string;
 }
 
-export const EntityExtractionEditor: React.FC<EntityExtractionEditorProps> = ({ rules, onChange }) => {
+export const EntityExtractionEditor: React.FC<EntityExtractionEditorProps> = ({ rules, onChange, t }) => {
   const updateRule = (key: keyof EntityExtractionRules, val: string) => {
     onChange({ ...rules, [key]: val });
   };
@@ -17,8 +18,8 @@ export const EntityExtractionEditor: React.FC<EntityExtractionEditorProps> = ({ 
     <div className="space-y-8">
       <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">Entity Extraction</h4>
-          <p className="text-[10px] text-neutral-400">Regex patterns for identifying specific data points inside lines.</p>
+          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">{t('parser.entity_extraction')}</h4>
+          <p className="text-[10px] text-neutral-400">{t('parser.entity_extraction_desc')}</p>
         </div>
         <div className="flex gap-2">
            <div className="w-8 h-8 rounded-full bg-neutral-200/50 flex items-center justify-center">
@@ -29,50 +30,56 @@ export const EntityExtractionEditor: React.FC<EntityExtractionEditorProps> = ({ 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <SectionHeader icon={CreditCard} title="Primary Entities" />
+          <SectionHeader icon={CreditCard} title={t('parser.primary_entities')} />
           <RuleField 
-            label="Price Pattern"
+            label={t('parser.price_pattern')}
             value={rules.pricePattern}
             onChange={(v) => updateRule('pricePattern', v)}
             placeholder="e.g. ([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$)"
-            description="Must include one capture group for the numeric value."
+            description={t('parser.price_pattern_desc')}
+            t={t}
           />
           <RuleField 
-            label="Weight Pattern"
+            label={t('parser.weight_pattern')}
             value={rules.weightPattern}
             onChange={(v) => updateRule('weightPattern', v)}
             placeholder="e.g. (\d+\s*(?:гр|g|gr|мл|ml))"
-            description="Capture group 1 should be the weight string."
+            description={t('parser.weight_pattern_desc')}
+            t={t}
           />
           <RuleField 
-            label="Date Pattern"
+            label={t('parser.date_pattern')}
             value={rules.datePattern}
             onChange={(v) => updateRule('datePattern', v)}
             placeholder="e.g. (\d{1,2}[.\-/\d]{2,10})"
+            t={t}
           />
         </div>
 
         <div className="space-y-6">
-          <SectionHeader icon={Scissors} title="Identification & Noise" />
+          <SectionHeader icon={Scissors} title={t('parser.id_noise')} />
           <RuleField 
-            label="Item Prefix"
+            label={t('parser.item_prefix')}
             value={rules.itemPrefixPattern}
             onChange={(v) => updateRule('itemPrefixPattern', v)}
             placeholder="^[-•*]\s*"
-            description="Lines matching this will be treated as menu items."
+            description={t('parser.item_prefix_desc')}
+            t={t}
           />
           <RuleField 
-            label="Box Fee Extract"
+            label={t('parser.box_fee_extract')}
             value={rules.boxFeePattern}
             onChange={(v) => updateRule('boxFeePattern', v)}
             placeholder="([\d]+[,.][\d]+)\s*кутийка"
+            t={t}
           />
           <RuleField 
-            label="BGN Price Noise (Strip)"
+            label={t('parser.bgn_noise')}
             value={rules.bgnNoisePattern || ''}
             onChange={(v) => updateRule('bgnNoisePattern', v)}
             placeholder="e.g. [\d]+[,.][\d]+\s*(?:лв|лева)"
-            description="Matches removed from name to avoid double prices."
+            description={t('parser.bgn_noise_desc')}
+            t={t}
           />
         </div>
       </div>

@@ -33,8 +33,8 @@ export function normalizeMenuText(originalText: string, preset?: FormatPreset | 
 
   // 1. Replace common non-standard bullet styles
   text = text.replace(/^[•○*◦‣▸►▶]\s*/gm, '- ');
-  // 2. Lines that look like items (have price) but no "- " → prepend "- "
-  text = text.replace(/^(?![-•*])(.*[\d]+[,.]\d{1,2}\s*[€$].*)$/gm, (match) => `- ${match.trim()}`);
+  // 2. Lines that look like items (have price) but no "- " and don't start with digits → prepend "- "
+  text = text.replace(/^(?![-•*]|\d)(.*[\d]+[,.]\d{1,2}\s*[€$лв].*)$/gm, (match) => `- ${match.trim()}`);
   
   // 3. Apply all rules from active preset
   if (preset) {

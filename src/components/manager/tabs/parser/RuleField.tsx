@@ -7,9 +7,10 @@ interface RuleFieldProps {
   onChange: (val: string) => void;
   placeholder?: string;
   description?: string;
+  t: (key: string) => string;
 }
 
-export const RuleField: React.FC<RuleFieldProps> = ({ label, value, onChange, placeholder, description }) => {
+export const RuleField: React.FC<RuleFieldProps> = ({ label, value, onChange, placeholder, description, t }) => {
   const [isValid, setIsValid] = useState(true);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +31,7 @@ export const RuleField: React.FC<RuleFieldProps> = ({ label, value, onChange, pl
         {!isValid && (
           <div className="flex items-center gap-1 text-red-500">
             <AlertCircle className="w-3 h-3" />
-            <span className="text-[9px] font-bold">Invalid Regex</span>
+            <span className="text-[9px] font-bold">{t('parser.invalid_regex')}</span>
           </div>
         )}
         {isValid && value && (

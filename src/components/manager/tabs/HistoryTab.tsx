@@ -31,7 +31,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             {t('navigation.history')}
           </h1>
           <p className="text-neutral-500 text-sm md:text-base">
-            Search and filter all past orders
+            {t('menu.history_desc')}
           </p>
         </div>
       </div>
@@ -112,12 +112,12 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                     <p className="text-[10px] text-neutral-400 font-mono">{new Date(order.timestamp).toLocaleTimeString()}</p>
                   </td>
                   <td className="p-6">
-                    <p className="font-bold text-neutral-900">{order.ownerName ?? 'Unknown User'}</p>
+                    <p className="font-bold text-neutral-900">{order.ownerName ?? t('menu.unknown_user')}</p>
                     <p className="text-[10px] text-neutral-400 font-mono">{order.rfid ?? 'N/A'}</p>
                   </td>
                   <td className="p-6">
                     <p className="text-xs text-neutral-600 max-w-[260px] truncate">
-                      {Array.isArray(order.items) ? order.items.map((i) => i.name).join(', ') : 'No items'}
+                      {Array.isArray(order.items) ? order.items.map((i) => i.name).join(', ') : t('menu.no_items')}
                     </p>
                   </td>
                   <td className="p-6 text-right font-mono font-bold text-neutral-900">
@@ -128,7 +128,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               {(!Array.isArray(history) || history.length === 0) && (
                 <tr>
                   <td colSpan={4} className="p-12 text-center text-neutral-400 italic text-sm">
-                    No orders found matching filters.
+                    {t('menu.no_history')}
                   </td>
                 </tr>
               )}

@@ -186,15 +186,15 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-2 ${isScanning ? 'bg-neutral-900 text-white border-neutral-900 ring-4 ring-neutral-100' : 'bg-white text-neutral-900 border-neutral-200 hover:border-neutral-900'}`}
               >
                 <CreditCard className={`w-4 h-4 ${isScanning ? 'animate-pulse' : ''}`} />
-                {isScanning ? 'Waiting for Scan...' : t('cards.scan_to_register')}
+                {isScanning ? t('menu.waiting_scan') : t('cards.scan_to_register')}
               </button>
 
               {lastScanned && (
                 <div className="p-3 bg-neutral-50 rounded-xl border border-dashed border-neutral-300">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">Last Scanned RFID</p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">{t('menu.last_scanned_rfid')}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-neutral-900">{lastScanned}</span>
-                    <button onClick={() => setNewCardRfid(lastScanned)} className="text-[10px] font-bold text-neutral-900 underline uppercase tracking-widest">Use</button>
+                    <button onClick={() => setNewCardRfid(lastScanned)} className="text-[10px] font-bold text-neutral-900 underline uppercase tracking-widest">{t('menu.use')}</button>
                   </div>
                 </div>
               )}

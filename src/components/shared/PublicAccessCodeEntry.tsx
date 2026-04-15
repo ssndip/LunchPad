@@ -5,9 +5,10 @@ import { Lock, ShieldCheck, ArrowRight, Loader2, Globe, AlertCircle } from 'luci
 interface PublicAccessCodeEntryProps {
   onUnlock: (code: string) => Promise<{ success: boolean; error?: string }>;
   lang: string;
+  t: (key: string) => string;
 }
 
-export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ onUnlock, lang }) => {
+export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ onUnlock, lang, t }) => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +22,10 @@ export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ on
     try {
       const res = await onUnlock(code);
       if (!res.success) {
-        setError(res.error || 'Invalid code');
+        setError(res.error || t('settings.invalid_code'));
       }
     } catch (err) {
-      setError('Connection error');
+      setError(t('settings.connection_err'));
     } finally {
       setLoading(false);
     }
@@ -41,9 +42,9 @@ export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ on
           <div className="w-20 h-20 bg-neutral-900 rounded-[30px] flex items-center justify-center mb-6 shadow-xl shadow-neutral-200">
             <Lock className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-black text-neutral-900 mb-2">Access Secured</h2>
+          <h2 className="text-3xl font-black text-neutral-900 mb-2">{t('settings.access_secured')}</h2>
           <p className="text-neutral-500 max-w-[280px]">
-            This kiosk is restricted to authorized web users. Please enter the access code.
+             {t('settings.access_restricted_desc')}
           </p>
         </div>
 
@@ -54,7 +55,7 @@ export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ on
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Enter Code"
+              placeholder={t('settings.enter_code')}
               className="w-full px-6 py-5 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-neutral-900 focus:bg-white transition-all text-center text-2xl font-black tracking-[0.5em] placeholder:tracking-normal placeholder:font-bold focus:outline-none"
             />
             <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity">
@@ -84,7 +85,7 @@ export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ on
               <Loader2 className="w-6 h-6 animate-spin" />
             ) : (
               <>
-                Unlock Kiosk <ArrowRight className="w-5 h-5" />
+                {t('settings.unlock_kiosk')} <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
@@ -92,7 +93,7 @@ export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ on
 
         <div className="mt-10 flex items-center justify-center gap-2 text-neutral-400">
           <Globe className="w-4 h-4" />
-          <span className="text-[10px] font-mono uppercase tracking-widest">Web Remote Access Active</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest">{t('settings.remote_access_active')}</span>
         </div>
       </motion.div>
     </div>

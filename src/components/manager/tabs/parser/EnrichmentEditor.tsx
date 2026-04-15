@@ -5,9 +5,10 @@ import { Plus, Trash2, Tag, Zap, Filter, CheckCircle } from 'lucide-react';
 interface EnrichmentEditorProps {
   rules: EnrichmentRule[];
   onChange: (rules: EnrichmentRule[]) => void;
+  t: (key: string) => string;
 }
 
-export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onChange }) => {
+export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onChange, t }) => {
   const addRule = () => {
     const newRule: EnrichmentRule = {
       id: `rule-${Date.now()}`,
@@ -29,14 +30,14 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
     <div className="space-y-6">
       <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex justify-between items-center">
         <div>
-          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">Enrichment Rules</h4>
-          <p className="text-[10px] text-neutral-400">Apply tags or override fees based on item conditions.</p>
+          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">{t('parser.enrichment_rules')}</h4>
+          <p className="text-[10px] text-neutral-400">{t('parser.enrichment_desc')}</p>
         </div>
         <button 
           onClick={addRule}
           className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-md"
         >
-          <Plus className="w-3 h-3" /> Add Rule
+          <Plus className="w-3 h-3" /> {t('parser.add_rule')}
         </button>
       </div>
 
@@ -48,12 +49,12 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
                <div className="flex-1 space-y-4 w-full">
                   <div className="flex items-center gap-2 mb-2">
                      <Filter className="w-4 h-4 text-neutral-400" />
-                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Condition</span>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">{t('parser.condition')}</span>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
-                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Categories (comma separated)</label>
+                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">{t('parser.categories_comma')}</label>
                         <input 
                            type="text"
                            value={rule.condition.category?.join(', ') || ''}
@@ -65,7 +66,7 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
                         />
                      </div>
                      <div>
-                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Name Contains</label>
+                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">{t('parser.name_contains')}</label>
                         <input 
                            type="text"
                            value={rule.condition.nameContains || ''}
@@ -83,12 +84,12 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
                <div className="flex-1 space-y-4 w-full">
                   <div className="flex items-center gap-2 mb-2">
                      <Zap className="w-4 h-4 text-amber-500" />
-                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Action</span>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">{t('parser.action')}</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
-                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Add Tag</label>
+                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">{t('parser.add_tag')}</label>
                         <div className="relative">
                            <Tag className="absolute left-2.5 top-2.5 w-3 h-3 text-neutral-400" />
                            <input 
@@ -103,7 +104,7 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
                         </div>
                      </div>
                      <div>
-                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Set Box Fee</label>
+                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">{t('parser.set_box_fee')}</label>
                         <input 
                            type="number"
                            step="0.01"
@@ -126,7 +127,7 @@ export const EnrichmentEditor: React.FC<EnrichmentEditorProps> = ({ rules, onCha
                            : 'bg-white border-neutral-100 text-neutral-400'
                        }`}
                      >
-                        <CheckCircle className="w-3 h-3" /> Inc. Side Choice
+                        <CheckCircle className="w-3 h-3" /> {t('parser.inc_side_choice')}
                      </button>
                   </div>
                </div>

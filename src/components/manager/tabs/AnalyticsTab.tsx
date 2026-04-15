@@ -31,35 +31,35 @@ export const AnalyticsTab: React.FC<{ t: any }> = ({ t }) => {
     );
   }
 
-  if (!data) return <div>Failed to load analytics</div>;
+  if (!data) return <div className="p-12 text-center text-neutral-400 font-bold">{t('analytics.failed_load')}</div>;
 
   return (
     <div className="space-y-8 pb-12">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
           icon={<TrendingUp className="w-5 h-5 text-neutral-900" />}
-          label="Top Meal"
+          label={t('analytics.top_meal')}
           value={data.popularMeals[0]?.name || 'N/A'}
-          subValue={`${data.popularMeals[0]?.count || 0} orders`}
+          subValue={`${data.popularMeals[0]?.count || 0} ${t('analytics.orders_unit')}`}
         />
         <StatCard 
           icon={<Award className="w-5 h-5 text-neutral-900" />}
-          label="Top Side"
+          label={t('analytics.top_side')}
           value={data.popularSides[0]?.name || 'N/A'}
-          subValue={`${data.popularSides[0]?.count || 0} times`}
+          subValue={`${data.popularSides[0]?.count || 0} ${t('analytics.times_unit')}`}
         />
         <StatCard 
           icon={<Clock className="w-5 h-5 text-neutral-900" />}
-          label="Peak Hour"
+          label={t('analytics.peak_hour')}
           value={data.peakTimes.sort((a:any, b:any) => b.count - a.count)[0]?.hour || 'N/A'}
-          subValue="Highest activity"
+          subValue={t('analytics.highest_activity')}
         />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Popular Meals Chart */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-          <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">Popular Meals</h3>
+          <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.popular_meals')}</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.popularMeals} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -78,7 +78,7 @@ export const AnalyticsTab: React.FC<{ t: any }> = ({ t }) => {
 
         {/* Peak Times Chart */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-          <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">Activity Wave</h3>
+          <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.activity_wave')}</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.peakTimes}>

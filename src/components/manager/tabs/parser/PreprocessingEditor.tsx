@@ -6,9 +6,10 @@ import { RuleField } from './RuleField';
 interface PreprocessingEditorProps {
   rules: PreprocessingRule[];
   onChange: (rules: PreprocessingRule[]) => void;
+  t: (key: string) => string;
 }
 
-export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules, onChange }) => {
+export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules, onChange, t }) => {
   const addRule = () => {
     const newRule: PreprocessingRule = {
       id: `pre-${Date.now()}`,
@@ -31,14 +32,14 @@ export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules,
     <div className="space-y-6">
       <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex justify-between items-center">
         <div>
-          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">Text Preprocessing</h4>
-          <p className="text-[10px] text-neutral-400">Standardize menu text before it enters the parsing stages.</p>
+          <h4 className="text-sm font-black uppercase tracking-tighter text-neutral-900">{t('parser.text_preprocessing')}</h4>
+          <p className="text-[10px] text-neutral-400">{t('parser.preprocessing_desc')}</p>
         </div>
         <button 
           onClick={addRule}
           className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-md"
         >
-          <Plus className="w-3 h-3" /> Add Step
+          <Plus className="w-3 h-3" /> {t('parser.add_step')}
         </button>
       </div>
 
@@ -56,10 +57,10 @@ export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules,
                   onChange={(e) => updateRule(rule.id, { type: e.target.value as any })}
                   className="bg-transparent text-xs font-black uppercase tracking-widest text-neutral-900 focus:outline-none"
                >
-                  <option value="replace">Replace</option>
-                  <option value="trim">Trim Global</option>
-                  <option value="normalize_whitespace">Clean Spaces</option>
-                  <option value="remove">Remove</option>
+                   <option value="replace">{t('parser.type_replace')}</option>
+                   <option value="trim">{t('parser.type_trim')}</option>
+                   <option value="normalize_whitespace">{t('parser.type_clean_spaces')}</option>
+                   <option value="remove">{t('parser.type_remove')}</option>
                </select>
             </div>
 
@@ -67,20 +68,21 @@ export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules,
                <>
                   <div className="flex-1 w-full">
                      <RuleField 
-                        label="Search (Regex)"
+                        label={t('parser.search_regex')}
                         value={rule.pattern || ''}
                         onChange={(v) => updateRule(rule.id, { pattern: v })}
                         placeholder="e.g. \[\w+\]"
+                        t={t}
                      />
                   </div>
                   <div className="flex-1 w-full">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1.5 block">Replace With</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1.5 block">{t('parser.replace_with')}</label>
                      <input 
                         type="text"
                         value={rule.replace || ''}
                         onChange={(e) => updateRule(rule.id, { replace: e.target.value })}
                         className="w-full px-4 py-3 bg-neutral-50 border border-neutral-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/5 focus:border-neutral-900"
-                        placeholder="leave empty to delete"
+                         placeholder={t('parser.leave_empty_delete')}
                      />
                   </div>
                </>
@@ -88,7 +90,7 @@ export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules,
 
             {(rule.type === 'trim' || rule.type === 'normalize_whitespace') && (
                <p className="flex-1 text-[11px] text-neutral-400 italic">
-                  This rule will be applied automatically across the entire raw text input.
+                   {t('parser.rule_applied_auto')}
                </p>
             )}
 

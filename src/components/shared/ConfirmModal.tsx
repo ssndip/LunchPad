@@ -25,8 +25,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   config,
   onClose,
   t,
-  cancelLabel = 'Cancel',
+  cancelLabel,
 }) => {
+  const actualCancelLabel = cancelLabel || t('modals.cancel');
   const [inputValue, setInputValue] = React.useState('');
 
   React.useEffect(() => {
@@ -104,7 +105,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onClick={onClose}
                 className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
               >
-                {cancelLabel}
+                {actualCancelLabel}
               </button>
               <button
                 onClick={handleConfirm}
@@ -115,7 +116,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     : 'bg-neutral-900 hover:bg-neutral-800 shadow-neutral-100'
                 }`}
               >
-                {config.confirmText ?? 'Confirm'}
+                {config.confirmText ?? t('modals.confirm')}
               </button>
             </div>
           </motion.div>

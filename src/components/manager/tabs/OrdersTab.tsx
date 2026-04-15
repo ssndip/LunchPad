@@ -48,7 +48,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           });
         } catch (err: any) {
           confirm({
-            title: 'Error',
+            title: t('menu.Error'),
             message: err.message,
             isDestructive: true,
             confirmText: 'OK',
@@ -95,7 +95,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${expandedDate === summary.date ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400 group-hover:bg-neutral-200'}`}>
                           <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedDate === summary.date ? 'rotate-90' : ''}`} />
                         </div>
-                        <span>{summary.date ?? 'Unknown Date'}</span>
+                        <span>{summary.date ?? t('menu.unknown_date')}</span>
                       </div>
                     </td>
                     <td className="p-6 text-center">
@@ -185,8 +185,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                 {Array.isArray(dailyDetails) && dailyDetails.map((item, idx) => (
                                   <tr key={idx} className="hover:bg-neutral-50 transition-colors">
                                     <td className="p-5">
-                                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category ?? 'Uncategorized'}</p>
-                                      <p className="font-bold text-neutral-900">{item.name ?? 'Unknown Item'}</p>
+                                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category ?? t('menu.uncategorized')}</p>
+                                      <p className="font-bold text-neutral-900">{item.name ?? t('menu.unknown_item')}</p>
                                     </td>
                                     <td className="p-5 text-center">
                                       <span className="bg-neutral-100 px-3 py-1 rounded-lg font-mono font-black text-neutral-900">

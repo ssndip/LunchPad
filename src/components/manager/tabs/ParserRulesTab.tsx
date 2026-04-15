@@ -9,12 +9,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Package, Layers, Play, Zap, Save, ChevronDown, ChevronUp,
   CheckCircle2, AlertTriangle, FolderOpen, Plus, Trash2,
-  Calendar, X, Check, Sparkles, BookOpen, Tag
+  Calendar, X, Check, Sparkles, BookOpen, Tag,
+  Download, Upload, History
 } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
 import { MENU_CONFIG } from '../../../utils/menuConfig';
-import { FormatPreset, applyItemOverrides } from '../../../utils/menuNormalizer';
+import { FormatPreset, applyItemOverrides, normalizeMenuText } from '../../../utils/menuNormalizer';
 import {
   loadCategorySettings, saveCategorySettings,
   AllCategorySettings, DEFAULT_CATEGORY_SETTINGS,
@@ -31,6 +32,14 @@ interface ClassifyState {
   index: number;
   action: ClassifyAction | null;
   inputValue: string;
+}
+
+interface ParserProfile {
+  id: string;
+  name: string;
+  settings: ParserPersistence;
+  presets: FormatPreset[];
+  createdAt: string;
 }
 
 interface ParserRulesTabProps {
@@ -57,6 +66,7 @@ const getCatKey = (label: string) => {
 };
 
 const PRESETS_KEY = 'lunchpad_format_presets';
+const PROFILES_KEY = 'lunchpad_parser_profiles';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -78,6 +88,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
   const [manualRulePreset, setManualRulePreset] = useState<string | null>(null);
   const [manualRuleFind, setManualRuleFind] = useState('');
   const [manualRuleReplace, setManualRuleReplace] = useState('');
+  const [profiles, setProfiles] = useState<ParserProfile[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // ── Derived active preset & persistence ──
   const activePresetId = settings.activePresetId || null;
@@ -92,8 +104,10 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
   // ── Bootstrap ──
   useEffect(() => {
     setSettings(loadCategorySettings());
-    const raw = localStorage.getItem(PRESETS_KEY);
-    if (raw) setPresets(JSON.parse(raw));
+    const rawPr = localStorage.getItem(PRESETS_KEY);
+    if (rawPr) setPresets(JSON.parse(rawPr));
+    const rawProfiles = localStorage.getItem(PROFILES_KEY);
+    if (rawProfiles) setProfiles(JSON.parse(rawProfiles));
   }, []);
 
   // ── Category Settings ──
@@ -113,11 +127,113 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
     setTimeout(() => setSavedToast(false), 2000);
   };
 
+  // ── Profile Versioning ──
+  const saveProfiles = (updated: ParserProfile[]) => {
+    setProfiles(updated);
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(updated));
+  };
+
+  const handleSaveCurrentAsProfile = (name?: string) => {
+    const defaultName = `Snapshot ${new Date().toLocaleString('bg-BG')}`;
+    const profileName = typeof name === 'string' ? name : defaultName;
+    
+    const newProfile: ParserProfile = {
+      id: new Date().toISOString(),
+      name: profileName,
+      settings: JSON.parse(JSON.stringify(settings)),
+      presets: JSON.parse(JSON.stringify(presets)),
+      createdAt: new Date().toISOString()
+    };
+    
+    saveProfiles([newProfile, ...profiles]);
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
+  };
+
+  const handleActivateProfile = (profile: ParserProfile) => {
+    confirm({
+      title: t('parser.activate_profile'),
+      message: `${t('parser.activate_warning')} "${profile.name}"?`,
+      confirmText: t('parser.activate_button'),
+      onConfirm: () => {
+        // Overwrite active config
+        setSettings(profile.settings);
+        saveCategorySettings(profile.settings);
+        setPresets(profile.presets);
+        localStorage.setItem(PRESETS_KEY, JSON.stringify(profile.presets));
+        
+        // Trigger a parse with the new settings
+        setTimeout(() => handleParse(profile.presets, profile.settings.activePresetId), 100);
+      }
+    });
+  };
+
+  const handleExportProfile = (profile: ParserProfile) => {
+    const dataStr = JSON.stringify(profile, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const exportFileDefaultName = `lunchpad_parser_${profile.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', url);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (!json.settings || !json.presets) {
+          throw new Error('Invalid format');
+        }
+
+        const newProfile: ParserProfile = {
+          id: new Date().toISOString(),
+          name: json.name || `Imported ${new Date().toLocaleDateString()}`,
+          settings: json.settings,
+          presets: json.presets,
+          createdAt: new Date().toISOString()
+        };
+
+        saveProfiles([newProfile, ...profiles]);
+      } catch (err) {
+        alert('Failed to import: Invalid JSON or format.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const deleteProfile = (id: string) => {
+    const updated = profiles.filter(p => p.id !== id);
+    saveProfiles(updated);
+  };
+
   // ── Parse ──
-  const handleParse = () => {
+  const handleParse = (forcedPresets?: FormatPreset[] | React.MouseEvent, forcedPresetId?: string | null) => {
     if (!previewText.trim()) return;
-    const result = parsePastedMenu(previewText);
-    const activePreset = presets.find(p => p.id === activePresetId);
+    
+    // If called from onClick, the first arg is a React Event
+    const isEvent = forcedPresets && !Array.isArray(forcedPresets);
+    const currentList = (forcedPresets && Array.isArray(forcedPresets)) ? forcedPresets : presets;
+    const currentActiveId = (forcedPresetId !== undefined && !isEvent) ? forcedPresetId : activePresetId;
+    
+    const activePreset = currentList.find(p => p.id === currentActiveId);
+    
+    // Explicitly run normalizer to match MenuTab's behavior perfectly
+    const normalizedText = normalizeMenuText(previewText, activePreset);
+    
+    if (normalizedText !== previewText && !forcedPresets) {
+      setPreviewText(normalizedText); 
+    }
+
+    const result = parsePastedMenu(normalizedText);
     const finalItems = applyItemOverrides(result.items, activePreset);
     setParseResult({ ...result, items: finalItems });
     setClassify(null);
@@ -128,30 +244,16 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
     if (!previewText.trim()) return;
     setIsNormalizing(true);
 
-    let text = previewText;
-
-    // 1. Replace common non-standard bullet styles
-    text = text.replace(/^[•○*◦‣▸►▶]\s*/gm, '- ');
-    // 2. Lines that look like items (have price) but no "- " → prepend "- "
-    text = text.replace(/^(?![-•*])(.*[\d]+[,.]\d{1,2}\s*[€$].*)$/gm, (match) => `- ${match.trim()}`);
-    // 3. Apply all rules from active preset
     const activePreset = presets.find(p => p.id === activePresetId);
-    if (activePreset) {
-      for (const rule of activePreset.preprocessRules) {
-        try {
-          const pattern = rule.isRegex ? new RegExp(rule.find, 'gm') : new RegExp(rule.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gm');
-          text = text.replace(pattern, rule.replace);
-        } catch { /* invalid regex, skip */ }
-      }
-    }
+    const text = normalizeMenuText(previewText, activePreset);
 
     setPreviewText(text);
     setIsNormalizing(false);
+    
     // Auto-parse after normalize
     setTimeout(() => {
       const result = parsePastedMenu(text);
-      const activeP = presets.find(p => p.id === activePresetId);
-      const finalItems = applyItemOverrides(result.items, activeP);
+      const finalItems = applyItemOverrides(result.items, activePreset);
       setParseResult({ ...result, items: finalItems });
     }, 50);
   };
@@ -181,50 +283,54 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
   };
 
   // ── Preset Management ──
-  const addPresetRule = (rule: { find: string; replace: string; isRegex: boolean }) => {
-    setPresets(prev => {
-      let updated = [...prev];
-      if (activePresetId) {
-        const idx = updated.findIndex(p => p.id === activePresetId);
-        if (idx >= 0) {
-          updated[idx] = { ...updated[idx], preprocessRules: [...updated[idx].preprocessRules, rule] };
-        }
-      } else {
-        const now = new Date().toISOString();
-        const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [rule], createdAt: now };
-        updated.push(newPreset);
-        setActivePresetId(newPreset.id);
+  const addPresetRuleSync = (rule: { find: string; replace: string; isRegex: boolean }) => {
+    let updated = [...presets];
+    let targetId = activePresetId;
+    if (targetId) {
+      const idx = updated.findIndex(p => p.id === targetId);
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], preprocessRules: [...updated[idx].preprocessRules, rule] };
       }
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    } else {
+      const now = new Date().toISOString();
+      const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [rule], createdAt: now };
+      updated.push(newPreset);
+      targetId = now;
+      setActivePresetId(now);
+    }
+    setPresets(updated);
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
+    return { updatedPresets: updated, activeId: targetId };
+  };
+
+  const addPresetRule = (rule: { find: string; replace: string; isRegex: boolean }) => {
+    addPresetRuleSync(rule);
   };
 
   const addCategoryOverrideRule = (itemName: string, newCategory: string) => {
-    setPresets(prev => {
-      let updated = [...prev];
-      let targetId = activePresetId;
-      
-      // Auto-create preset if none active
-      if (!targetId) {
-        const now = new Date().toISOString();
-        const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [], createdAt: now };
-        updated.push(newPreset);
-        targetId = now;
-        setActivePresetId(now);
-      }
+    let updated = [...presets];
+    let targetId = activePresetId;
+    
+    // Auto-create preset if none active
+    if (!targetId) {
+      const now = new Date().toISOString();
+      const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [], createdAt: now };
+      updated.push(newPreset);
+      targetId = now;
+      setActivePresetId(now);
+    }
 
-      const idx = updated.findIndex(p => p.id === targetId);
-      if (idx >= 0) {
-        const overrides = { ...(updated[idx].itemCategoryOverrides || {}) };
-        overrides[itemName] = newCategory;
-        updated[idx] = { ...updated[idx], itemCategoryOverrides: overrides };
-      }
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    const idx = updated.findIndex(p => p.id === targetId);
+    if (idx >= 0) {
+      const overrides = { ...(updated[idx].itemCategoryOverrides || {}) };
+      overrides[itemName] = newCategory;
+      updated[idx] = { ...updated[idx], itemCategoryOverrides: overrides };
+    }
+    
+    setPresets(updated);
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
     setRemapItem(null);
-    handleParse();
+    handleParse(updated, targetId);
   };
 
   const addNameOverrideRule = (itemName: string, newName: string) => {
@@ -232,35 +338,35 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
       setRenameItem(null);
       return;
     }
-    setPresets(prev => {
-      let updated = [...prev];
-      let targetId = activePresetId;
-      
-      // Auto-create preset if none active
-      if (!targetId) {
-        const now = new Date().toISOString();
-        const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [], createdAt: now };
-        updated.push(newPreset);
-        targetId = now;
-        setActivePresetId(now);
-      }
+    
+    let updated = [...presets];
+    let targetId = activePresetId;
+    
+    // Auto-create preset if none active
+    if (!targetId) {
+      const now = new Date().toISOString();
+      const newPreset: FormatPreset = { id: now, name: `Preset ${updated.length + 1}`, preprocessRules: [], createdAt: now };
+      updated.push(newPreset);
+      targetId = now;
+      setActivePresetId(now);
+    }
 
-      const idx = updated.findIndex(p => p.id === targetId);
-      if (idx >= 0) {
-        const overrides = { ...(updated[idx].itemNameOverrides || {}) };
-        overrides[itemName] = newName.trim();
-        updated[idx] = { ...updated[idx], itemNameOverrides: overrides };
-      }
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    const idx = updated.findIndex(p => p.id === targetId);
+    if (idx >= 0) {
+      const overrides = { ...(updated[idx].itemNameOverrides || {}) };
+      overrides[itemName] = newName.trim();
+      updated[idx] = { ...updated[idx], itemNameOverrides: overrides };
+    }
+    
+    setPresets(updated);
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
     setRenameItem(null);
-    handleParse();
+    handleParse(updated, targetId);
   };
 
   const addRemoveItemRule = (itemName: string) => {
-    addPresetRule({ find: itemName, replace: '', isRegex: false });
-    handleParse();
+    const { updatedPresets, activeId } = addPresetRuleSync({ find: itemName, replace: '', isRegex: false });
+    handleParse(updatedPresets, activeId);
   };
 
   const duplicateActivePresetAsNew = () => {
@@ -305,7 +411,18 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
 
   const applyPreset = (preset: FormatPreset) => {
     setActivePresetId(preset.id);
-    handleNormalize();
+    // Directly run normalization with the preset, since state hasn't updated yet!
+    if (!previewText.trim()) return;
+    setIsNormalizing(true);
+    const normalizedText = normalizeMenuText(previewText, preset);
+    setPreviewText(normalizedText);
+    setIsNormalizing(false);
+
+    setTimeout(() => {
+      const result = parsePastedMenu(normalizedText);
+      const finalItems = applyItemOverrides(result.items, preset);
+      setParseResult({ ...result, items: finalItems });
+    }, 50);
   };
 
   // ── Group items for display ──
@@ -323,6 +440,99 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
   return (
     <div className="space-y-6 pb-12">
 
+      {/* ══ SECTION 0: Profiles & Versioning ══ */}
+      <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-violet-100">
+                <History className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight">{t('parser.profiles_title')}</h3>
+                <p className="text-[10px] text-neutral-400 font-medium">{t('parser.snapshot_tip')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleSaveCurrentAsProfile()}
+                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-md active:scale-95"
+              >
+                <Save className="w-3.5 h-3.5" /> {t('parser.save_snapshot')}
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-neutral-200 text-neutral-700 rounded-xl font-bold text-xs hover:bg-neutral-50 transition-all active:scale-95"
+              >
+                <Upload className="w-3.5 h-3.5" /> {t('parser.import_new')}
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImportFile} 
+                className="hidden" 
+                accept=".json"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {profiles.length === 0 && (
+              <div className="col-span-full py-12 text-center bg-neutral-50/50 rounded-3xl border border-dashed border-neutral-200">
+                <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <BookOpen className="w-6 h-6 text-neutral-300" />
+                </div>
+                <p className="text-xs text-neutral-400 font-bold">{t('parser.no_versions')}</p>
+              </div>
+            )}
+            {profiles.map(profile => (
+              <div 
+                key={profile.id}
+                className="group relative p-5 bg-white border border-neutral-100 rounded-2xl hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/5 transition-all duration-300"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-neutral-900 truncate pr-8">{profile.name}</p>
+                    <p className="text-[9px] text-neutral-400 font-mono mt-1 flex items-center gap-1">
+                      <Calendar className="w-2.5 h-2.5" />
+                      {new Date(profile.createdAt).toLocaleString('bg-BG')}
+                    </p>
+                  </div>
+                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                    <button
+                      onClick={() => handleExportProfile(profile)}
+                      className="p-1.5 text-neutral-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all"
+                      title={t('parser.export_json')}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => confirm({ 
+                        title: t('modals.delete_warning'), 
+                        message: `${t('modals.delete_warning')} "${profile.name}"?`, 
+                        isDestructive: true, 
+                        onConfirm: () => deleteProfile(profile.id) 
+                      })}
+                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => handleActivateProfile(profile)}
+                  className="w-full py-2 bg-neutral-50 text-neutral-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-violet-600 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group/btn"
+                >
+                  <Play className="w-2.5 h-2.5 transition-transform group-hover/btn:translate-x-0.5" />
+                  {t('parser.activate')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ══ SECTION 1: Category Settings ══ */}
       <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
         <div
@@ -338,6 +548,14 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <AnimatePresence>
+              {savedToast && (
+                <motion.span
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex items-center gap-1.5 text-green-600 text-[10px] font-black uppercase tracking-widest"
+                >
                   <Check className="w-3 h-3" /> {t('parser.saved')}
                 </motion.span>
               )}
@@ -449,6 +667,11 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                 className="w-full h-80 p-5 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200 focus:border-neutral-400 focus:outline-none font-mono text-xs resize-none text-neutral-700 placeholder:text-neutral-300"
               />
               <div className="flex gap-3">
+                <button
+                  onClick={handleParse}
+                  disabled={!previewText.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-200"
+                >
                   <Play className="w-4 h-4" /> {t('parser.parse_button')}
                 </button>
                 <button
@@ -513,7 +736,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                                     setRemapItem(null);
                                   }}
                                   className="p-1 text-neutral-400 hover:text-blue-500 rounded"
-                                  title="Rename item"
+                                  title={t('parser.rename_item')}
                                 >
                                   📝
                                 </button>
@@ -523,7 +746,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                                     setRenameItem(null);
                                   }}
                                   className="p-1 text-neutral-400 hover:text-indigo-600 rounded"
-                                  title="Remap to a different category"
+                                  title={t('parser.remap_desc')}
                                 >
                                   ✏️
                                 </button>
@@ -600,14 +823,14 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                   {activePresetId && (
                     <div className="mt-4 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-indigo-900">Preset Rules Applied</h4>
-                        <p className="text-[10px] text-indigo-600">You are editing the active preset.</p>
+                        <h4 className="text-xs font-bold text-indigo-900">{t('parser.preset_rules_applied')}</h4>
+                        <p className="text-[10px] text-indigo-600">{t('parser.editing_active')}</p>
                       </div>
                       <button
                         onClick={duplicateActivePresetAsNew}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition"
                       >
-                        Save as New Preset
+                        {t('parser.save_new_preset')}
                       </button>
                     </div>
                   )}
@@ -632,9 +855,9 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                 </div>
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">
-                    Unmatched Lines <span className="font-mono text-red-500">({parseResult.unmatchedLines.length})</span>
+                    {t('parser.unmatched_lines')} <span className="font-mono text-red-500">({parseResult.unmatchedLines.length})</span>
                   </h2>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Classify each line to teach the parser, then save as a Format Preset</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">{t('parser.classify_desc')}</p>
                 </div>
               </div>
             </div>
@@ -648,19 +871,19 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                       onClick={() => setClassify({ line, index: idx, action: 'category', inputValue: '' })}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-[10px] font-bold hover:bg-blue-100 transition-colors"
                     >
-                      <FolderOpen className="w-3 h-3" /> Category
+                      <FolderOpen className="w-3 h-3" /> {t('menu.category')}
                     </button>
                     <button
                       onClick={() => setClassify({ line, index: idx, action: 'item', inputValue: '' })}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[10px] font-bold hover:bg-green-100 transition-colors"
                     >
-                      <Plus className="w-3 h-3" /> Item
+                      <Plus className="w-3 h-3" /> {t('parser.item_noun')}
                     </button>
                     <button
                       onClick={() => setClassify({ line, index: idx, action: 'ignore', inputValue: '' })}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 border border-neutral-200 text-neutral-600 rounded-xl text-[10px] font-bold hover:bg-neutral-100 transition-colors"
                     >
-                      <X className="w-3 h-3" /> Ignore
+                      <X className="w-3 h-3" /> {t('parser.ignore')}
                     </button>
                   </div>
 
@@ -675,7 +898,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                           {classify.action === 'category' && (
                             <>
                               <FolderOpen className="w-4 h-4 text-blue-500 shrink-0" />
-                              <span className="text-xs text-neutral-500 shrink-0">Map to category keyword:</span>
+                              <span className="text-xs text-neutral-500 shrink-0">{t('parser.map_keyword')}</span>
                               <input
                                 autoFocus
                                 value={classify.inputValue}
@@ -688,14 +911,14 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                           {classify.action === 'item' && (
                             <>
                               <Plus className="w-4 h-4 text-green-500 shrink-0" />
-                              <span className="text-xs text-neutral-500 shrink-0">Will prepend "- " to this line. Confirm:</span>
+                              <span className="text-xs text-neutral-500 shrink-0">{t('parser.prepend_dash')}</span>
                               <code className="flex-1 text-xs font-mono text-green-700 bg-green-50 px-2 py-1 rounded-lg truncate">{classify.line}</code>
                             </>
                           )}
                           {classify.action === 'ignore' && (
                             <>
                               <X className="w-4 h-4 text-neutral-500 shrink-0" />
-                              <span className="text-xs text-neutral-500 shrink-0">Will remove this line from future parses. Confirm:</span>
+                              <span className="text-xs text-neutral-500 shrink-0">{t('parser.remove_line_confirm')}</span>
                               <code className="flex-1 text-xs font-mono text-neutral-600 bg-neutral-100 px-2 py-1 rounded-lg truncate">{classify.line}</code>
                             </>
                           )}
@@ -703,7 +926,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                             onClick={applyClassify}
                             className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white rounded-xl text-[10px] font-bold hover:bg-neutral-800 transition-all"
                           >
-                            <Check className="w-3 h-3" /> Save Rule
+                            <Check className="w-3 h-3" /> {t('parser.save_rule')}
                           </button>
                           <button
                             onClick={() => setClassify(null)}
@@ -751,15 +974,15 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               disabled={!newPresetName.trim()}
               className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all disabled:opacity-40"
             >
-              <Plus className="w-3.5 h-3.5" /> Create
+              <Plus className="w-3.5 h-3.5" /> {t('parser.create')}
             </button>
           </div>
 
           {presets.length === 0 && (
             <div className="py-8 text-center text-neutral-300">
               <Tag className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs font-bold">No presets yet</p>
-              <p className="text-[10px] mt-1">Classify unmatched lines to build your first preset automatically.</p>
+              <p className="text-xs font-bold">{t('parser.no_presets_yet')}</p>
+              <p className="text-[10px] mt-1">{t('parser.auto_build_tip')}</p>
             </div>
           )}
 
@@ -775,7 +998,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   {activePresetId === preset.id && (
-                    <span className="text-[9px] font-black uppercase tracking-widest text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full border border-violet-200">Active</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full border border-violet-200">{t('parser.active')}</span>
                   )}
                   <span className="text-sm font-bold text-neutral-900">{preset.name}</span>
                   <span className="text-[10px] text-neutral-400">{preset.preprocessRules.length} rule{preset.preprocessRules.length !== 1 ? 's' : ''}</span>
@@ -785,7 +1008,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                     onClick={() => applyPreset(preset)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-xl text-[10px] font-bold hover:bg-neutral-800 transition-all"
                   >
-                    <Play className="w-2.5 h-2.5" /> Apply & Parse
+                    <Play className="w-2.5 h-2.5" /> {t('parser.apply_parse')}
                   </button>
                   <button
                     onClick={() => setActivePresetId(activePresetId === preset.id ? null : preset.id)}
@@ -803,20 +1026,20 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               </div>
               {preset.preprocessRules.length > 0 && (
                 <div className="space-y-1 mt-3">
-                  <p className="text-[9px] font-bold text-neutral-400 uppercase">Text Rules:</p>
+                    <p className="text-[9px] font-bold text-neutral-400 uppercase">{t('parser.text_rules')}</p>
                   {preset.preprocessRules.map((rule, i) => (
                     <div key={i} className="flex items-center gap-2 text-[10px] font-mono">
                       <code className="px-2 py-0.5 bg-red-50 border border-red-100 text-red-700 rounded truncate max-w-[35%]">{rule.find || '(empty)'}</code>
                       <span className="text-neutral-400">→</span>
                       <code className="px-2 py-0.5 bg-green-50 border border-green-100 text-green-700 rounded truncate max-w-[35%]">{rule.replace || '(remove)'}</code>
-                      {rule.isRegex && <span className="text-violet-500 font-bold px-1">regex</span>}
+                      {rule.isRegex && <span className="text-violet-500 font-bold px-1">{t('parser.regex_label')}</span>}
                     </div>
                   ))}
                 </div>
               )}
               {preset.itemCategoryOverrides && Object.keys(preset.itemCategoryOverrides).length > 0 && (
                 <div className="space-y-1 mt-3">
-                  <p className="text-[9px] font-bold text-neutral-400 uppercase">Item Category Remaps:</p>
+                    <p className="text-[9px] font-bold text-neutral-400 uppercase">{t('parser.item_remaps')}</p>
                   {Object.entries(preset.itemCategoryOverrides).map(([itemName, targetCat], i) => (
                     <div key={`remap-${i}`} className="flex items-center gap-2 text-[10px] font-mono">
                       <code className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 rounded truncate max-w-[40%] text-xs font-bold">{itemName}</code>
@@ -829,7 +1052,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
               
               {preset.itemNameOverrides && Object.keys(preset.itemNameOverrides).length > 0 && (
                 <div className="space-y-1 mt-3">
-                  <p className="text-[9px] font-bold text-neutral-400 uppercase">Item Name Adjustments:</p>
+                    <p className="text-[9px] font-bold text-neutral-400 uppercase">{t('parser.item_renames')}</p>
                   {Object.entries(preset.itemNameOverrides).map(([originalName, newName], i) => (
                     <div key={`rename-${i}`} className="flex items-center gap-2 text-[10px] font-mono">
                       <code className="px-2 py-0.5 bg-neutral-100 border border-neutral-200 text-neutral-600 rounded truncate max-w-[40%] text-xs line-through">{originalName}</code>
@@ -846,13 +1069,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                   <input
                     value={manualRuleFind}
                     onChange={e => setManualRuleFind(e.target.value)}
-                    placeholder="Find text..."
+                    placeholder={t('parser.find_text')}
                     className="flex-1 bg-neutral-50 px-2.5 py-1.5 text-xs rounded border border-neutral-200 focus:outline-none"
                   />
                   <input
                     value={manualRuleReplace}
                     onChange={e => setManualRuleReplace(e.target.value)}
-                    placeholder="Replace with..."
+                    placeholder={t('parser.replace_with_placeholder')}
                     className="flex-1 bg-neutral-50 px-2.5 py-1.5 text-xs rounded border border-neutral-200 focus:outline-none"
                   />
                   <button
@@ -873,7 +1096,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) =>
                     }}
                     className="px-3 py-1.5 bg-neutral-900 text-white rounded text-xs font-bold hover:bg-neutral-800"
                   >
-                    Save
+                    {t('parser.save_rule')}
                   </button>
                   <button onClick={() => setManualRulePreset(null)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400">
                     <X className="w-3.5 h-3.5" />

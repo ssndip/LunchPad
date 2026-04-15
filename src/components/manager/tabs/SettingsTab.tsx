@@ -103,13 +103,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           
           {/* Public Access Code Field (Only relevant if Global Access is ON) */}
           <div className="mt-6 pt-6 border-t border-neutral-100">
-            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Public Web Access Code</label>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.public_code')}</label>
             <div className="flex gap-4">
               <input
                 type="text"
                 value={localPublicCode}
                 onChange={(e) => setLocalPublicCode(e.target.value)}
-                placeholder="Leave empty for open access"
+                placeholder={t('settings.public_code_placeholder')}
                 className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm"
               />
               <button
@@ -117,10 +117,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 disabled={localPublicCode === publicAccessCode}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
               >
-                Update
+                {t('settings.update')}
               </button>
             </div>
-            <p className="mt-2 text-[10px] text-neutral-400 italic">If set, remote users must enter this code to access the kiosk. Local users will bypass it.</p>
+            <p className="mt-2 text-[10px] text-neutral-400 italic">{t('settings.public_code_desc')}</p>
           </div>
         </div>
 
@@ -158,7 +158,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center"><Settings className="w-6 h-6 text-red-600" /></div>
             <div>
               <h3 className="text-xl font-bold text-neutral-900">{t('settings.change_pin')}</h3>
-              <p className="text-sm text-neutral-500 italic">Update your administrative PIN</p>
+              <p className="text-sm text-neutral-500 italic">{t('settings.update_pin_desc')}</p>
             </div>
           </div>
 
@@ -180,7 +180,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               />
             </div>
             {newPin && confirmPin && newPin !== confirmPin && (
-              <p className="text-xs text-red-500 font-bold">PINs do not match</p>
+              <p className="text-xs text-red-500 font-bold">{t('settings.pin_mismatch')}</p>
             )}
             <button
               onClick={onUpdatePin}
@@ -189,7 +189,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 pinUpdateStatus === 'success' ? 'bg-green-600 text-white' : pinUpdateStatus === 'error' ? 'bg-red-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50'
               }`}
             >
-              {pinUpdateStatus === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : pinUpdateStatus === 'success' ? <><CheckCircle2 className="w-5 h-5" /> PIN Updated</> : t('settings.update_pin')}
+              {pinUpdateStatus === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : pinUpdateStatus === 'success' ? <><CheckCircle2 className="w-5 h-5" /> {t('settings.pin_updated')}</> : t('settings.update_pin')}
             </button>
           </div>
         </div>
