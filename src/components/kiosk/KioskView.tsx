@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, Users } from 'lucide-react';
+import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { Language } from '../../translations';
 import { KioskCategorySidebar } from './KioskCategorySidebar';
@@ -9,7 +9,10 @@ import { KioskOrderPanel, OrderSuccessOverlay } from './KioskOrderPanel';
 import { UserHistoryModal } from './UserHistoryModal';
 import { useRfidScanner } from '../../hooks/useRfidScanner';
 import { useResponsive } from '../../hooks/useResponsive';
+import { usePWA } from '../../hooks/usePWA';
 import { triggerHaptic } from '../../utils/haptics';
+import { useStore } from '../../store/useStore';
+import { PinPadModal } from '../shared/PinPadModal';
 
 interface KioskViewProps {
   menu: MenuItem[];
@@ -33,7 +36,7 @@ interface KioskViewProps {
   onToggleItem: (item: MenuItem) => void;
   onAddWithSide: (item: MenuItem, side?: string) => void;
   onUpdateQuantity: (id: number, delta: number) => void;
-  onOrder: (rfidOverride?: string) => void;
+  onOrder: (rfidOverride?: string, pinOverride?: string) => void;
   onClearCart: () => void;
   onGoToManager: () => void;
   t: (key: string) => string;
@@ -68,6 +71,9 @@ export const KioskView: React.FC<KioskViewProps> = ({
 }) => {
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const { kioskModeEnabled } = useStore();
+  const { isStandalone, enterFullscreen } = usePWA();
   
   // Category Navigation
   const categories = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
@@ -134,9 +140,25 @@ export const KioskView: React.FC<KioskViewProps> = ({
           <span className="text-xs font-bold text-neutral-400 uppercase">
             {displayDate}
           </span>
+          {kioskModeEnabled && isStandalone && (
+            <div className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-violet-50 rounded-full border border-violet-100">
+              <Smartphone className="w-3 h-3 text-violet-600" />
+              <span className="text-[10px] font-black text-violet-600 uppercase tracking-tighter">
+                {t('pwa.kiosk_active')}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          {kioskModeEnabled && isStandalone && !document.fullscreenElement && (
+            <button 
+              onClick={enterFullscreen}
+              className="p-1.5 rounded-lg bg-violet-600 text-white shadow-sm hover:bg-violet-700 transition-colors"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
+          )}
           <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
             <Users className="w-4 h-4" />
           </button>
@@ -187,6 +209,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             testModeEnabled={testModeEnabled}
             orderButtonEnabled={orderButtonEnabled}
             onOrder={() => onOrder(rfid || undefined)}
+            onPinOrder={() => setPinModalOpen(true)}
             onClearCart={onClearCart}
             onUpdateSide={() => {}}
             onUpdateQuantity={onUpdateQuantity}
@@ -209,6 +232,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
       </AnimatePresence>
 
       <UserHistoryModal isOpen={userHistoryOpen} onClose={() => setUserHistoryOpen(false)} t={t} />
+      
+      <PinPadModal 
+        isOpen={pinModalOpen}
+        onClose={() => setPinModalOpen(false)}
+        onSubmit={(pin) => {
+          setPinModalOpen(false);
+          onOrder(undefined, pin);
+        }}
+        t={t}
+      />
     </div>
   );
 };

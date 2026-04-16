@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, Plus, CreditCard, RotateCcw } from 'lucide-react';
+import { Trash2, Plus, CreditCard, RotateCcw, Pencil } from 'lucide-react';
 import { Card } from '../../../types';
 
 interface CardsTabProps {
   cards: Card[];
-  onUpdateCards: (cards: Card[]) => void;
+  onUpdateSingleCard: (rfid: string, card: Card) => Promise<boolean>;
   onRemoveCard: (rfid: string) => void;
   onResetCardBalance: (rfid: string) => void;
   onResetAllBalances: () => void;
@@ -18,6 +18,8 @@ interface CardsTabProps {
   setNewCardOwner: (v: string) => void;
   newCardIsAdmin: boolean;
   setNewCardIsAdmin: (v: boolean) => void;
+  newCardPin: string;
+  setNewCardPin: (v: string) => void;
   lastScanned: string | null;
   isScanning: boolean;
   setIsScanning: (v: boolean) => void;
@@ -31,7 +33,7 @@ interface CardsTabProps {
 
 export const CardsTab: React.FC<CardsTabProps> = ({
   cards,
-  onUpdateCards,
+  onUpdateSingleCard,
   onRemoveCard,
   onResetCardBalance,
   onResetAllBalances,
@@ -50,13 +52,37 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   setPasteCardsText,
   isPasteCardsModalOpen,
   setIsPasteCardsModalOpen,
+  newCardPin,
+  setNewCardPin,
   t,
 }) => {
   const managerRfidRef = useRef<HTMLInputElement>(null);
+  const [editingRfid, setEditingRfid] = React.useState<string | null>(null);
+  const [editValues, setEditValues] = React.useState<Partial<Card>>({});
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const startEditing = (card: Card) => {
+    setEditingRfid(card.rfid);
+    setEditValues({ ...card });
+  };
+
+  const handleSave = async (rfid: string) => {
+    setIsSaving(true);
+    const success = await onUpdateSingleCard(rfid, editValues as Card);
+    if (success) {
+      setEditingRfid(null);
+    }
+    setIsSaving(false);
+  };
+
+  const handleCancel = () => {
+    setEditingRfid(null);
+    setEditValues({});
+  };
 
   return (
     <>
-      {/* Header */}
+      {/* Header logic ... (omitted if no change) */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
@@ -82,7 +108,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         </div>
       </div>
 
-      {/* Paste Cards Modal */}
+      {/* Paste Cards Modal ... (omitted if no change) */}
       <AnimatePresence>
         {isPasteCardsModalOpen && (
           <motion.div
@@ -122,50 +148,105 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               <table className="w-full text-left border-collapse min-w-[500px]">
                 <thead>
                   <tr>
-                    {[t('cards.rfid'), t('cards.owner_name'), t('cards.admin'), t('cards.owed'), t('cards.actions')].map((h, i) => (
-                      <th key={h} className={`p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100 ${[2,3,4].includes(i) ? 'text-center' : ''}`}>{h}</th>
+                    {[t('cards.rfid'), t('cards.owner_name'), 'PIN', t('cards.admin'), t('cards.owed'), t('cards.actions')].map((h, i) => (
+                      <th key={h} className={`p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100 ${[3,4,5].includes(i) ? 'text-center' : ''}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {Array.isArray(cards) && cards.map((card) => (
-                    <tr key={card.rfid} className="hover:bg-neutral-50 transition-colors">
-                      <td className="p-6 font-mono text-sm text-neutral-600">{card.rfid}</td>
-                      <td className="p-6 font-bold text-neutral-900">{card.ownerName ?? 'N/A'}</td>
-                      <td className="p-6 text-center">
-                        <button
-                          onClick={() => onUpdateCards(cards.map((c) => c.rfid === card.rfid ? { ...c, isAdmin: !c.isAdmin } : c))}
-                          role="switch" aria-checked={card.isAdmin}
-                          className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${card.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
-                          aria-label="Toggle Admin"
-                        >
-                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${card.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
-                        </button>
-                      </td>
-                      <td className="p-6 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="text-neutral-400">€</span>
+                  {Array.isArray(cards) && cards.map((card) => {
+                    const isEditing = editingRfid === card.rfid;
+                    const values = isEditing ? editValues : card;
+
+                    return (
+                      <tr key={card.rfid} className="hover:bg-neutral-50 transition-colors">
+                        <td className="p-6 font-mono text-sm text-neutral-600">{card.rfid}</td>
+                        <td className="p-6">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={values.ownerName || ''}
+                              onChange={(e) => setEditValues({ ...values, ownerName: e.target.value })}
+                              className="w-full bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-200 focus:ring-2 focus:ring-neutral-900 text-xs font-bold outline-none"
+                            />
+                          ) : (
+                            <span className="font-bold text-neutral-900">{card.ownerName ?? 'N/A'}</span>
+                          )}
+                        </td>
+                        <td className="p-6">
                           <input
-                            type="number"
-                            value={Number(card.balance) || 0}
-                            aria-label={`Balance for ${card.ownerName}`}
-                            onChange={(e) => onUpdateCards(cards.map((c) => c.rfid === card.rfid ? { ...c, balance: parseFloat(e.target.value) } : c))}
-                            className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold text-right p-0 focus:outline-none"
+                            type="text"
+                            maxLength={6}
+                            value={values.pin || ''}
+                            placeholder="------"
+                            onFocus={() => !isEditing && startEditing(card)}
+                            onChange={(e) => setEditValues({ ...values, pin: e.target.value.replace(/\D/g, '') })}
+                            className={`w-20 px-2 py-1.5 rounded-lg border font-mono text-center text-xs outline-none transition-all ${isEditing ? 'bg-white border-neutral-900 ring-1 ring-neutral-900' : 'bg-neutral-50 border-neutral-200'}`}
                           />
-                        </div>
-                      </td>
-                      <td className="p-6">
-                        <div className="flex items-center justify-center gap-2">
-                          <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
-                            <RotateCcw className="w-4 h-4" />
+                        </td>
+                        <td className="p-6 text-center">
+                          <button
+                            onClick={() => isEditing ? setEditValues({ ...values, isAdmin: !values.isAdmin }) : startEditing({ ...card, isAdmin: !card.isAdmin })}
+                            role="switch" aria-checked={values.isAdmin}
+                            className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                            aria-label="Toggle Admin"
+                          >
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${values.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
                           </button>
-                          <button onClick={() => onRemoveCard(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-6 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-neutral-400 text-xs">€</span>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                value={values.balance || 0}
+                                onChange={(e) => setEditValues({ ...values, balance: parseFloat(e.target.value) })}
+                                className="w-16 bg-neutral-50 px-2 py-1 rounded-lg border border-neutral-200 focus:ring-2 focus:ring-neutral-900 text-xs font-mono font-bold text-right outline-none"
+                              />
+                            ) : (
+                              <span className="font-mono font-bold text-sm">{(Number(card.balance) || 0).toFixed(2)}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-6">
+                          <div className="flex items-center justify-center gap-2">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => handleSave(card.rfid)}
+                                  disabled={isSaving}
+                                  className="p-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                                  title={t('menu.save')}
+                                >
+                                  {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <div className="flex items-center px-1"><Plus className="w-3.5 h-3.5 rotate-45" style={{transform:'rotate(0deg)'}} /><span className="text-[9px] font-black uppercase ml-0.5">OK</span></div>}
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="p-2 bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors"
+                                  title={t('modals.cancel')}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => onRemoveCard(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {(!Array.isArray(cards) || cards.length === 0) && (
                     <tr><td colSpan={5} className="p-12 text-center text-neutral-400 italic">{t('cards.no_cards')}</td></tr>
                   )}
@@ -232,6 +313,19 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAddManualCard(); } }}
                   placeholder={t('cards.owner_placeholder')}
                   className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="newCardPin" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">Order PIN (Optional)</label>
+                <input
+                  id="newCardPin"
+                  type="text"
+                  maxLength={6}
+                  value={newCardPin}
+                  onChange={(e) => setNewCardPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="6 digits PIN"
+                  className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none"
                 />
               </div>
 

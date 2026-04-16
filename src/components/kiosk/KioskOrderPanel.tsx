@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Trash2, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Trash2, CheckCircle2, Loader2, ArrowRight, Lock } from 'lucide-react';
 import { CartItem, MenuItem } from '../../types';
 import { useStore } from '../../store/useStore';
 import { isItemAutoBox } from '../../utils/categoryAutobox';
@@ -17,6 +17,7 @@ interface KioskOrderPanelProps {
   testModeEnabled: boolean;
   orderButtonEnabled: boolean;
   onOrder: () => void;
+  onPinOrder: () => void;
   onClearCart: () => void;
   onUpdateSide: (item: CartItem) => void;
   onUpdateQuantity: (id: number, delta: number) => void;
@@ -33,6 +34,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
   testModeEnabled,
   orderButtonEnabled,
   onOrder,
+  onPinOrder,
   onClearCart,
   onUpdateSide,
   onUpdateQuantity,
@@ -49,103 +51,154 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
   // Phone Sticky Bottom Layout
   if (isPhone) {
     return (
-      <div className={`fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl transition-all duration-300 ease-in-out border-t border-neutral-200 ${isExpanded ? 'h-[85vh] flex flex-col' : 'h-auto'}`}>
-        {/* Toggle/Handle */}
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-center pt-3 pb-2 focus:outline-none"
-        >
-          <div className="w-12 h-1.5 bg-neutral-200 rounded-full mb-2" />
-        </button>
-
-        <div className="px-5 pb-5 pt-2 flex items-center justify-between">
-          <div onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-3 cursor-pointer">
-            <div className="relative">
-              <ShoppingCart className={`w-6 h-6 ${selectedItems.length > 0 ? 'text-neutral-900' : 'text-neutral-300'}`} />
-              {selectedItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
-                  {itemCount}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-tight">{t('orders.total')}</span>
-              <span className="text-lg font-black text-neutral-900 leading-tight">€{totalPrice.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <button
-            onClick={(e) => {
-              if (!isExpanded && selectedItems.length > 0) {
-                setIsExpanded(true);
-                return;
-              }
-              onOrder();
-            }}
-            disabled={orderDisabled}
-            className={`px-8 py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-transform active:scale-95 ${orderDisabled ? 'bg-neutral-100 text-neutral-400' : 'bg-neutral-900 text-white shadow-xl shadow-neutral-900/20'}`}
-          >
-            {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : (!rfid && !testModeEnabled && isExpanded ? t('kiosk.please_scan_card') : (isExpanded ? t('modals.confirm') : t('kiosk.view_cart')))}
-          </button>
-        </div>
-
-        {/* Expanded Area */}
+      <>
+        {/* Backdrop for expanded state */}
         <AnimatePresence>
           {isExpanded && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="flex-1 flex flex-col overflow-hidden border-t border-neutral-100 bg-neutral-50"
-            >
-              <div className="p-4 flex items-center justify-between bg-white border-b border-neutral-100">
-                <span className="text-xs font-black uppercase tracking-widest text-neutral-400">{t('orders.items')}</span>
-                {selectedItems.length > 0 && (
-                  <button onClick={onClearCart} className="text-red-500 text-xs font-bold uppercase tracking-widest p-2 active:scale-90">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
-                {selectedItems.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="bg-white p-4 rounded-2xl shadow-sm border border-neutral-100">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                       <span className="text-sm font-bold text-neutral-900 leading-tight">{item.name}</span>
-                       <span className="text-sm font-black text-neutral-900 shrink-0">€{item.price.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 font-bold active:scale-90">-</button>
-                      <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 font-bold active:scale-90">+</button>
-                    </div>
-                    {/* Nested details exactly as desktop... */}
-                     <div className="pl-2 border-l-2 border-neutral-100 space-y-1 mt-2">
-                        {item.side && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-bold uppercase">
-                            <span>{item.side}</span>
-                            <span className="text-[8px] bg-neutral-100 px-1 py-0.5 rounded text-neutral-400">{t('kiosk.included')}</span>
-                          </div>
-                        )}
-                        {item.extraFees?.map((fee, fIdx) => (
-                          <div key={fIdx} className="flex justify-between items-center text-[10px] text-neutral-500 font-bold uppercase">
-                            <span>{fee.type}</span>
-                            <span className="font-mono">+€{fee.amount.toFixed(2)}</span>
-                          </div>
-                        ))}
-                        {isItemAutoBox(item) && (
-                          <div className="flex justify-between items-center text-[10px] text-neutral-500 font-bold uppercase">
-                            <span>{t('menu.packaging_fee') || 'Box'}</span>
-                            <span className="font-mono">+€{packagingFee.toFixed(2)}</span>
-                          </div>
-                        )}
-                      </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsExpanded(false)}
+              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm md:hidden"
+            />
           )}
         </AnimatePresence>
-      </div>
+
+        <motion.div 
+          layout
+          initial={false}
+          animate={{ 
+            height: isExpanded ? '80vh' : 'auto',
+          }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 100) setIsExpanded(false);
+          }}
+          className={`fixed bottom-0 left-0 right-0 z-[70] overflow-hidden rounded-t-[36px] border-t border-white/60 flex flex-col transition-shadow ${isExpanded ? 'bg-white/85 backdrop-blur-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.2)]' : 'bg-white/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.1)]'}`}
+        >
+          {/* Draggable Handle */}
+          <div 
+            className="w-full flex items-center justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className="w-12 h-1.5 bg-neutral-200/50 rounded-full" />
+          </div>
+
+          {/* Expanded Content Area (Item List) */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                <div className="px-6 py-4 flex items-center justify-between border-b border-black/5">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('orders.items')}</span>
+                  {selectedItems.length > 0 && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onClearCart(); }} 
+                      className="flex items-center gap-2 text-red-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full bg-red-50 active:scale-90 transition-transform"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {t('modals.remove')}
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+                  {selectedItems.map((item, idx) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      key={`${item.id}-${idx}`} 
+                      className="bg-white/50 border border-black/5 backdrop-blur-md p-5 rounded-[24px] shadow-sm relative group"
+                    >
+                      <div className="flex justify-between items-start gap-4 mb-4">
+                         <span className="text-sm font-black text-neutral-900 leading-tight">{item.name}</span>
+                         <span className="text-sm font-black text-neutral-900 shrink-0 font-mono">€{item.price.toFixed(2)}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 bg-neutral-100/50 p-1.5 rounded-xl">
+                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
+                          <span className="text-xs font-black w-6 text-center">{item.quantity}</span>
+                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform">+</button>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1">
+                          {item.side && (
+                            <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-black uppercase tracking-tighter bg-neutral-100 px-2 py-1 rounded-md">
+                              <span>{item.side}</span>
+                            </div>
+                          )}
+                          {item.extraFees?.some(f => f.amount > 0) && (
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase">+ {t('menu.packaging_fee')}</span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Sticky Summary Area (Total + Order Button) */}
+          <div className={`px-4 pt-3 pb-6 flex items-center justify-between shrink-0 border-t gap-2 ${isExpanded ? 'border-black/5' : 'border-transparent'}`}>
+            <div onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-3 cursor-pointer shrink-0">
+              <div className="relative">
+                <div className={`p-2 rounded-xl transition-colors ${selectedItems.length > 0 ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-300'}`}>
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                {selectedItems.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-white">
+                    {itemCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">{t('orders.total')}</span>
+                <span className="text-xl font-black text-neutral-900 leading-none">€{totalPrice.toFixed(2)}</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isExpanded && selectedItems.length > 0) {
+                  setIsExpanded(true);
+                  return;
+                }
+                onOrder();
+              }}
+              disabled={orderDisabled}
+              className={`px-5 py-3.5 rounded-2xl font-black text-[11px] whitespace-nowrap uppercase tracking-widest transition-all active:scale-95 flex-1 ${orderDisabled ? 'bg-neutral-100 text-neutral-400' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'}`}
+            >
+              {isScanning ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (!rfid && !testModeEnabled && isExpanded ? t('kiosk.please_scan_card') : (isExpanded ? t('modals.confirm') : t('kiosk.view_cart')))}
+            </button>
+
+            {isExpanded && !orderDisabled && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPinOrder(); }}
+                className="p-3.5 rounded-2xl bg-white border-2 border-neutral-900 text-neutral-900 active:scale-95 transition-all shadow-sm flex items-center justify-center"
+                title="PIN Order"
+              >
+                <Lock className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Safe Area Spacer for iOS Home Indicator */}
+          <div className="h-[env(safe-area-inset-bottom,20px)] bg-transparent" />
+        </motion.div>
+      </>
     );
   }
 
@@ -249,40 +302,51 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
         </div>
 
         {/* Action Button */}
-        <button
-          onClick={onOrder}
-          disabled={orderDisabled}
-          className={`w-full py-4 rounded-2xl relative overflow-hidden transition-all active:scale-[0.98] ${
-            orderDisabled 
-              ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed grayscale' 
-              : 'bg-neutral-900 text-white shadow-xl hover:shadow-2xl'
-          }`}
-        >
-          <div className="relative z-10 flex items-center justify-center gap-3">
-            {isScanning ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm font-black uppercase tracking-widest">{t('kiosk.processing')}</span>
-              </>
-            ) : (
-              <>
-                <span className="text-sm font-black uppercase tracking-widest">
-                  {testModeEnabled && !rfid ? t('kiosk.place_order') : (rfid ? t('modals.confirm') : t('kiosk.please_scan_card'))}
-                </span>
-                {!rfid && !testModeEnabled && <ShoppingCart className="w-4 h-4 animate-pulse" />}
-              </>
+        <div className="flex gap-3">
+          <button
+            onClick={onOrder}
+            disabled={orderDisabled}
+            className={`flex-1 py-4 rounded-2xl relative overflow-hidden transition-all active:scale-[0.98] ${
+              orderDisabled 
+                ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed grayscale' 
+                : 'bg-neutral-900 text-white shadow-xl hover:shadow-2xl'
+            }`}
+          >
+            <div className="relative z-10 flex items-center justify-center gap-3">
+              {isScanning ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-black uppercase tracking-widest">{t('kiosk.processing')}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm font-black uppercase tracking-widest">
+                    {testModeEnabled && !rfid ? t('kiosk.place_order') : (rfid ? t('modals.confirm') : t('kiosk.please_scan_card'))}
+                  </span>
+                  {!rfid && !testModeEnabled && <ShoppingCart className="w-4 h-4 animate-pulse" />}
+                </>
+              )}
+            </div>
+            
+            {/* Scan highlight animator if no RFID */}
+            {!rfid && !testModeEnabled && !isScanning && (
+              <motion.div
+                animate={{ x: ['100%', '-100%'] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
+              />
             )}
-          </div>
-          
-          {/* Scan highlight animator if no RFID */}
-          {!rfid && !testModeEnabled && !isScanning && (
-            <motion.div
-              animate={{ x: ['100%', '-100%'] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
-            />
+          </button>
+
+          {!orderDisabled && (
+            <button
+              onClick={onPinOrder}
+              className="px-6 py-4 rounded-2xl bg-white border-2 border-neutral-900 text-neutral-900 font-black flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all shadow-md active:scale-95"
+            >
+              <Lock className="w-5 h-5" />
+            </button>
           )}
-        </button>
+        </div>
 
         {/* RFID hint if scanning */}
         {!orderDisabled && !rfid && !testModeEnabled && (

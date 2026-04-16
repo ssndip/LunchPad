@@ -95,7 +95,9 @@ export async function startServer() {
       globalAccess: settings.globalAccess,
       publicAccessCode: settings.publicAccessCode ? "__REQUIRED__" : "", // Tell client a code is needed, but don't reveal it
       orderButtonEnabled: settings.orderButtonEnabled,
-      testModeEnabled: settings.testModeEnabled
+      testModeEnabled: settings.testModeEnabled,
+      kioskModeEnabled: settings.kioskModeEnabled,
+      allowPWAInstall: settings.allowPWAInstall
     });
   });
 
@@ -163,7 +165,9 @@ export async function startServer() {
       globalAccess: settings.globalAccess,
       publicAccessCode: settings.publicAccessCode,
       orderButtonEnabled: settings.orderButtonEnabled,
-      testModeEnabled: settings.testModeEnabled
+      testModeEnabled: settings.testModeEnabled,
+      kioskModeEnabled: settings.kioskModeEnabled,
+      allowPWAInstall: settings.allowPWAInstall
     }));
 
     ws.on("pong", () => {

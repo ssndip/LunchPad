@@ -8,7 +8,9 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  ChevronRight,
   TrendingUp,
+  BarChart2,
   Terminal,
 } from 'lucide-react';
 import { Language } from '../../translations';
@@ -41,7 +43,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     { id: 'menu', icon: MenuIcon, label: t('navigation.menu_management') },
     { id: 'orders', icon: TrendingUp, label: t('navigation.order_summary') },
     { id: 'cards', icon: CreditCard, label: t('navigation.card_management') },
-    { id: 'analytics', icon: TrendingUp, label: t('navigation.analytics') },
+    { id: 'analytics', icon: BarChart2, label: t('navigation.analytics') },
     { id: 'parser_rules', icon: Terminal, label: 'Parser Rules' },
     { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
   ];
@@ -133,28 +135,32 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
   // Phone Bottom Navigation
   const PhoneBottomNav = () => (
-    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-100 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_rgba(0,0,0,0.04)]">
-      <div className="flex w-full justify-around items-center h-16 pr-2">
-        {/* Only show 5 icons max on phone to avoid squishing */}
-        {menuItems.slice(0, 5).map((item) => {
+    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]">
+      <div className="flex w-full justify-around items-center h-[72px] px-1 relative">
+        {menuItems.filter(i => i.id !== 'settings').map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id as any)}
-              className={`flex flex-col items-center justify-center w-16 h-full gap-1 active:scale-95 transition-transform`}
+              className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
             >
-              <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-neutral-900 text-white shadow-md' : 'text-neutral-400'}`}>
-                <item.icon className="w-5 h-5" />
+              <div className={`p-1 transition-all z-10 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                <item.icon className="w-5 h-5 flex-shrink-0" />
               </div>
-              {isActive && <span className="text-[8px] font-bold text-neutral-900 truncate w-full text-center">{item.label}</span>}
+              {isActive && (
+                <motion.div
+                  layoutId="mobile-nav-pill"
+                  className="absolute inset-x-2 inset-y-2 bg-neutral-900/5 rounded-2xl z-0 pointer-events-none"
+                  transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                />
+              )}
+              <span className={`text-[9px] font-bold z-10 truncate w-full text-center transition-colors ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                {item.label}
+              </span>
             </button>
           );
         })}
-        {/* More Menu Dropout trigger if we wanted it, or just wrap... we'll just stack the priority ones. */}
-        <button onClick={onLogout} className="flex flex-col items-center justify-center w-12 h-full gap-1 active:scale-95 text-red-400">
-          <div className="p-1.5"><LogOut className="w-5 h-5" /></div>
-        </button>
       </div>
     </nav>
   );
@@ -189,6 +195,22 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Setting & Logout Buttons (visible entirely on Mobile so they don't clog bottom bar) */}
+            <div className="flex md:hidden items-center gap-1.5 mr-1 border-r border-neutral-200 pr-2">
+              <button 
+                onClick={() => onTabChange('settings')} 
+                className={`p-2 rounded-full transition-all active:scale-95 ${activeTab === 'settings' ? 'bg-neutral-900 text-white shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-600'}`}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={onLogout} 
+                className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+
             <span className="hidden sm:inline text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
               {lang === 'bg' ? 'Български' : 'English'}
             </span>

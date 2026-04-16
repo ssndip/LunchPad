@@ -63,6 +63,13 @@
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    /* Allow vertical overscroll for pull-to-refresh */
+    overscroll-behavior-y: auto;
+  }
+
+  /* No tap highlight on mobile for clean UI */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -74,4 +81,9 @@ html, body, #root {
   -webkit-touch-callout: none; /* Disable long-press context menu on tablets */
   -webkit-user-select: none;
   user-select: none;
+  /* Prevent scrolling at the root level to solidify app feel */
+  /* Allow vertical overscroll for pull-to-refresh functionality */
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
 }

@@ -38,6 +38,13 @@ export const initDb = () => {
     // Column already exists
   }
 
+  try {
+    db.exec("ALTER TABLE cards ADD COLUMN pin TEXT");
+    console.log("[DB] Added pin column to cards table");
+  } catch (e) {
+    // Column already exists
+  }
+
   // Individual migrations for menu table
   const menuMigrations = [
     "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0",
@@ -220,4 +227,13 @@ export const seedInitialData = () => {
     })();
     console.log("[DB] Seeded Default Parser Profile");
   }
+
+  // Seed PWA Settings
+  const pwaSettings = [
+    { key: 'kioskModeEnabled', value: '0' },
+    { key: 'allowPWAInstall', value: '1' }
+  ];
+  const insertSetting = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
+  pwaSettings.forEach(s => insertSetting.run(s.key, s.value));
+  console.log("[DB] Ensured PWA settings exist");
 };

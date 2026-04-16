@@ -38,8 +38,8 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 md:p-4">
-      <div className="flex flex-col divide-y divide-neutral-100 bg-white rounded-2xl md:rounded-3xl shadow-sm border border-neutral-100 mb-32 md:mb-6">
+    <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 pb-[180px] md:p-4 md:pb-6">
+      <div className="flex flex-col divide-y divide-neutral-100 bg-white rounded-2xl md:rounded-3xl shadow-sm border border-neutral-100 mb-0 md:mb-6">
         {items.filter(i => i.available).map((item) => {
           const isSelected = selectedItemIds.has(item.id);
           const cartItem = selectedItems.find(i => i.id === item.id);

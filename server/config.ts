@@ -10,6 +10,8 @@ export const settings = {
   menuVersion: 1,
   packagingFee: 0.10,
   deliveryFee: 5.00,
+  kioskModeEnabled: false,
+  allowPWAInstall: true,
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
 };
@@ -21,6 +23,8 @@ export const setOrderButtonEnabledConfig = (val: boolean) => settings.orderButto
 export const setTestModeConfig = (val: boolean) => settings.testModeEnabled = val;
 export const setPackagingFeeConfig = (val: number) => settings.packagingFee = val;
 export const setDeliveryFeeConfig = (val: number) => settings.deliveryFee = val;
+export const setKioskModeConfig = (val: boolean) => settings.kioskModeEnabled = val;
+export const setAllowPWAInstallConfig = (val: boolean) => settings.allowPWAInstall = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -106,6 +110,22 @@ export const initSettings = () => {
     settings.deliveryFee = 5.0;
   } else {
     settings.deliveryFee = parseFloat(deliveryFeeRecord.value) || 5.0;
+  }
+  
+  const kioskModeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_mode_enabled") as { value: string } | undefined;
+  if (!kioskModeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_mode_enabled", "0");
+    settings.kioskModeEnabled = false;
+  } else {
+    settings.kioskModeEnabled = kioskModeRecord.value === "1";
+  }
+
+  const allowPWAInstallRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("allow_pwa_install") as { value: string } | undefined;
+  if (!allowPWAInstallRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("allow_pwa_install", "1");
+    settings.allowPWAInstall = true;
+  } else {
+    settings.allowPWAInstall = allowPWAInstallRecord.value === "1";
   }
 
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

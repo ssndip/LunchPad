@@ -37,6 +37,7 @@ interface AppState {
   newCardRfid: string;
   newCardOwner: string;
   newCardIsAdmin: boolean;
+  newCardPin: string;
   lastScanned: string | null;
   isScanningForCard: boolean;
   pasteCardsText: string;
@@ -57,6 +58,8 @@ interface AppState {
   kioskOpenTime: string;
   kioskCloseTime: string;
   kioskCloseDay: number;
+  kioskModeEnabled: boolean;
+  allowPWAInstall: boolean;
   
   // --- PIN Change ---
   newPin: string;
@@ -67,6 +70,7 @@ interface AppState {
   // --- Summaries ---
   expandedDate: string | null;
   dailyDetails: any[];
+  dailySides: any[];
 
   // --- Actions ---
   setMode: (mode: 'kiosk' | 'manager') => void;
@@ -91,6 +95,7 @@ interface AppState {
   setNewCardRfid: (v: string) => void;
   setNewCardOwner: (v: string) => void;
   setNewCardIsAdmin: (v: boolean) => void;
+  setNewCardPin: (v: string) => void;
   setLastScanned: (v: string | null) => void;
   setIsScanningForCard: (v: boolean) => void;
   setPasteCardsText: (v: string) => void;
@@ -104,6 +109,8 @@ interface AppState {
   setKioskOpenTime: (v: string) => void;
   setKioskCloseTime: (v: string) => void;
   setKioskCloseDay: (v: number) => void;
+  setKioskModeEnabled: (v: boolean) => void;
+  setAllowPWAInstall: (v: boolean) => void;
   setPublicAccessCode: (v: string) => void;
   setPublicAccessToken: (v: string | null) => void;
   setNewPin: (v: string) => void;
@@ -112,6 +119,7 @@ interface AppState {
   setPublicAccessRequired: (v: boolean) => void;
   setExpandedDate: (v: string | null) => void;
   setDailyDetails: (v: any[]) => void;
+  setDailySides: (v: any[]) => void;
   
   // Complex Actions
   loginManager: (pin: string) => void;
@@ -121,7 +129,11 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set) => ({
-  mode: 'kiosk',
+  mode: (() => {
+    const isManager = new URLSearchParams(window.location.search).get('view') === 'manager';
+    if (!isManager) sessionStorage.removeItem('token');
+    return isManager ? 'manager' : 'kiosk';
+  })(),
   activeTab: 'menu',
   lang: (localStorage.getItem('lang') as Language) || 'bg',
   menu: [],
@@ -146,6 +158,7 @@ export const useStore = create<AppState>((set) => ({
   newCardRfid: '',
   newCardOwner: '',
   newCardIsAdmin: false,
+  newCardPin: '',
   lastScanned: null,
   isScanningForCard: false,
   pasteCardsText: '',
@@ -164,12 +177,15 @@ export const useStore = create<AppState>((set) => ({
   kioskOpenTime: '08:00',
   kioskCloseTime: '11:00',
   kioskCloseDay: 0,
+  kioskModeEnabled: false,
+  allowPWAInstall: true,
   newPin: '',
   confirmPin: '',
   pinUpdateStatus: 'idle',
   publicAccessRequired: false,
   expandedDate: null,
   dailyDetails: [],
+  dailySides: [],
 
   // Setters
   setMode: (mode) => set({ mode }),
@@ -197,6 +213,7 @@ export const useStore = create<AppState>((set) => ({
   setNewCardRfid: (newCardRfid) => set({ newCardRfid }),
   setNewCardOwner: (newCardOwner) => set({ newCardOwner }),
   setNewCardIsAdmin: (newCardIsAdmin) => set({ newCardIsAdmin }),
+  setNewCardPin: (newCardPin) => set({ newCardPin }),
   setLastScanned: (lastScanned) => set({ lastScanned }),
   setIsScanningForCard: (isScanningForCard) => set({ isScanningForCard }),
   setPasteCardsText: (pasteCardsText) => set({ pasteCardsText }),
@@ -210,6 +227,8 @@ export const useStore = create<AppState>((set) => ({
   setKioskOpenTime: (kioskOpenTime) => set({ kioskOpenTime }),
   setKioskCloseTime: (kioskCloseTime) => set({ kioskCloseTime }),
   setKioskCloseDay: (kioskCloseDay) => set({ kioskCloseDay }),
+  setKioskModeEnabled: (v) => set({ kioskModeEnabled: v }),
+  setAllowPWAInstall: (v) => set({ allowPWAInstall: v }),
   setPublicAccessCode: (publicAccessCode) => set({ publicAccessCode }),
   setPublicAccessToken: (token) => {
     if (token) localStorage.setItem('public_access_token', token);
@@ -222,6 +241,7 @@ export const useStore = create<AppState>((set) => ({
   setPublicAccessRequired: (v) => set({ publicAccessRequired: v }),
   setExpandedDate: (expandedDate) => set({ expandedDate }),
   setDailyDetails: (dailyDetails) => set({ dailyDetails }),
+  setDailySides: (dailySides) => set({ dailySides }),
 
   // Complex Actions
   loginManager: (token) => {
@@ -230,7 +250,7 @@ export const useStore = create<AppState>((set) => ({
   },
   logoutManager: () => {
     sessionStorage.removeItem('token');
-    set({ token: null, isManagerLoggedIn: false, mode: 'kiosk' });
+    window.location.href = window.location.origin + '/';
   },
   resetCart: () => set({ selectedItems: [], rfid: '' }),
   updateItemQuantity: (id, delta) => set((state) => {

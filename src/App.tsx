@@ -1,4 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Smartphone, X, Info } from 'lucide-react';
 import { useStore } from './store/useStore';
 import { 
   useGroupedMenu, 
@@ -11,6 +13,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { translations } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
+import { usePWA } from './hooks/usePWA';
 
 // Components
 import { KioskView } from './components/kiosk/KioskView';
@@ -19,6 +22,8 @@ import { ManagerLogin } from './components/manager/ManagerLogin';
 import { ManagerDashboard } from './components/manager/ManagerDashboard';
 import { PublicAccessCodeEntry } from './components/shared/PublicAccessCodeEntry';
 import { ConfirmModal } from './components/shared/ConfirmModal';
+import { PwaInstallBanner } from './components/shared/PwaInstallBanner';
+import { PullToRefresh } from './components/shared/PullToRefresh';
 
 // Tabs
 import { MenuTab } from './components/manager/tabs/MenuTab';
@@ -38,6 +43,7 @@ export default function App() {
   const totalPrice = useTotalPrice();
   const selectedItemIds = useSelectedItemIds();
   const computedKioskOpen = useComputedKioskOpen();
+  const { installApp, deferredPrompt, isIOS } = usePWA();
 
 
   const t = (key: string) => {
@@ -52,6 +58,7 @@ export default function App() {
 
   // Modal State
   const [confirmConfig, setConfirmConfig] = React.useState<any | null>(null);
+  const [showPWAInstructions, setShowPWAInstructions] = useState(false);
 
   // ─── WebSocket Logic ───────────────────────────────────────────────────────
   useWebSocket({
@@ -64,6 +71,8 @@ export default function App() {
       s.setTestModeEnabled(data.testModeEnabled);
       if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
       if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
+      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
+      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
       s.setMenuVersion(data.menuVersion);
       s.setConnectionError(null);
       s.setPublicAccessRequired(false);
@@ -80,6 +89,12 @@ export default function App() {
       if (data.publicAccessCode !== undefined) s.setPublicAccessCode(data.publicAccessCode);
       if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
       if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
+      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
+      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
+    },
+    onPWASettingsUpdate: (data: any) => {
+      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
+      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
     },
     onCardsUpdate: () => {
       if (s.token) fetchCards();
@@ -189,9 +204,13 @@ export default function App() {
     }
   };
 
-  const handleOrder = async (rfidOverride?: string) => {
-    const finalRfid = rfidOverride || s.rfid;
-    if (!finalRfid && !s.testModeEnabled) return;
+  const handleOrder = async (rfidOverride?: string, pinOverride?: string) => {
+    // Determine the final identification to use
+    // If pinOverride is provided, we send rfid=null to trigger PIN lookup
+    const finalRfid = pinOverride ? null : (rfidOverride || s.rfid);
+    const finalPin = pinOverride;
+
+    if (!finalRfid && !finalPin && !s.testModeEnabled) return;
 
     // Feature 7: Validation - Ensure mandatory sides are selected
     const missingSides = s.selectedItems.filter(i => (i.requiresSideChoice || i.hasIncludedSide) && !i.side);
@@ -209,7 +228,7 @@ export default function App() {
         Array(i.quantity).fill({ id: i.id, side: i.side })
       );
       
-      const res = await api.placeOrder(finalRfid || 'TEST-ADMIN', items, s.menuVersion);
+      const res = await api.placeOrder(finalRfid, items, s.menuVersion, finalPin);
 
       if (!res.ok) {
         if (res.status === 409) {
@@ -261,7 +280,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string) => {
+  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kioskMode?: boolean, allowPwa?: boolean) => {
     if (!s.token) return;
     try {
       const update = {
@@ -269,12 +288,16 @@ export default function App() {
         orderButtonEnabled: orderBtn,
         testModeEnabled: test ?? s.testModeEnabled,
         publicAccessCode: publicCode ?? s.publicAccessCode,
+        kioskModeEnabled: kioskMode ?? s.kioskModeEnabled,
+        allowPWAInstall: allowPwa ?? s.allowPWAInstall,
       };
       await api.updateSettings(s.token, update);
       s.setGlobalAccess(access);
       s.setOrderButtonEnabled(orderBtn);
       if (test !== undefined) s.setTestModeEnabled(test);
       if (publicCode !== undefined) s.setPublicAccessCode(publicCode);
+      if (kioskMode !== undefined) s.setKioskModeEnabled(kioskMode);
+      if (allowPwa !== undefined) s.setAllowPWAInstall(allowPwa);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -325,7 +348,7 @@ export default function App() {
       return (
         <ManagerLogin
           onLogin={(pin) => s.loginManager(pin)}
-          onBack={() => s.setMode('kiosk')}
+          onBack={() => { window.location.href = window.location.origin + '/'; }}
           t={t}
         />
       );
@@ -372,6 +395,7 @@ export default function App() {
               summaries={s.summaries}
               expandedDate={s.expandedDate}
               dailyDetails={s.dailyDetails}
+              dailySides={s.dailySides}
               confirm={setConfirmConfig}
               onExpandDate={async (date) => {
                 if (s.expandedDate === date) {
@@ -381,12 +405,21 @@ export default function App() {
                   if (s.token) {
                     const details = await api.fetchDailySummaryDetails(s.token, date);
                     s.setDailyDetails(details.items || []);
+                    s.setDailySides(details.sides || []);
                   }
                 }
               }}
               onCopySummary={(date, total) => {
-                const text = `Summary for ${date}\nTotal: €${(Number(total) || 0).toFixed(2)}\n\n` + 
-                  s.dailyDetails.map(d => `${d.name} x${d.quantity}: €${(Number(d.total) || 0).toFixed(2)}`).join('\n');
+                let text = `SUMMARY FOR ${date}\n`;
+                text += `TOTAL REVENUE: €${(Number(total) || 0).toFixed(2)}\n`;
+                text += `─────────────────────────\n\n`;
+                
+                s.dailyDetails.forEach(d => {
+                  text += `• ${d.name} x${d.quantity}\n`;
+                });
+                
+                text += `\n─────────────────────────`;
+                
                 navigator.clipboard.writeText(text);
                 setConfirmConfig({
                   title: t('navigation.order_summary'),
@@ -415,11 +448,35 @@ export default function App() {
           {s.activeTab === 'cards' && (
             <CardsTab
               cards={s.cards}
-              onUpdateCards={async (newCards) => {
+              onUpdateSingleCard={async (rfid, updatedCard) => {
                 if (s.token) {
-                  await api.updateCards(s.token, newCards);
-                  s.setCards(newCards);
+                  try {
+                    const res = await api.updateCard(s.token, rfid, updatedCard);
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                      if (res.status === 409) {
+                        setConfirmConfig({
+                          title: t('menu.Error'),
+                          message: data.error || "Conflict detected",
+                          isDestructive: true,
+                          confirmText: 'OK',
+                          onConfirm: () => {}
+                        });
+                        return false;
+                      }
+                      throw new Error(data.error);
+                    }
+                    
+                    // Update successfully - fetch cards to be sure
+                    fetchCards();
+                    return true;
+                  } catch (err: any) {
+                     console.error("Update failed:", err);
+                     return false;
+                  }
                 }
+                return false;
               }}
               onRemoveCard={async (rfid) => {
                 if (s.token) {
@@ -455,25 +512,43 @@ export default function App() {
               }}
               onAddManualCard={async () => {
                 if (s.token && s.newCardRfid && s.newCardOwner) {
-                  await api.addCard(s.token, {
+                  const res = await api.addCard(s.token, {
                     rfid: s.newCardRfid,
                     ownerName: s.newCardOwner,
                     balance: 0,
                     isAdmin: s.newCardIsAdmin,
+                    pin: s.newCardPin,
                   });
+                  
+                  if (!res.ok) {
+                    const data = await res.json();
+                    if (res.status === 409) {
+                      setConfirmConfig({
+                        title: t('menu.Error'),
+                        message: data.error,
+                        isDestructive: true,
+                        confirmText: 'OK',
+                        onConfirm: () => {}
+                      });
+                      return;
+                    }
+                  }
+
                   s.setNewCardRfid('');
                   s.setNewCardOwner('');
                   s.setNewCardIsAdmin(false);
+                  s.setNewCardPin('');
                   fetchCards();
                 }
               }}
               onBatchAddCards={async () => {
                 if (s.token && s.pasteCardsText) {
                   const lines = s.pasteCardsText.split('\n');
-                  const cardsToBatch: Card[] = lines.map(line => {
-                    const [rfid, ...nameParts] = line.trim().split(/\s+/);
-                    return { rfid, ownerName: nameParts.join(' ') || 'User', balance: 0, isAdmin: false };
-                  }).filter(c => c.rfid);
+                  const cardsToBatch: any[] = lines.map(line => {
+                    const [rfid, ownerName, pin] = line.trim().split(',').map(part => part.trim());
+                    if (!rfid) return null;
+                    return { rfid, ownerName: ownerName || 'User', balance: 0, isAdmin: false, pin: pin || undefined };
+                  }).filter(Boolean);
                   await api.batchAddCards(s.token, cardsToBatch);
                   s.setIsPasteCardsModalOpen(false);
                   s.setPasteCardsText('');
@@ -486,6 +561,8 @@ export default function App() {
               setNewCardOwner={s.setNewCardOwner}
               newCardIsAdmin={s.newCardIsAdmin}
               setNewCardIsAdmin={s.setNewCardIsAdmin}
+              newCardPin={s.newCardPin}
+              setNewCardPin={s.setNewCardPin}
               lastScanned={s.lastScanned}
               isScanning={s.isScanningForCard}
               setIsScanning={s.setIsScanningForCard}
@@ -509,9 +586,18 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(acc, ord, tst, code) => {
-                handleUpdateSettings(acc, ord, tst, code);
+              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings) => {
+                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings);
               }}
+              onInstallApp={() => {
+                if (deferredPrompt && !isIOS) {
+                  installApp();
+                } else {
+                  setShowPWAInstructions(true);
+                }
+              }}
+              kioskModeEnabled={s.kioskModeEnabled}
+              allowPWAInstall={s.allowPWAInstall}
               onUpdatePin={async () => {
                 if (s.token && s.newPin === s.confirmPin) {
                   s.setPinUpdateStatus('loading');
@@ -542,41 +628,160 @@ export default function App() {
           t={t}
           cancelLabel={t('modals.cancel')}
         />
+
+        <AnimatePresence>
+          {showPWAInstructions && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-neutral-900/80 backdrop-blur-xl flex items-center justify-center p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-[40px] w-full max-w-sm overflow-hidden shadow-2xl"
+              >
+                <div className="p-8 border-b border-neutral-100 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                      <Smartphone className="w-6 h-6 text-violet-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-neutral-900">{t('pwa.how_to_install')}</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowPWAInstructions(false)}
+                    className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="p-8 space-y-6">
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 1</div>
+                    <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_share')}</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 2</div>
+                    <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_add')}</p>
+                  </div>
+                  
+                  <div className="pt-4 p-4 bg-violet-50 rounded-2xl flex items-center gap-3">
+                    <Info className="w-5 h-5 text-violet-500" />
+                    <p className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">{t('pwa.install_description')}</p>
+                  </div>
+                </div>
+                
+                <div className="p-8 pt-0">
+                  <button
+                    onClick={() => setShowPWAInstructions(false)}
+                    className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase tracking-widest text-sm"
+                  >
+                    {t('menu.OK')}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   if (!computedKioskOpen && !s.testModeEnabled) {
-    return <KioskClosed onGoToManager={() => s.setMode('manager')} t={t} />;
+    return <KioskClosed onGoToManager={() => { window.location.search = '?view=manager'; }} t={t} />;
   }
 
   return (
-    <KioskView
-      menu={s.menu}
-      groupedMenu={groupedMenu}
-      sideItems={sideItems}
-      selectedItems={s.selectedItems}
-      selectedItemIds={selectedItemIds}
-      totalPrice={totalPrice}
-      rfid={s.rfid}
-      setRfid={s.setRfid}
-      isScanning={s.isScanning}
-      showSuccess={s.showSuccess}
-      error={s.error}
-      connectionError={s.connectionError}
-      orderButtonEnabled={s.orderButtonEnabled}
-      testModeEnabled={s.testModeEnabled}
-      computedKioskOpen={computedKioskOpen}
-      kioskAutoTiming={s.kioskAutoTiming}
-      kioskCloseTime={s.kioskCloseTime}
-      lang={s.lang}
-      onToggleItem={handleToggleItem}
-      onAddWithSide={handleAddWithSide}
-      onUpdateQuantity={s.updateItemQuantity}
-      onOrder={handleOrder}
-      onClearCart={s.resetCart}
-      onGoToManager={() => s.setMode('manager')}
-      t={t}
-    />
+    <PullToRefresh>
+      <KioskView
+        menu={s.menu}
+        groupedMenu={groupedMenu}
+        sideItems={sideItems}
+        selectedItems={s.selectedItems}
+        selectedItemIds={selectedItemIds}
+        totalPrice={totalPrice}
+        rfid={s.rfid}
+        setRfid={s.setRfid}
+        isScanning={s.isScanning}
+        showSuccess={s.showSuccess}
+        error={s.error}
+        connectionError={s.connectionError}
+        orderButtonEnabled={s.orderButtonEnabled}
+        testModeEnabled={s.testModeEnabled}
+        computedKioskOpen={computedKioskOpen}
+        kioskAutoTiming={s.kioskAutoTiming}
+        kioskCloseTime={s.kioskCloseTime}
+        lang={s.lang}
+        onToggleItem={handleToggleItem}
+        onAddWithSide={handleAddWithSide}
+        onUpdateQuantity={s.updateItemQuantity}
+        onOrder={handleOrder}
+        onClearCart={s.resetCart}
+        onGoToManager={() => { window.location.search = '?view=manager'; }}
+        t={t}
+      />
+      <PwaInstallBanner t={t} onNeedInstructions={() => setShowPWAInstructions(true)} />
+
+      <AnimatePresence>
+        {showPWAInstructions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-neutral-900/80 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 border-b border-neutral-100 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                    <Smartphone className="w-6 h-6 text-violet-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-neutral-900">{t('pwa.how_to_install')}</h3>
+                </div>
+                <button
+                  onClick={() => setShowPWAInstructions(false)}
+                  className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 1</div>
+                  <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_share')}</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 2</div>
+                  <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_add')}</p>
+                </div>
+                
+                <div className="pt-4 p-4 bg-violet-50 rounded-2xl flex items-center gap-3">
+                  <Info className="w-5 h-5 text-violet-500" />
+                  <p className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">{t('pwa.install_description')}</p>
+                </div>
+              </div>
+              
+              <div className="p-8 pt-0">
+                <button
+                  onClick={() => setShowPWAInstructions(false)}
+                  className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase tracking-widest text-sm"
+                >
+                  {t('menu.OK')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PullToRefresh>
   );
 }

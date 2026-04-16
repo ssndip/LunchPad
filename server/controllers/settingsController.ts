@@ -9,6 +9,8 @@ import {
   setTestModeConfig,
   setPackagingFeeConfig,
   setDeliveryFeeConfig,
+  setKioskModeConfig,
+  setAllowPWAInstallConfig,
   hashAndSetAdminPin
 } from "../config";
 import { globalAccessGuard } from "../middleware/auth";
@@ -21,13 +23,18 @@ export const fetchSettings = (req: Request, res: Response) => {
     orderButtonEnabled: settings.orderButtonEnabled,
     testModeEnabled: settings.testModeEnabled,
     packagingFee: settings.packagingFee,
-    deliveryFee: settings.deliveryFee
+    deliveryFee: settings.deliveryFee,
+    kioskModeEnabled: settings.kioskModeEnabled,
+    allowPWAInstall: settings.allowPWAInstall
   });
 };
 
 export const updateSettings = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, packagingFee, deliveryFee } = req.body;
+    const { 
+      globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, 
+      packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall 
+    } = req.body;
     
     if (globalAccess !== undefined) {
       if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
@@ -82,6 +89,20 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       broadcast({ type: "STATUS_UPDATE", data: { deliveryFee } });
     }
 
+    if (kioskModeEnabled !== undefined) {
+      if (typeof kioskModeEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for kioskModeEnabled" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_mode_enabled", kioskModeEnabled ? "1" : "0");
+      setKioskModeConfig(kioskModeEnabled);
+      broadcast({ type: "PWA_SETTINGS_UPDATE", data: { kioskModeEnabled, allowPWAInstall: settings.allowPWAInstall } });
+    }
+
+    if (allowPWAInstall !== undefined) {
+      if (typeof allowPWAInstall !== 'boolean') return res.status(400).json({ error: "Invalid value for allowPWAInstall" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("allow_pwa_install", allowPWAInstall ? "1" : "0");
+      setAllowPWAInstallConfig(allowPWAInstall);
+      broadcast({ type: "PWA_SETTINGS_UPDATE", data: { allowPWAInstall, kioskModeEnabled: settings.kioskModeEnabled } });
+    }
+
     res.json({ 
       success: true, 
       globalAccess: settings.globalAccess, 
@@ -89,7 +110,9 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       orderButtonEnabled: settings.orderButtonEnabled, 
       testModeEnabled: settings.testModeEnabled,
       packagingFee: settings.packagingFee,
-      deliveryFee: settings.deliveryFee
+      deliveryFee: settings.deliveryFee,
+      kioskModeEnabled: settings.kioskModeEnabled,
+      allowPWAInstall: settings.allowPWAInstall
     });
   } catch (err: any) {
     next(err);

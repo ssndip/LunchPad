@@ -7,7 +7,8 @@ import {
   updateAllCards, 
   resetAllBalances, 
   resetSingleBalance, 
-  getCardProfile 
+  getCardProfile,
+  updateSingleCard
 } from "../controllers/cardController";
 import { requireAuth } from "../middleware/auth";
 
@@ -18,7 +19,7 @@ router.post("/", requireAuth, addOrUpdateCard);
 router.post("/batch", requireAuth, batchAddCards);
 router.post("/update", requireAuth, updateAllCards);
 router.post("/reset-all", requireAuth, resetAllBalances);
-router.post("/:rfid/reset", requireAuth, resetSingleBalance);
+router.post("/:rfid/update", requireAuth, updateSingleCard);
 router.get("/:rfid/profile", getCardProfile);
 router.delete("/:rfid", requireAuth, deleteCard);
 

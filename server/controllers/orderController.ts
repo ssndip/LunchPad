@@ -34,10 +34,10 @@ interface RequestedItem {
 
 export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { rfid, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid: string, items: RequestedItem[], menuVersion?: number };
+    const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: RequestedItem[], menuVersion?: number };
 
-    if (!rfid || !requestedItems || !Array.isArray(requestedItems) || requestedItems.length === 0) {
-      return res.status(400).json({ error: "Invalid request: Missing RFID or items" });
+    if ((!rfid && !pin) || !requestedItems || !Array.isArray(requestedItems) || requestedItems.length === 0) {
+      return res.status(400).json({ error: "Invalid request: Missing RFID/PIN or items" });
     }
     
     // Concurrency Check: Menu version must match
@@ -51,11 +51,27 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     
     if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
 
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
-    const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
-    
-    if (!card && cleanRfid !== 'test-admin') {
-      return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
+    let card: any;
+
+    if (pin) {
+      // PIN Lookup (must be exactly 6 digits)
+      if (pin.length !== 6) return res.status(400).json({ error: "PIN must be 6 digits" });
+      card = db.prepare("SELECT * FROM cards WHERE pin = ?").get(pin) as any;
+      if (!card) {
+        console.warn(`[Order] Failed PIN login attempt: ${pin}`);
+        return res.status(401).json({ error: "Incorrect or unknown PIN" });
+      }
+    } else if (rfid) {
+      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
+      
+      const isTestAdmin = cleanRfid === 'test-admin';
+      if (!card && !isTestAdmin) {
+        return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
+      }
+    } else {
+      // No identification provided at all
+      return res.status(401).json({ error: "No RFID or PIN provided" });
     }
 
     const menu = getMenu(db);
@@ -188,33 +204,28 @@ export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunct
         items.forEach((item: any) => {
           if (!item || !item.name) return;
           
-          // Main Item Aggregation
-          if (!itemMap[item.name]) {
-            itemMap[item.name] = { 
-              name: item.name, 
+          const sideName = item.side ? item.side.trim() : "";
+          const displayName = sideName ? `${item.name} (${sideName})` : item.name;
+          const aggregationKey = `${item.name}|${sideName}`;
+
+          if (!itemMap[aggregationKey]) {
+            itemMap[aggregationKey] = { 
+              name: displayName, 
               quantity: 0, 
               total: 0, 
               price: Number(item.price) || 0, 
               category: item.category || 'Uncategorized' 
             };
           }
-          itemMap[item.name].quantity += 1;
-          itemMap[item.name].total += (Number(item.price) || 0);
-
-          // Side Dish Aggregation
-          if (item.side) {
-            if (!sideMap[item.side]) {
-              sideMap[item.side] = { name: item.side, quantity: 0 };
-            }
-            sideMap[item.side].quantity += 1;
-          }
+          itemMap[aggregationKey].quantity += 1;
+          itemMap[aggregationKey].total += (Number(item.price) || 0);
         });
       }
     });
     
     res.json({
-      items: Object.values(itemMap).sort((a, b) => b.total - a.total),
-      sides: Object.values(sideMap).sort((a, b) => b.quantity - a.quantity)
+      items: Object.values(itemMap).sort((a, b) => a.name.localeCompare(b.name)),
+      sides: []
     });
   } catch (err: any) {
     next(err);

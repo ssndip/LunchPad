@@ -13,7 +13,7 @@ export const fetchCards = (req: Request, res: Response) => {
 
 export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { rfid, ownerName, balance, isAdmin } = req.body;
+    const { rfid, ownerName, balance, isAdmin, pin } = req.body;
     if (!rfid || !ownerName) {
       return res.status(400).json({ error: "RFID and ownerName are required" });
     }
@@ -25,15 +25,25 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     }
     const now = new Date().toISOString();
     const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+
+    // PIN Uniqueness Check
+    if (pin) {
+      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(pin, cleanRfid) as any;
+      if (existing) {
+        return res.status(409).json({ error: "PIN is already assigned to another card." });
+      }
+    }
+
     db.prepare(`
-      INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(rfid) DO UPDATE SET
         ownerName = excluded.ownerName,
         balance = excluded.balance,
         lastUpdated = excluded.lastUpdated,
-        isAdmin = excluded.isAdmin
-    `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0);
+        isAdmin = excluded.isAdmin,
+        pin = excluded.pin
+    `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0, pin || null);
     
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -59,10 +69,10 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
     const now = new Date().toISOString();
     db.transaction(() => {
       const insert = db.prepare(`
-        INSERT OR IGNORE INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
-      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0));
+      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -99,9 +109,9 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
     }
     db.transaction(() => {
       db.prepare("DELETE FROM cards").run();
-      const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin) VALUES (?, ?, ?, ?, ?)");
+      const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin) VALUES (?, ?, ?, ?, ?, ?)");
       const now = new Date().toISOString();
-      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0));
+      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -127,6 +137,33 @@ export const resetSingleBalance = (req: Request, res: Response, next: NextFuncti
     db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const updateSingleCard = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rfid } = req.params;
+    const { ownerName, balance, isAdmin, pin } = req.body;
+    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+
+    // PIN Uniqueness Check (if PIN is provided and changing)
+    if (pin) {
+      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(pin, cleanRfid) as any;
+      if (existing) {
+        return res.status(409).json({ error: "PIN is already assigned to another card." });
+      }
+    }
+
+    db.prepare(`
+      UPDATE cards 
+      SET ownerName = ?, balance = ?, isAdmin = ?, pin = ?, lastUpdated = ?
+      WHERE LOWER(rfid) = ?
+    `).run(ownerName, balance || 0, isAdmin ? 1 : 0, pin || null, new Date().toISOString(), cleanRfid);
+
+    broadcast({ type: "CARDS_UPDATE" });
+    res.json({ success: true, card: getCards().find(c => c.rfid.toLowerCase() === cleanRfid) });
   } catch (err: any) {
     next(err);
   }

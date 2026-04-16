@@ -53,6 +53,7 @@ export interface Card {
   ownerName: string;
   balance: number;
   isAdmin?: boolean;
+  pin?: string;
 }
 
 export interface DailySummary {

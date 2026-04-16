@@ -60,14 +60,15 @@ export const fetchOrders = async (token: string): Promise<Order[]> => {
 
 /** Place a kiosk order. Returns the raw response so callers can read error bodies. */
 export const placeOrder = async (
-  rfid: string,
+  rfid: string | null,
   items: { id: number, side?: string }[],
   menuVersion?: number,
+  pin?: string,
 ): Promise<Response> => {
   return fetch('/api/v1/order', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rfid: rfid.trim(), items, menuVersion }),
+    body: JSON.stringify({ rfid: rfid?.trim() || undefined, pin, items, menuVersion }),
   });
 };
 
@@ -160,8 +161,16 @@ export const batchAddCards = async (token: string, cards: Card[]): Promise<void>
   if (!res.ok) throw new Error('Failed to batch add cards');
 };
 
-export const updateCards = async (token: string, cards: Card[]): Promise<void> => {
-  await fetch('/api/cards/update', {
+export const updateCard = async (token: string, rfid: string, card: Card): Promise<Response> => {
+  return fetch(`/api/cards/${encodeURIComponent(rfid)}/update`, {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(card),
+  });
+};
+
+export const updateCards = async (token: string, cards: Card[]): Promise<Response> => {
+  return fetch('/api/cards/update', {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(cards),

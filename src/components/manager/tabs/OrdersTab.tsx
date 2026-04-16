@@ -9,6 +9,7 @@ interface OrdersTabProps {
   summaries: DailySummary[];
   expandedDate: string | null;
   dailyDetails: Array<{ category: string; name: string; quantity: number; price: number; total: number }>;
+  dailySides: Array<{ name: string; quantity: number }>;
   onExpandDate: (date: string) => void;
   onCopySummary: (date: string, total: number) => void;
   t: (key: string) => string;
@@ -19,6 +20,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   summaries,
   expandedDate,
   dailyDetails,
+  dailySides,
   onExpandDate,
   onCopySummary,
   t,
@@ -170,7 +172,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                               </div>
                             </div>
                           </div>
-
                           <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-xl">
                             <table className="w-full text-left text-sm">
                               <thead>
@@ -183,7 +184,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                               </thead>
                               <tbody className="divide-y divide-neutral-50">
                                 {Array.isArray(dailyDetails) && dailyDetails.map((item, idx) => (
-                                  <tr key={idx} className="hover:bg-neutral-50 transition-colors">
+                                  <tr key={`item-${idx}`} className="hover:bg-neutral-50 transition-colors">
                                     <td className="p-5">
                                       <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category ?? t('menu.uncategorized')}</p>
                                       <p className="font-bold text-neutral-900">{item.name ?? t('menu.unknown_item')}</p>
