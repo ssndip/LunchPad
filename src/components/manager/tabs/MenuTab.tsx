@@ -230,7 +230,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                   onConfirm: () => onDeleteAll()
                 });
               }}
-              tabIndex={-1}
+
               className="flex items-center gap-2 px-5 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all text-sm"
             >
               <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
@@ -277,14 +277,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           </div>
           <button
             onClick={() => setIsPasteOpen(true)}
-            tabIndex={-1}
+
             className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
           >
             <FileText className="w-4 h-4" /> {t('menu.paste_title')}
           </button>
           <button
             onClick={onAddItem}
-            tabIndex={-1}
+
             className="flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-md shadow-neutral-200"
           >
             <Plus className="w-4 h-4" /> {t('menu.add_item')}

@@ -160,7 +160,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 />
                 {rfid && (
                   <button
-                    tabIndex={-1}
+
                     onClick={() => setRfid('')}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
                     aria-label="Clear RFID"
