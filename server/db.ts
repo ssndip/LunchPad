@@ -95,6 +95,9 @@ export const initDb = () => {
     CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
 
+    -- ⚡ Bolt: Index for O(1) lookup of orders by date
+    CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date);
+
     -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
     CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));
 
