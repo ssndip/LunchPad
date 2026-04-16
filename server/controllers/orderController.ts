@@ -36,7 +36,9 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: RequestedItem[], menuVersion?: number };
 
-    if ((!rfid && !pin) || !requestedItems || !Array.isArray(requestedItems) || requestedItems.length === 0) {
+    const isBypass = settings.testModeEnabled && !rfid && !pin;
+
+    if (!isBypass && (!rfid && !pin) || !requestedItems || !Array.isArray(requestedItems) || requestedItems.length === 0) {
       return res.status(400).json({ error: "Invalid request: Missing RFID/PIN or items" });
     }
     
@@ -68,6 +70,13 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       const isTestAdmin = cleanRfid === 'test-admin';
       if (!card && !isTestAdmin) {
         return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
+      }
+    } else if (settings.testModeEnabled) {
+      // Test Mode Bypass: Use TEST-ADMIN as fallback
+      card = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
+      if (!card) {
+        // Fallback if TEST-ADMIN was somehow deleted or not seeded
+        card = { rfid: "test-bypass", ownerName: "Test Mode User", balance: 0 };
       }
     } else {
       // No identification provided at all
