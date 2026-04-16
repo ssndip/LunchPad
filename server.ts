@@ -71,6 +71,8 @@ export async function startServer() {
     legacyHeaders: false,
   });
 
+  app.use(limiter);
+
   app.use(express.json({ limit: '500kb' }));
 
   // --- API Routes ---
