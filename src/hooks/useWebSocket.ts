@@ -22,6 +22,7 @@ export interface WsHandlers {
     globalAccess?: boolean;
   }) => void;
   onCardsUpdate: () => void;
+  onPWASettingsUpdate: (data: { kioskModeEnabled?: boolean; allowPWAInstall?: boolean }) => void;
   onConnectionError: (msg: string | null) => void;
 }
 
@@ -103,6 +104,10 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
 
           case 'STATUS_UPDATE':
             h.onStatusUpdate(message.data);
+            break;
+
+          case 'PWA_SETTINGS_UPDATE':
+            h.onPWASettingsUpdate(message.data);
             break;
         }
       };

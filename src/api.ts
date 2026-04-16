@@ -136,13 +136,12 @@ export const fetchCards = async (token: string): Promise<Card[]> => {
   return res.json();
 };
 
-export const addCard = async (token: string, card: Card): Promise<void> => {
-  const res = await fetch('/api/cards', {
+export const addCard = async (token: string, card: Card): Promise<Response> => {
+  return fetch('/api/cards', {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(card),
   });
-  if (!res.ok) throw new Error('Failed to add card');
 };
 
 export const deleteCard = async (token: string, rfid: string): Promise<void> => {
