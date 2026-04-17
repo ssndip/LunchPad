@@ -52,6 +52,16 @@ export async function startServer() {
   // CORS Middleware
   app.use(cors());
 
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply the rate limiter to all requests
+  app.use(limiter);
+
   // Global Access & Security Middleware
   // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
   app.use("/api", (req, res, next) => {
@@ -64,16 +74,6 @@ export async function startServer() {
   app.use(helmet({
     contentSecurityPolicy: false, // Allow Vite dev server
   }));
-
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
-  // Apply the rate limiter to all requests
-  app.use(limiter);
 
   app.use(express.json({ limit: '500kb' }));
 
