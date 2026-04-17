@@ -69,8 +69,10 @@ export async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
+  app.use(limiter);
   app.use(express.json({ limit: '500kb' }));
 
   // --- API Routes ---
