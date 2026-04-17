@@ -50,9 +50,25 @@ export default function App() {
   const computedKioskOpen = useComputedKioskOpen();
   const { installApp, deferredPrompt, isIOS } = usePWA();
 
-  // Modal State
   const [confirmConfig, setConfirmConfig] = React.useState<any | null>(null);
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
+
+  // Sync mode with URL view param
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const search = new URLSearchParams(window.location.search);
+      const isManager = search.get('view') === 'manager';
+      const currentTab = search.get('tab') as any || 'menu';
+      
+      useStore.setState({ 
+        mode: isManager ? 'manager' : 'kiosk', 
+        activeTab: currentTab 
+      });
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    handleUrlChange();
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, [s.setMode]);
 
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
@@ -560,7 +576,12 @@ export default function App() {
   }
 
   if (!computedKioskOpen && !s.testModeEnabled) {
-    return <KioskClosed onGoToManager={() => { window.location.search = '?view=manager'; }} />;
+    return <KioskClosed onGoToManager={() => { 
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', 'manager');
+      window.history.pushState({}, '', url);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }} />;
   }
 
   return (
@@ -589,7 +610,12 @@ export default function App() {
         onUpdateQuantity={s.updateItemQuantity}
         onOrder={handleOrder}
         onClearCart={s.resetCart}
-        onGoToManager={() => { window.location.search = '?view=manager'; }}
+        onGoToManager={() => { 
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'manager');
+          window.history.pushState({}, '', url);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }}
       />
       <PwaInstallBanner onNeedInstructions={() => setShowPWAInstructions(true)} />
 

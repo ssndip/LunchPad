@@ -71,7 +71,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
           animate={{ 
             height: isExpanded ? '80vh' : 'auto',
           }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          transition={{ duration: 0.3, ease: 'circOut' }}
           drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={0.2}
@@ -95,6 +95,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 <div className="px-6 py-4 flex items-center justify-between border-b border-black/5">
@@ -370,9 +371,10 @@ export const OrderSuccessOverlay: React.FC<{ show: boolean, t: any }> = ({ show,
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       >
         <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.9, y: 20 }}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'circOut' }}
           className="bg-white rounded-[40px] p-8 shadow-2xl text-center max-w-sm w-full border border-neutral-100"
         >
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">

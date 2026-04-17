@@ -3,18 +3,11 @@
  * Enhanced with Heartbeat and Exponential Backoff.
  */
 import { useRef, useEffect } from 'react';
-import { MenuItem } from '../types';
-import { WsMessage } from '../types/websocket';
+import { MenuItem, Card, Order } from '../types';
+import { WsMessage, InitialStateMessage } from '../types/websocket';
 
 export interface WsHandlers {
-  onInitialState: (data: {
-    menu: MenuItem[];
-    kioskOpen: boolean;
-    globalAccess: boolean;
-    orderButtonEnabled: boolean;
-    testModeEnabled: boolean;
-    menuVersion: number;
-  }) => void;
+  onInitialState: (data: InitialStateMessage) => void;
   onMenuUpdate: (data: { menu: MenuItem[]; menuVersion: number }) => void;
   onStatusUpdate: (data: {
     kioskOpen?: boolean;
@@ -84,12 +77,14 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
           case 'INITIAL_STATE':
             h.onInitialState({
               menu: message.menu ?? [],
+              orders: message.orders,
+              cards: message.cards,
               kioskOpen: !!message.kioskOpen,
               globalAccess: !!message.globalAccess,
               orderButtonEnabled: !!message.orderButtonEnabled,
               testModeEnabled: !!message.testModeEnabled,
               menuVersion: message.menuVersion ?? 1,
-            });
+            } as any);
             break;
 
           case 'MENU_UPDATE':

@@ -69,7 +69,7 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> = ({
                 <motion.div
                   layoutId="active-cat-pill"
                   className="absolute inset-0 bg-neutral-900"
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  transition={{ type: 'tween', ease: 'circOut', duration: 0.25 }}
                 />
               )}
             </button>

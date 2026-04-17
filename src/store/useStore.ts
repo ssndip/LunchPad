@@ -134,7 +134,7 @@ export const useStore = create<AppState>((set) => ({
     if (!isManager) sessionStorage.removeItem('token');
     return isManager ? 'manager' : 'kiosk';
   })(),
-  activeTab: 'menu',
+  activeTab: (new URLSearchParams(window.location.search).get('tab') as any) || 'menu',
   lang: (localStorage.getItem('lang') as Language) || 'bg',
   menu: [],
   orders: [],
@@ -188,8 +188,18 @@ export const useStore = create<AppState>((set) => ({
   dailySides: [],
 
   // Setters
-  setMode: (mode) => set({ mode }),
-  setActiveTab: (activeTab) => set({ activeTab }),
+  setMode: (mode) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', mode);
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+    set({ mode });
+  },
+  setActiveTab: (activeTab) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', activeTab);
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+    set({ activeTab });
+  },
   setLang: (lang) => {
     localStorage.setItem('lang', lang);
     set({ lang });

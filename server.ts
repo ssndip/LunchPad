@@ -17,6 +17,8 @@ import { isLocalOrigin, globalAccessGuard } from "./server/middleware/auth";
 
 // Controllers (for init/broadcast)
 import { getMenu } from "./server/controllers/menuController";
+import { getCards } from "./server/controllers/cardController";
+import { getOrders } from "./server/controllers/orderController";
 import { kioskOpen } from "./server/controllers/statusController";
 
 // Routes
@@ -42,8 +44,9 @@ export const appPromise = startServer();
 
 export async function startServer() {
   const app = express();
-  // Trust only the immediate reverse proxy (e.g., Nginx, Cloudflare) rather than any number of hops
-  app.set("trust proxy", 1);
+  // Global IP Identification
+  app.set("trust proxy", true);
+
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
   setWssInstance(wss);
@@ -57,29 +60,50 @@ export async function startServer() {
     contentSecurityPolicy: false, // Allow Vite dev server
   }));
 
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 1000,
+  const authLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 10, // 10 attempts per minute
     standardHeaders: true,
     legacyHeaders: false,
     validate: { trustProxy: false },
-    message: { error: "Too many requests", message: "Please try again later" },
+    message: { error: "Too many login attempts", message: "Please try again in a minute" },
     handler: (req, res, next, options) => {
+      logger.warn(`Rate limit hit: Auth endpoint from IP ${req.ip}`);
       res.status(options.statusCode).json(options.message);
     }
   });
 
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5000, // Increased to 5000 for more headroom
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { trustProxy: false },
+    skip: (req) => {
+      // EXEMPT critical endpoints from the general rate limit
+      const exemptPaths = ["/auth/login", "/auth/unlock", "/init", "/ping"];
+      return exemptPaths.some(p => req.path === p);
+    },
+    message: { error: "Too many requests", message: "Please try again later" },
+    handler: (req, res, next, options) => {
+      logger.warn(`Rate limit hit: API endpoint ${req.path} from IP ${req.ip}`);
+      res.status(options.statusCode).json(options.message);
+    }
+  });
 
   // Global Access & Security Middleware
-  // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
   app.use("/api", (req, res, next) => {
-    // Always allow login/unlock so admins can log in and remote users can authenticate
-    // Always allow init so the kiosk can bootstrap even before authentication
     if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
     return globalAccessGuard(req, res, next);
   });
 
-  app.use(limiter);
+  // Apply General API Limiter to all /api routes (with its own skip logic for critical paths)
+  app.use("/api", apiLimiter);
+
+  // Apply Auth Limiter specifically to login/unlock (separate quota)
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/unlock", authLimiter);
+
   app.use(express.json({ limit: '500kb' }));
 
   // --- API Routes ---
@@ -166,20 +190,20 @@ export async function startServer() {
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
       menu: getMenu(),
-      orders: [], 
+      orders: isAdmin ? getOrders(100) : [], 
       kioskOpen,
-      cards: [],
+      cards: isAdmin ? getCards() : [],
       deliveryFee: settings.deliveryFee || 0,
       packagingFee: settings.packagingFee || 0.1,
       menuVersion: settings.menuVersion,
       globalAccess: settings.globalAccess,
-      publicAccessCode: settings.publicAccessCode,
+      publicAccessCode: settings.publicAccessCode ? "__REQUIRED__" : "", 
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
       systemLanguage: settings.systemLanguage
-    }));
+    } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {
       (ws as any).isAlive = true;

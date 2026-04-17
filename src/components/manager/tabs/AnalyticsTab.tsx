@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, AreaChart, Area, Legend
+  AreaChart, Area
 } from 'recharts';
-import { Loader2, TrendingUp, Users, Clock, Award } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, Award } from 'lucide-react';
 import * as api from '../../../api';
 import { useStore } from '../../../store/useStore';
-
 import { useTranslation } from '../../../hooks/useTranslation';
 
 const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
@@ -16,6 +15,26 @@ export const AnalyticsTab: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const token = useStore(s => s.token);
+
+  const { topMeal, topSide, peakHour, sortedPeakTimes } = React.useMemo(() => {
+    if (!data) return { topMeal: 'N/A', topSide: 'N/A', peakHour: 'N/A', sortedPeakTimes: [] };
+
+    const topMealObj = [...data.popularMeals].sort((a, b) => b.count - a.count)[0];
+    const topSideObj = [...data.popularSides].sort((a, b) => b.count - a.count)[0];
+    const peakHourObj = [...data.peakTimes].sort((a, b) => b.count - a.count)[0];
+    const sortedPeakTimesObj = [...data.peakTimes].sort((a, b) => {
+      const hA = parseInt(a.hour) || 0;
+      const hB = parseInt(b.hour) || 0;
+      return hA - hB;
+    });
+
+    return {
+      topMeal: topMealObj?.name || 'N/A',
+      topSide: topSideObj?.name || 'N/A',
+      peakHour: peakHourObj?.hour || 'N/A',
+      sortedPeakTimes: sortedPeakTimesObj
+    };
+  }, [data]);
 
   useEffect(() => {
     if (token) {
@@ -42,19 +61,19 @@ export const AnalyticsTab: React.FC = () => {
         <StatCard 
           icon={<TrendingUp className="w-5 h-5 text-neutral-900" />}
           label={t('analytics.top_meal')}
-          value={data.popularMeals[0]?.name || 'N/A'}
+          value={topMeal}
           subValue={`${data.popularMeals[0]?.count || 0} ${t('analytics.orders_unit')}`}
         />
         <StatCard 
           icon={<Award className="w-5 h-5 text-neutral-900" />}
           label={t('analytics.top_side')}
-          value={data.popularSides[0]?.name || 'N/A'}
+          value={topSide}
           subValue={`${data.popularSides[0]?.count || 0} ${t('analytics.times_unit')}`}
         />
         <StatCard 
           icon={<Clock className="w-5 h-5 text-neutral-900" />}
           label={t('analytics.peak_hour')}
-          value={data.peakTimes.sort((a:any, b:any) => b.count - a.count)[0]?.hour || 'N/A'}
+          value={peakHour}
           subValue={t('analytics.highest_activity')}
         />
       </div>
@@ -84,7 +103,7 @@ export const AnalyticsTab: React.FC = () => {
           <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.activity_wave')}</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.peakTimes}>
+              <AreaChart data={sortedPeakTimes}>
                 <defs>
                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>

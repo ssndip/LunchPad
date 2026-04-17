@@ -99,7 +99,7 @@
 
   /* Micro-animations */
   .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-1 active:scale-[0.98];
+    @apply transition-transform duration-150 hover:-translate-y-1 active:scale-[0.98];
   }
 
   .shimmer {

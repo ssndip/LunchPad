@@ -39,14 +39,14 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
 
   return (
     <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 pb-[180px] md:p-6 md:pb-6">
-      <div className="flex flex-col gap-3 mb-0 md:mb-6">
+      <div className="flex flex-col gap-[6px] mb-0 md:mb-6">
         {items.filter(i => i.available).map((item) => {
           const isSelected = selectedItemIds.has(item.id);
           const cartItem = selectedItems.find(i => i.id === item.id);
           const needsSide = !!(item.requiresSideChoice || item.hasIncludedSide);
 
           return (
-            <div key={item.id} className={`flex flex-col transition-all overflow-hidden rounded-[24px] md:rounded-[32px] border ${isSelected ? 'glass-morphism border-neutral-900/10 shadow-lg' : 'bg-white border-white hover:border-neutral-200 shadow-sm'} hover-lift no-tap-highlight`}>
+            <div key={item.id} className={`flex flex-col transition-all overflow-hidden rounded-[20px] md:rounded-[24px] border border-transparent ${isSelected ? 'bg-neutral-900/[0.04] !border-neutral-900/10' : 'bg-white shadow-sm hover:border-neutral-200'} no-tap-highlight`}>
               <motion.div
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
@@ -57,18 +57,9 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                     onToggle(item);
                   }
                 }}
-                className="flex items-center justify-between px-5 py-4 md:px-8 md:py-6 cursor-pointer"
+                className="flex items-center justify-between px-5 py-3.5 md:px-8 md:py-5 cursor-pointer"
               >
                 <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-4">
-                  <div className="shrink-0">
-                    <QuantityControl 
-                      isSelected={isSelected}
-                      quantity={cartItem?.quantity || 1}
-                      onIncrement={() => onUpdateQuantity(item.id, 1)}
-                      onDecrement={() => onUpdateQuantity(item.id, -1)}
-                      onToggle={() => !isSelected && onToggle(item)}
-                    />
-                  </div>
                   <div className="flex-1 min-w-0">
                     <h3 className={`text-[var(--fluid-base)] font-bold leading-snug tracking-tight line-clamp-2 ${isSelected ? 'text-neutral-900' : 'text-neutral-700'}`}>
                       {item.name}
@@ -89,16 +80,27 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                   </div>
                 </div>
 
-                {/* Price fixed directly right inline */}
-                <div className="flex flex-col items-end shrink-0 gap-0.5">
-                  <span className="text-[var(--fluid-lg)] font-black font-mono text-neutral-900">
-                    €{item.price.toFixed(2)}
-                  </span>
-                  {isPackagingFeeItem(item) && (
-                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">
-                      +{t('menu.packaging_fee') || 'Box'}
+                <div className="flex items-center gap-4 md:gap-6 shrink-0">
+                  <div className="w-[32px] md:w-[40px] flex items-center justify-center relative">
+                    <QuantityControl 
+                      isSelected={isSelected}
+                      quantity={cartItem?.quantity || 1}
+                      onIncrement={() => onUpdateQuantity(item.id, 1)}
+                      onDecrement={() => onUpdateQuantity(item.id, -1)}
+                      onToggle={() => !isSelected && onToggle(item)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-end gap-0.5 min-w-[60px] md:min-w-[80px]">
+                    <span className="text-[var(--fluid-lg)] font-black font-mono text-neutral-900">
+                      €{item.price.toFixed(2)}
                     </span>
-                  )}
+                    {isPackagingFeeItem(item) && (
+                      <span className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">
+                        +{t('menu.packaging_fee') || 'Box'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
 
@@ -109,6 +111,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
                     className="overflow-hidden bg-neutral-50 border-t border-neutral-100"
                   >
                     <div className="p-5 md:p-6 bg-violet-50/30">
@@ -164,31 +167,33 @@ const QuantityControl: React.FC<{
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={(e) => { triggerHaptic('light'); onToggle(); }}
             className="w-8 h-8 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors"
           />
         ) : (
           <motion.div
             key="control"
-            initial={{ width: 32, opacity: 0 }}
-            animate={{ width: 'auto', opacity: 1 }}
-            exit={{ width: 32, opacity: 0 }}
-            className="flex items-center bg-neutral-900 rounded-full p-1.5 gap-5 overflow-hidden shadow-lg shadow-black/20"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center bg-neutral-900 rounded-full p-1 gap-2 md:gap-4 overflow-hidden shadow-sm absolute right-0"
           >
             <button
               onClick={() => { triggerHaptic('light'); onDecrement(); }}
-              className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+              className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
             >
-              <Minus className="w-5 h-5" />
+              <Minus className="w-4 h-4" />
             </button>
-            <span className="text-lg font-black font-mono text-white min-w-[20px] text-center">
+            <span className="text-xs md:text-sm font-black font-mono text-white min-w-[12px] text-center">
               {quantity}
             </span>
             <button
               onClick={() => { triggerHaptic('light'); onIncrement(); }}
-              className="w-10 h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+              className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
           </motion.div>
         )}
