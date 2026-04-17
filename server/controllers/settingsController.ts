@@ -11,6 +11,7 @@ import {
   setDeliveryFeeConfig,
   setKioskModeConfig,
   setAllowPWAInstallConfig,
+  setSystemLanguageConfig,
   hashAndSetAdminPin
 } from "../config";
 import { globalAccessGuard } from "../middleware/auth";
@@ -25,7 +26,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     packagingFee: settings.packagingFee,
     deliveryFee: settings.deliveryFee,
     kioskModeEnabled: settings.kioskModeEnabled,
-    allowPWAInstall: settings.allowPWAInstall
+    allowPWAInstall: settings.allowPWAInstall,
+    systemLanguage: settings.systemLanguage
   });
 };
 
@@ -33,7 +35,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
   try {
     const { 
       globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, 
-      packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall 
+      packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
+      systemLanguage 
     } = req.body;
     
     if (globalAccess !== undefined) {
@@ -102,6 +105,19 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setAllowPWAInstallConfig(allowPWAInstall);
       broadcast({ type: "PWA_SETTINGS_UPDATE", data: { allowPWAInstall, kioskModeEnabled: settings.kioskModeEnabled } });
     }
+    
+    if (systemLanguage !== undefined) {
+      if (typeof systemLanguage !== 'string') return res.status(400).json({ error: "Invalid value for systemLanguage" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("system_language", systemLanguage);
+      setSystemLanguageConfig(systemLanguage);
+      broadcast({ type: "STATUS_UPDATE", data: { 
+        kioskOpen, 
+        orderButtonEnabled: settings.orderButtonEnabled, 
+        testModeEnabled: settings.testModeEnabled, 
+        globalAccess: settings.globalAccess,
+        systemLanguage 
+      } });
+    }
 
     res.json({ 
       success: true, 
@@ -112,7 +128,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       packagingFee: settings.packagingFee,
       deliveryFee: settings.deliveryFee,
       kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall
+      allowPWAInstall: settings.allowPWAInstall,
+      systemLanguage: settings.systemLanguage
     });
   } catch (err: any) {
     next(err);

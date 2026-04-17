@@ -16,6 +16,7 @@ export const settings = {
   deliveryFee: 5.00,
   kioskModeEnabled: false,
   allowPWAInstall: true,
+  systemLanguage: "bg",
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET
 };
@@ -29,6 +30,7 @@ export const setPackagingFeeConfig = (val: number) => settings.packagingFee = va
 export const setDeliveryFeeConfig = (val: number) => settings.deliveryFee = val;
 export const setKioskModeConfig = (val: boolean) => settings.kioskModeEnabled = val;
 export const setAllowPWAInstallConfig = (val: boolean) => settings.allowPWAInstall = val;
+export const setSystemLanguageConfig = (val: string) => settings.systemLanguage = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -130,6 +132,14 @@ export const initSettings = () => {
     settings.allowPWAInstall = true;
   } else {
     settings.allowPWAInstall = allowPWAInstallRecord.value === "1";
+  }
+
+  const systemLanguageRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("system_language") as { value: string } | undefined;
+  if (!systemLanguageRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("system_language", "bg");
+    settings.systemLanguage = "bg";
+  } else {
+    settings.systemLanguage = systemLanguageRecord.value;
   }
 
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

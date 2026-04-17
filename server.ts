@@ -105,7 +105,8 @@ export async function startServer() {
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall
+      allowPWAInstall: settings.allowPWAInstall,
+      systemLanguage: settings.systemLanguage
     });
   });
 
@@ -175,7 +176,8 @@ export async function startServer() {
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall
+      allowPWAInstall: settings.allowPWAInstall,
+      systemLanguage: settings.systemLanguage
     }));
 
     ws.on("pong", () => {

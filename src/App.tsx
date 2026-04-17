@@ -43,7 +43,7 @@ export default function App() {
   const totalPrice = useTotalPrice();
   const selectedItemIds = useSelectedItemIds();
   const computedKioskOpen = useComputedKioskOpen();
-  const { installApp, deferredPrompt, isIOS } = usePWA();
+  const { installApp, deferredPrompt, isIOS, isAndroid } = usePWA();
 
 
   const t = (key: string) => {
@@ -73,6 +73,7 @@ export default function App() {
       if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
+      if (data.systemLanguage !== undefined) s.setLang(data.systemLanguage);
       s.setMenuVersion(data.menuVersion);
       s.setConnectionError(null);
       s.setPublicAccessRequired(false);
@@ -91,6 +92,7 @@ export default function App() {
       if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
+      if (data.systemLanguage !== undefined) s.setLang(data.systemLanguage);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
@@ -280,7 +282,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kioskMode?: boolean, allowPwa?: boolean) => {
+  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kioskMode?: boolean, allowPwa?: boolean, systemLang?: string) => {
     if (!s.token) return;
     try {
       const update = {
@@ -290,6 +292,7 @@ export default function App() {
         publicAccessCode: publicCode ?? s.publicAccessCode,
         kioskModeEnabled: kioskMode ?? s.kioskModeEnabled,
         allowPWAInstall: allowPwa ?? s.allowPWAInstall,
+        systemLanguage: systemLang,
       };
       await api.updateSettings(s.token, update);
       s.setGlobalAccess(access);
@@ -298,6 +301,7 @@ export default function App() {
       if (publicCode !== undefined) s.setPublicAccessCode(publicCode);
       if (kioskMode !== undefined) s.setKioskModeEnabled(kioskMode);
       if (allowPwa !== undefined) s.setAllowPWAInstall(allowPwa);
+      if (systemLang) s.setLang(systemLang as Language);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -586,8 +590,8 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings) => {
-                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings);
+              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings, systemLang) => {
+                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings, systemLang);
               }}
               onInstallApp={() => {
                 if (deferredPrompt && !isIOS) {
@@ -757,11 +761,15 @@ export default function App() {
               <div className="p-8 space-y-6">
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 1</div>
-                  <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_share')}</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    {isIOS ? t('pwa.ios_share') : t('pwa.android_menu')}
+                  </p>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 2</div>
-                  <p className="text-sm font-medium text-neutral-700">{t('pwa.ios_add')}</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    {isIOS ? t('pwa.ios_add') : t('pwa.android_install')}
+                  </p>
                 </div>
                 
                 <div className="pt-4 p-4 bg-violet-50 rounded-2xl flex items-center gap-3">

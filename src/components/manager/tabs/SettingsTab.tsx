@@ -26,6 +26,7 @@ interface SettingsTabProps {
     publicCode?: string,
     kioskMode?: boolean,
     allowPwa?: boolean,
+    systemLanguage?: string,
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -39,7 +40,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onUpdateSettings, onUpdatePin, onInstallApp, t,
 }) => {
   const [localPublicCode, setLocalPublicCode] = React.useState(publicAccessCode);
-  const { canInstall, installApp, isIOS, isStandalone } = usePWA();
+  const { canInstall, installApp, isIOS, isAndroid, isStandalone, deferredPrompt } = usePWA();
   
   React.useEffect(() => {
     setLocalPublicCode(publicAccessCode);
@@ -81,7 +82,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl">
               {(['en', 'bg'] as Language[]).map((l) => (
-                <button key={l} onClick={() => setLang(l)}
+                <button key={l} onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${lang === l ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}>
                   {l.toUpperCase()}
                 </button>

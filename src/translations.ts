@@ -295,6 +295,8 @@ export const translations = {
       how_to_install: "How to Install",
       ios_share: "Tap the 'Share' button",
       ios_add: "Select 'Add to Home Screen'",
+      android_menu: "Tap the browser menu (three dots)",
+      android_install: "Select 'Install App' or 'Add to Home Screen'",
       step: "Step"
     },
     modals: {
@@ -676,6 +678,8 @@ export const translations = {
       how_to_install: "Как да инсталирате",
       ios_share: "Натиснете бутона „Споделяне“ (Share)",
       ios_add: "Изберете „Добавяне към началния екран“",
+      android_menu: "Отворете менюто на браузъра (трите точки)",
+      android_install: "Изберете „Инсталиране“ или „Добавяне“",
       step: "Стъпка"
     },
     modals: {
