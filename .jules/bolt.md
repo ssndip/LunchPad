@@ -1,0 +1,3 @@
+## 2025-03-08 - Optimized Kiosk Order Menu Fetching
+**Learning:** Performing a full-table `SELECT *` and dynamically constructing a `Map` array in memory for every incoming API request causes extreme CPU/GC spikes and blocking I/O, particularly under concurrent load. Caching prepared statements at the module scope using a lazy-loader pattern correctly reduces redundant SQL parsing overhead.
+**Action:** When needing to enrich single rows from a database within a request loop, write specific lookups using cached prepared statements (`SELECT * FROM table WHERE id = ?`) encapsulated properly in their respective domain controllers instead of aggressively pre-fetching the whole table locally.

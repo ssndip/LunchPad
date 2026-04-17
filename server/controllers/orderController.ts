@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { getMenu } from "./menuController";
+import { getMenu, getMenuItemById } from "./menuController";
 import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
 import { settings } from "../config";
@@ -83,13 +83,11 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       return res.status(401).json({ error: "No RFID or PIN provided" });
     }
 
-    const menu = getMenu(db);
-    const menuMap = new Map(menu.map(m => [m.id, m]));
-    
     // Strict Validation & Enrichment
     const enrichedItems: any[] = [];
+
     for (const ri of requestedItems) {
-      const baseItem = menuMap.get(ri.id);
+      const baseItem = getMenuItemById(db, ri.id);
       if (!baseItem) continue;
 
       // Feature 7: Strict Side-Dish Validation
