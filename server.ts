@@ -52,11 +52,16 @@ export async function startServer() {
   // CORS Middleware
   app.use(cors());
 
+  app.use(helmet({
+    contentSecurityPolicy: false, // Allow Vite dev server
+  }));
+
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Apply the rate limiter to all requests
@@ -70,10 +75,6 @@ export async function startServer() {
     if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
     return globalAccessGuard(req, res, next);
   });
-
-  app.use(helmet({
-    contentSecurityPolicy: false, // Allow Vite dev server
-  }));
 
   app.use(express.json({ limit: '500kb' }));
 

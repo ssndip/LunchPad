@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { getMenu } from "./menuController";
+import { getMenu, getMenuItemById } from "./menuController";
 import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
 import { settings } from "../config";
@@ -83,13 +83,11 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       return res.status(401).json({ error: "No RFID or PIN provided" });
     }
 
-    const menu = getMenu(db);
-    const menuMap = new Map(menu.map(m => [m.id, m]));
-    
     // Strict Validation & Enrichment
     const enrichedItems: any[] = [];
+
     for (const ri of requestedItems) {
-      const baseItem = menuMap.get(ri.id);
+      const baseItem = getMenuItemById(db, ri.id);
       if (!baseItem) continue;
 
       // Feature 7: Strict Side-Dish Validation
@@ -342,10 +340,11 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
     const now = new Date().toISOString();
 
     // 2. Perform updates in a transaction
+    const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
     db.transaction(() => {
+      const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
       for (const row of rows) {
-        db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
-          .run(splitFee, now, row.rfid);
+        updateStmt.run(splitFee, now, row.rfid);
       }
     })();
 
