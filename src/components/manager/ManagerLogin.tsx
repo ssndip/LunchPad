@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, ArrowRight, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 import * as api from '../../api';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface ManagerLoginProps {
   onLogin: (pin: string) => void;
   onBack: () => void;
-  t: (key: string) => string;
 }
 
-export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack, t }) => {
+export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack }) => {
+  const { t } = useTranslation();
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

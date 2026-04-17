@@ -7,9 +7,12 @@ import { Loader2, TrendingUp, Users, Clock, Award } from 'lucide-react';
 import * as api from '../../../api';
 import { useStore } from '../../../store/useStore';
 
+import { useTranslation } from '../../../hooks/useTranslation';
+
 const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
 
-export const AnalyticsTab: React.FC<{ t: any }> = ({ t }) => {
+export const AnalyticsTab: React.FC = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const token = useStore(s => s.token);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order } from '../../../types';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface Filters {
   startDate: string;
@@ -13,7 +14,6 @@ interface HistoryTabProps {
   filters: Filters;
   onFilterChange: (key: keyof Filters, value: string) => void;
   onApplyFilters: () => void;
-  t: (key: string) => string;
 }
 
 export const HistoryTab: React.FC<HistoryTabProps> = ({
@@ -21,8 +21,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   filters,
   onFilterChange,
   onApplyFilters,
-  t,
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">

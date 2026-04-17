@@ -10,6 +10,8 @@ import { useStore } from '../../../store/useStore';
 import * as api from '../../../api';
 import { getActivePreset, getAllPresets, FormatPreset, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
 
+import { useTranslation } from '../../../hooks/useTranslation';
+
 interface MenuTabProps {
   editingMenu: MenuItem[];
   onAddItem: () => void;
@@ -18,7 +20,6 @@ interface MenuTabProps {
   onDeleteAll: () => void;
   onApplyMenu: (items: MenuItem[]) => void;
   confirm: (config: any) => void;
-  t: (key: string) => string;
 }
 
 export const MenuTab: React.FC<MenuTabProps> = ({
@@ -29,8 +30,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   onDeleteAll,
   onApplyMenu,
   confirm,
-  t,
 }) => {
+  const { t } = useTranslation();
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<any | null>(null);

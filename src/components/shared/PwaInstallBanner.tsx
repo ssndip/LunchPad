@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Download, X, Smartphone } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface PwaInstallBannerProps {
-  t: (key: string) => string;
   onNeedInstructions?: () => void;
 }
 
-export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ t, onNeedInstructions }) => {
+export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onNeedInstructions }) => {
+  const { t } = useTranslation();
   const { canInstall, installApp, isStandalone, isIOS, isAndroid, deferredPrompt } = usePWA();
   const [dismissed, setDismissed] = React.useState(false);
 

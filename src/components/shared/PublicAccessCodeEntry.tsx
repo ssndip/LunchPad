@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, ShieldCheck, ArrowRight, Loader2, Globe, AlertCircle } from 'lucide-react';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface PublicAccessCodeEntryProps {
   onUnlock: (code: string) => Promise<{ success: boolean; error?: string }>;
-  lang: string;
-  t: (key: string) => string;
 }
 
-export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ onUnlock, lang, t }) => {
+export const PublicAccessCodeEntry: React.FC<PublicAccessCodeEntryProps> = ({ onUnlock }) => {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

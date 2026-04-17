@@ -15,12 +15,12 @@ import {
 import { Language } from '../../translations';
 import { useResponsive } from '../../hooks/useResponsive';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface ManagerDashboardProps {
   activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
   onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules') => void;
   onLogout: () => void;
-  lang: Language;
-  t: (key: string) => string;
   children: React.ReactNode;
   kioskOpen: boolean;
   onToggleKiosk: (open: boolean) => void;
@@ -30,12 +30,11 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   activeTab,
   onTabChange,
   onLogout,
-  lang,
-  t,
   children,
   kioskOpen,
   onToggleKiosk,
 }) => {
+  const { t, lang } = useTranslation();
   const { isPhone, isTablet, isDesktop } = useResponsive();
 
   const menuItems = [

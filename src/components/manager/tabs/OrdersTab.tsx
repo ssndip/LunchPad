@@ -5,6 +5,8 @@ import { useStore } from '../../../store/useStore';
 import * as api from '../../../api';
 import { Truck, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
 
+import { useTranslation } from '../../../hooks/useTranslation';
+
 interface OrdersTabProps {
   summaries: DailySummary[];
   expandedDate: string | null;
@@ -12,7 +14,6 @@ interface OrdersTabProps {
   dailySides: Array<{ name: string; quantity: number }>;
   onExpandDate: (date: string) => void;
   onCopySummary: (date: string, total: number) => void;
-  t: (key: string) => string;
   confirm: (config: any) => void;
 }
 
@@ -23,9 +24,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   dailySides,
   onExpandDate,
   onCopySummary,
-  t,
   confirm,
 }) => {
+  const { t } = useTranslation();
   const token = useStore(s => s.token);
   const globalDeliveryFee = useStore(s => s.deliveryFee);
   const [dailyFees, setDailyFees] = React.useState<Record<string, string>>({});

@@ -21,6 +21,7 @@ import {
   AllCategorySettings, DEFAULT_CATEGORY_SETTINGS,
   ParserPersistence
 } from '../../../utils/parserLocalSettings';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,6 @@ interface ParserProfile {
 }
 
 interface ParserRulesTabProps {
-  t: (key: string) => string;
   confirm: (cfg: any) => void;
 }
 
@@ -70,7 +70,8 @@ const PROFILES_KEY = 'lunchpad_parser_profiles';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ t, confirm }) => {
+export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
+  const { t } = useTranslation();
   // ── State ──
   const [settings, setSettings] = useState<ParserPersistence>(() => loadCategorySettings());
   const [settingsOpen, setSettingsOpen] = useState(true);

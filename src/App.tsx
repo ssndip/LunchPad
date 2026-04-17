@@ -34,8 +34,13 @@ import { SettingsTab } from './components/manager/tabs/SettingsTab';
 import { ParserRulesTab } from './components/manager/tabs/ParserRulesTab';
 import { AnalyticsTab } from './components/manager/tabs/AnalyticsTab';
 
+import { useTranslation } from './hooks/useTranslation';
+import { useSyncState } from './hooks/useSyncState';
+
 export default function App() {
   const s = useStore();
+  const { t } = useTranslation();
+  const { fetchInitFallback, fetchCards } = useSyncState();
   
   // Selectors
   const groupedMenu = useGroupedMenu();
@@ -43,142 +48,12 @@ export default function App() {
   const totalPrice = useTotalPrice();
   const selectedItemIds = useSelectedItemIds();
   const computedKioskOpen = useComputedKioskOpen();
-  const { installApp, deferredPrompt, isIOS, isAndroid } = usePWA();
-
-
-  const t = (key: string) => {
-    const keys = key.split('.');
-    let val: any = translations[s.lang];
-    for (const k of keys) {
-      if (!val || typeof val !== 'object') return key;
-      val = val[k];
-    }
-    return typeof val === 'string' ? val : key;
-  };
+  const { installApp, deferredPrompt, isIOS } = usePWA();
 
   // Modal State
   const [confirmConfig, setConfirmConfig] = React.useState<any | null>(null);
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
 
-  // ─── WebSocket Logic ───────────────────────────────────────────────────────
-  useWebSocket({
-    onInitialState: (data: any) => {
-      s.setMenu(data.menu);
-      s.setKioskOpen(data.kioskOpen);
-      s.setGlobalAccess(data.globalAccess);
-      s.setPublicAccessCode(data.publicAccessCode || "");
-      s.setOrderButtonEnabled(data.orderButtonEnabled);
-      s.setTestModeEnabled(data.testModeEnabled);
-      if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
-      if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
-      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
-      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
-      if (data.systemLanguage !== undefined) s.setLang(data.systemLanguage);
-      s.setMenuVersion(data.menuVersion);
-      s.setConnectionError(null);
-      s.setPublicAccessRequired(false);
-    },
-    onMenuUpdate: (data) => {
-      s.setMenu(data.menu);
-      s.setMenuVersion(data.menuVersion);
-    },
-    onStatusUpdate: (data: any) => {
-      if (data.kioskOpen !== undefined) s.setKioskOpen(data.kioskOpen);
-      if (data.orderButtonEnabled !== undefined) s.setOrderButtonEnabled(data.orderButtonEnabled);
-      if (data.testModeEnabled !== undefined) s.setTestModeEnabled(data.testModeEnabled);
-      if (data.globalAccess !== undefined) s.setGlobalAccess(data.globalAccess);
-      if (data.publicAccessCode !== undefined) s.setPublicAccessCode(data.publicAccessCode);
-      if (data.packagingFee !== undefined) s.setPackagingFee(data.packagingFee);
-      if (data.deliveryFee !== undefined) s.setDeliveryFee(data.deliveryFee);
-      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
-      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
-      if (data.systemLanguage !== undefined) s.setLang(data.systemLanguage);
-    },
-    onPWASettingsUpdate: (data: any) => {
-      if (data.kioskModeEnabled !== undefined) s.setKioskModeEnabled(data.kioskModeEnabled);
-      if (data.allowPWAInstall !== undefined) s.setAllowPWAInstall(data.allowPWAInstall);
-    },
-    onCardsUpdate: () => {
-      if (s.token) fetchCards();
-    },
-    onConnectionError: (msg) => {
-      if (msg === 'PUBLIC_ACCESS_REQUIRED') {
-        s.setPublicAccessRequired(true);
-        s.setConnectionError(null);
-      } else {
-        s.setConnectionError(msg);
-      }
-    },
-  }, s.token || s.publicAccessToken);
-
-  // ─── Initial Fetch ─────────────────────────────────────────────────────────
-  const fetchCards = useCallback(async () => {
-    if (!s.token) return;
-    try {
-      const cards = await api.fetchCards(s.token);
-      s.setCards(cards);
-    } catch (err) {
-      console.error('Failed to fetch cards', err);
-    }
-  }, [s.token, s.setCards]);
-
-  // HTTP Fallback: when WS is unavailable, load state from /api/init
-  const fetchInitFallback = useCallback(async () => {
-    try {
-      const data = await api.fetchInitialState();
-      if (data && data.menu && data.menu.length > 0) {
-        s.setMenu(data.menu);
-        s.setKioskOpen(data.kioskOpen ?? true);
-        s.setGlobalAccess(data.globalAccess ?? true);
-        s.setOrderButtonEnabled(data.orderButtonEnabled ?? true);
-        s.setTestModeEnabled(data.testModeEnabled ?? false);
-        s.setMenuVersion(data.menuVersion ?? 1);
-        s.setConnectionError(null); // menu available via HTTP — clear the blocked error
-      }
-    } catch {
-      // HTTP also failed, keep existing error state
-    }
-  }, []); // eslint-disable-line
-
-  // Trigger HTTP fallback on any connection error (WS blocked, reconnecting, etc.)
-  useEffect(() => {
-    if (s.connectionError) {
-      fetchInitFallback();
-    }
-  }, [s.connectionError, fetchInitFallback]);
-
-  // Always fetch init on mount (instant bootstrap regardless of WS)
-  useEffect(() => {
-    fetchInitFallback();
-  }, []); // eslint-disable-line
-
-  // Poll /api/init every 30s when WS is not providing live updates
-  // This keeps globalAccess, kioskOpen, and menu in sync for remote users
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!s.isManagerLoggedIn) {
-        fetchInitFallback();
-      }
-    }, 30000);
-    return () => clearInterval(id);
-  }, [s.isManagerLoggedIn, fetchInitFallback]); // eslint-disable-line
-
-
-  useEffect(() => {
-    if (s.isManagerLoggedIn && s.token) {
-      fetchCards();
-      api.fetchOrders(s.token).then(s.setOrders).catch(console.error);
-      api.fetchSummaries(s.token).then(s.setSummaries).catch(console.error);
-      api.fetchSettings(s.token).then((res) => {
-        s.setGlobalAccess(res.globalAccess);
-        s.setPublicAccessCode(res.publicAccessCode);
-        s.setOrderButtonEnabled(res.orderButtonEnabled);
-        s.setTestModeEnabled(res.testModeEnabled);
-        if (res.packagingFee !== undefined) s.setPackagingFee(res.packagingFee);
-        if (res.deliveryFee !== undefined) s.setDeliveryFee(res.deliveryFee);
-      }).catch(console.error);
-    }
-  }, [s.isManagerLoggedIn, s.token, fetchCards, s.setOrders, s.setSummaries, s.setGlobalAccess, s.setPublicAccessCode, s.setOrderButtonEnabled, s.setTestModeEnabled]);
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
   const handleToggleItem = (item: MenuItem) => {
@@ -344,7 +219,7 @@ export default function App() {
 
   // ─── Render Logic ──────────────────────────────────────────────────────────
   if (s.publicAccessRequired) {
-    return <PublicAccessCodeEntry onUnlock={handleUnlock} lang={s.lang} t={t} />;
+    return <PublicAccessCodeEntry onUnlock={handleUnlock} />;
   }
 
   if (s.mode === 'manager') {
@@ -353,7 +228,6 @@ export default function App() {
         <ManagerLogin
           onLogin={(pin) => s.loginManager(pin)}
           onBack={() => { window.location.href = window.location.origin + '/'; }}
-          t={t}
         />
       );
     }
@@ -364,8 +238,6 @@ export default function App() {
           activeTab={s.activeTab}
           onTabChange={s.setActiveTab}
           onLogout={s.logoutManager}
-          lang={s.lang}
-          t={t}
           kioskOpen={s.kioskOpen}
           onToggleKiosk={handleToggleKioskManual}
         >
@@ -391,7 +263,6 @@ export default function App() {
               onDeleteAll={() => handleApplyMenu([])}
               onApplyMenu={handleApplyMenu}
               confirm={setConfirmConfig}
-              t={t}
             />
           )}
           {s.activeTab === 'orders' && (
@@ -432,7 +303,6 @@ export default function App() {
                   onConfirm: () => {}
                 });
               }}
-              t={t}
             />
           )}
           {s.activeTab === 'history' && (
@@ -446,7 +316,6 @@ export default function App() {
                   s.setOrders(results);
                 }
               }}
-              t={t}
             />
           )}
           {s.activeTab === 'cards' && (
@@ -574,7 +443,6 @@ export default function App() {
               setPasteCardsText={s.setPasteCardsText}
               isPasteCardsModalOpen={s.isPasteCardsModalOpen}
               setIsPasteCardsModalOpen={s.setIsPasteCardsModalOpen}
-              t={t}
             />
           )}
           {s.activeTab === 'settings' && (
@@ -615,22 +483,19 @@ export default function App() {
                   }
                 }
               }}
-              t={t}
             />
           )}
           {s.activeTab === 'analytics' && (
-            <AnalyticsTab t={t} />
+            <AnalyticsTab />
           )}
           {s.activeTab === 'parser_rules' && (
-            <ParserRulesTab t={t} confirm={setConfirmConfig} />
+            <ParserRulesTab confirm={setConfirmConfig} />
           )}
         </ManagerDashboard>
 
         <ConfirmModal
           config={confirmConfig}
           onClose={() => setConfirmConfig(null)}
-          t={t}
-          cancelLabel={t('modals.cancel')}
         />
 
         <AnimatePresence>
@@ -695,7 +560,7 @@ export default function App() {
   }
 
   if (!computedKioskOpen && !s.testModeEnabled) {
-    return <KioskClosed onGoToManager={() => { window.location.search = '?view=manager'; }} t={t} />;
+    return <KioskClosed onGoToManager={() => { window.location.search = '?view=manager'; }} />;
   }
 
   return (
@@ -725,9 +590,8 @@ export default function App() {
         onOrder={handleOrder}
         onClearCart={s.resetCart}
         onGoToManager={() => { window.location.search = '?view=manager'; }}
-        t={t}
       />
-      <PwaInstallBanner t={t} onNeedInstructions={() => setShowPWAInstructions(true)} />
+      <PwaInstallBanner onNeedInstructions={() => setShowPWAInstructions(true)} />
 
       <AnimatePresence>
         {showPWAInstructions && (

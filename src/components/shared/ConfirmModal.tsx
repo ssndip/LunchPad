@@ -13,20 +13,20 @@ export interface ConfirmConfig {
   placeholder?: string;
 }
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface ConfirmModalProps {
   config: ConfirmConfig | null;
   onClose: () => void;
-  lang?: string;
-  t: (key: string) => string;
   cancelLabel?: string;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   config,
   onClose,
-  t,
   cancelLabel,
 }) => {
+  const { t } = useTranslation();
   const actualCancelLabel = cancelLabel || t('modals.cancel');
   const [inputValue, setInputValue] = React.useState('');
 

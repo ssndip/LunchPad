@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, Plus, CreditCard, RotateCcw, Pencil } from 'lucide-react';
 import { Card } from '../../../types';
 
+import { useTranslation } from '../../../hooks/useTranslation';
+
 interface CardsTabProps {
   cards: Card[];
   onUpdateSingleCard: (rfid: string, card: Card) => Promise<boolean>;
@@ -28,7 +30,6 @@ interface CardsTabProps {
   setPasteCardsText: (v: string) => void;
   isPasteCardsModalOpen: boolean;
   setIsPasteCardsModalOpen: (v: boolean) => void;
-  t: (key: string) => string;
 }
 
 export const CardsTab: React.FC<CardsTabProps> = ({
@@ -54,8 +55,8 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   setIsPasteCardsModalOpen,
   newCardPin,
   setNewCardPin,
-  t,
 }) => {
+  const { t } = useTranslation();
   const managerRfidRef = useRef<HTMLInputElement>(null);
   const [editingRfid, setEditingRfid] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<Partial<Card>>({});

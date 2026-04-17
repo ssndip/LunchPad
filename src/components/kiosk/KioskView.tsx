@@ -14,6 +14,8 @@ import { triggerHaptic } from '../../utils/haptics';
 import { useStore } from '../../store/useStore';
 import { PinPadModal } from '../shared/PinPadModal';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface KioskViewProps {
   menu: MenuItem[];
   groupedMenu: Record<string, MenuItem[]>;
@@ -32,14 +34,12 @@ interface KioskViewProps {
   computedKioskOpen: boolean;
   kioskAutoTiming: boolean;
   kioskCloseTime: string;
-  lang: Language;
   onToggleItem: (item: MenuItem) => void;
   onAddWithSide: (item: MenuItem, side?: string) => void;
   onUpdateQuantity: (id: number, delta: number) => void;
   onOrder: (rfidOverride?: string, pinOverride?: string) => void;
   onClearCart: () => void;
   onGoToManager: () => void;
-  t: (key: string) => string;
 }
 
 export const KioskView: React.FC<KioskViewProps> = ({
@@ -60,16 +60,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
   computedKioskOpen,
   kioskAutoTiming,
   kioskCloseTime,
-  lang,
   onToggleItem,
   onAddWithSide,
   onUpdateQuantity,
   onOrder,
   onClearCart,
   onGoToManager,
-  t,
 }) => {
+  const { t, lang } = useTranslation();
   const rfidInputRef = useRef<HTMLInputElement>(null);
+
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const { kioskModeEnabled } = useStore();
@@ -246,18 +246,21 @@ export const KioskView: React.FC<KioskViewProps> = ({
   );
 };
 
-export const KioskClosed: React.FC<{ onGoToManager: () => void; t: (key: string) => string; }> = ({ onGoToManager, t }) => (
-  <div className="h-screen w-screen overflow-hidden bg-neutral-50 flex items-center justify-center p-8 fixed-viewport">
-    <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center max-w-md w-full border border-neutral-100">
-      <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-        <LogOut className="w-10 h-10 text-red-500" />
+export const KioskClosed: React.FC<{ onGoToManager: () => void; }> = ({ onGoToManager }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-neutral-50 flex items-center justify-center p-8 fixed-viewport">
+      <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center max-w-md w-full border border-neutral-100">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <LogOut className="w-10 h-10 text-red-500" />
+        </div>
+        <h1 className="text-3xl font-black text-neutral-900 mb-2 uppercase tracking-tight">{t('kiosk.ordering_closed')}</h1>
+        <p className="text-neutral-400 text-sm">{t('kiosk.check_back_tomorrow')}</p>
+        <button onClick={onGoToManager} className="mt-8 w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all">
+          {t('navigation.admin_login')}
+        </button>
       </div>
-      <h1 className="text-3xl font-black text-neutral-900 mb-2 uppercase tracking-tight">{t('kiosk.ordering_closed')}</h1>
-      <p className="text-neutral-400 text-sm">{t('kiosk.check_back_tomorrow')}</p>
-      <button onClick={onGoToManager} className="mt-8 w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all">
-        {t('navigation.admin_login')}
-      </button>
     </div>
-  </div>
-);
+  );
+};
 

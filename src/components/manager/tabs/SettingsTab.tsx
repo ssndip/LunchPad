@@ -5,9 +5,9 @@ import { Language } from '../../../translations';
 import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
 
+import { useTranslation } from '../../../hooks/useTranslation';
+
 interface SettingsTabProps {
-  lang: Language;
-  setLang: (l: Language) => void;
   globalAccess: boolean;
   publicAccessCode: string;
   orderButtonEnabled: boolean;
@@ -30,15 +30,15 @@ interface SettingsTabProps {
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
-  t: (key: string) => string;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
-  lang, setLang, globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
+  globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
   kioskModeEnabled, allowPWAInstall,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
-  onUpdateSettings, onUpdatePin, onInstallApp, t,
+  onUpdateSettings, onUpdatePin, onInstallApp,
 }) => {
+  const { t, lang } = useTranslation();
   const [localPublicCode, setLocalPublicCode] = React.useState(publicAccessCode);
   const { canInstall, installApp, isIOS, isAndroid, isStandalone, deferredPrompt } = usePWA();
   
