@@ -5,7 +5,7 @@ import { verifyAdminPin, settings } from "../config";
 import { db } from "../db";
 
 export const isLocalOrigin = (origin?: string): boolean => {
-  if (!origin || origin === 'null') return true; 
+  if (!origin || origin === 'null') return false;
   try {
     const u = new URL(origin);
     const hostname = u.hostname;

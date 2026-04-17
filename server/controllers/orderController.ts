@@ -340,10 +340,11 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
     const now = new Date().toISOString();
 
     // 2. Perform updates in a transaction
+    const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
     db.transaction(() => {
+      const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
       for (const row of rows) {
-        db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
-          .run(splitFee, now, row.rfid);
+        updateStmt.run(splitFee, now, row.rfid);
       }
     })();
 
