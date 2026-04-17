@@ -1,105 +1,85 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { resetSingleBalance } from './cardController';
-import { db } from '../db';
-import { broadcast } from '../broadcast';
-
-vi.mock('../db', () => ({
-  db: {
-    prepare: vi.fn(),
-  },
-}));
+import { resetAllBalances } from './cardController';
+import { db, initDb } from '../db';
+import * as broadcastModule from '../broadcast';
 
 vi.mock('../broadcast', () => ({
   broadcast: vi.fn(),
 }));
 
 describe('cardController', () => {
-  describe('resetSingleBalance', () => {
+  describe('resetAllBalances', () => {
     let mockReq: Partial<Request>;
     let mockRes: Partial<Response>;
     let mockNext: NextFunction;
 
-    beforeEach(() => {
-      mockReq = {
-        params: {}
-      };
+    beforeAll(() => {
+      initDb();
+    });
 
+    beforeEach(() => {
+      mockReq = {};
       mockRes = {
+        status: vi.fn().mockReturnThis(),
         json: vi.fn()
       };
-
       mockNext = vi.fn();
 
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2024-01-01T12:00:00.000Z'));
+      db.exec("DELETE FROM cards");
     });
 
     afterEach(() => {
-      vi.useRealTimers();
       vi.clearAllMocks();
     });
 
-    it('should update the balance to 0 and broadcast for a given rfid', () => {
-      mockReq.params = { rfid: '12345' };
+    it('should reset all card balances to 0, broadcast update and return success', () => {
+      // Setup cards with balances
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, isAdmin)
+        VALUES
+          ('111', 'User 1', 10.50, 0),
+          ('222', 'User 2', 5.00, 0),
+          ('333', 'User 3', 0.00, 1)
+      `).run();
 
-      const mockRun = vi.fn();
-      const mockAll = vi.fn().mockReturnValue([{ rfid: '12345', balance: 0 }]);
-      vi.mocked(db.prepare).mockImplementation((query: string) => {
-        if (query.includes("UPDATE cards SET balance = 0")) {
-          return { run: mockRun } as any;
-        } else if (query.includes("SELECT * FROM cards")) {
-          return { all: mockAll } as any;
-        }
-        return {} as any;
+      resetAllBalances(mockReq as Request, mockRes as Response, mockNext);
+
+      // Verify db changes
+      const updatedCards = db.prepare("SELECT * FROM cards").all() as any[];
+      expect(updatedCards.length).toBe(3);
+      updatedCards.forEach(card => {
+        expect(card.balance).toBe(0);
       });
 
-      resetSingleBalance(mockReq as Request, mockRes as Response, mockNext);
-
-      expect(db.prepare).toHaveBeenCalledWith("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?");
-      expect(mockRun).toHaveBeenCalledWith('2024-01-01T12:00:00.000Z', '12345');
-
-      expect(broadcast).toHaveBeenCalledWith({ type: "CARDS_UPDATE" });
-
+      // Verify response
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        cards: [{ rfid: '12345', balance: 0, isAdmin: false }]
+        cards: expect.arrayContaining([
+          expect.objectContaining({ rfid: '111', balance: 0, isAdmin: false }),
+          expect.objectContaining({ rfid: '222', balance: 0, isAdmin: false }),
+          expect.objectContaining({ rfid: '333', balance: 0, isAdmin: true }),
+        ])
       });
+
+      // Verify broadcast
+      expect(broadcastModule.broadcast).toHaveBeenCalledWith({ type: 'CARDS_UPDATE' });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should properly clean the rfid before updating', () => {
-      mockReq.params = { rfid: '  ABcd 123!@#  ' };
+    it('should pass error to next if a database error occurs', () => {
+      const error = new Error('Database connection failed');
 
-      const mockRun = vi.fn();
-      const mockAll = vi.fn().mockReturnValue([]);
-      vi.mocked(db.prepare).mockImplementation((query: string) => {
-        if (query.includes("UPDATE cards SET balance = 0")) {
-          return { run: mockRun } as any;
-        } else if (query.includes("SELECT * FROM cards")) {
-          return { all: mockAll } as any;
-        }
-        return {} as any;
-      });
-
-      resetSingleBalance(mockReq as Request, mockRes as Response, mockNext);
-
-      expect(mockRun).toHaveBeenCalledWith('2024-01-01T12:00:00.000Z', 'abcd 123!@#');
-    });
-
-    it('should pass error to next if an exception is thrown', () => {
-      mockReq.params = { rfid: '12345' };
-
-      const error = new Error('Database error');
-      vi.mocked(db.prepare).mockImplementationOnce(() => {
+      const spy = vi.spyOn(db, 'prepare').mockImplementationOnce(() => {
         throw error;
       });
 
-      resetSingleBalance(mockReq as Request, mockRes as Response, mockNext);
+      resetAllBalances(mockReq as Request, mockRes as Response, mockNext);
 
+      expect(spy).toHaveBeenCalledWith("UPDATE cards SET balance = 0, lastUpdated = ?");
       expect(mockNext).toHaveBeenCalledWith(error);
       expect(mockRes.json).not.toHaveBeenCalled();
-      expect(broadcast).not.toHaveBeenCalled();
+      expect(broadcastModule.broadcast).not.toHaveBeenCalled();
     });
   });
 });

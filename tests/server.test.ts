@@ -27,9 +27,15 @@ describe('POST /api/menu', () => {
       { id: 1, name: "Test item", description: "Test description", price: 1.0, available: true, category: "Test" }
     ];
 
+    // Login to get a token for admin-restricted routes
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ pin: '0000' });
+    const authToken = loginRes.body.token;
+
     const response = await request(app)
       .post('/api/menu')
-      .set('x-admin-pin', '0000')
+      .set('Authorization', `Bearer ${authToken}`)
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);
