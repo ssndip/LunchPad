@@ -17,6 +17,11 @@ describe('POST /api/menu', () => {
   });
 
   it('should return 500 when database transaction fails', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ pin: '0000' });
+    const token = loginRes.body.token;
+
     // Mock db.transaction to throw an error
     const errorMessage = 'Database transaction failed';
     vi.spyOn(db, 'transaction').mockImplementation(() => {
@@ -31,11 +36,11 @@ describe('POST /api/menu', () => {
     const loginRes = await request(app)
       .post('/api/auth/login')
       .send({ pin: '0000' });
-    const token = loginRes.body.token;
+    const authToken = loginRes.body.token;
 
     const response = await request(app)
       .post('/api/menu')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .send(mockMenuItems);
 
     expect(response.status).toBe(500);

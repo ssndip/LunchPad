@@ -41,7 +41,8 @@ export const appPromise = startServer();
 
 export async function startServer() {
   const app = express();
-  app.set("trust proxy", true); 
+  // Trust only the immediate reverse proxy (e.g., Nginx, Cloudflare) rather than any number of hops
+  app.set("trust proxy", 1);
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
   setWssInstance(wss);
@@ -50,15 +51,6 @@ export async function startServer() {
 
   // CORS Middleware
   app.use(cors());
-
-  // Global Access & Security Middleware
-  // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
-  app.use("/api", (req, res, next) => {
-    // Always allow login/unlock so admins can log in and remote users can authenticate
-    // Always allow init so the kiosk can bootstrap even before authentication
-    if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
-    return globalAccessGuard(req, res, next);
-  });
 
   app.use(helmet({
     contentSecurityPolicy: false, // Allow Vite dev server
@@ -69,6 +61,19 @@ export async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
+  });
+
+  // Apply the rate limiter to all requests
+  app.use(limiter);
+
+  // Global Access & Security Middleware
+  // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
+  app.use("/api", (req, res, next) => {
+    // Always allow login/unlock so admins can log in and remote users can authenticate
+    // Always allow init so the kiosk can bootstrap even before authentication
+    if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
+    return globalAccessGuard(req, res, next);
   });
 
   app.use(express.json({ limit: '500kb' }));

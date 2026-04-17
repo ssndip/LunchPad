@@ -3,6 +3,8 @@ import { loadCategorySettings } from './parserLocalSettings';
 export interface FormatPreset {
   id: string;
   name: string;
+  type?: string;
+  rules?: { find: string; replace: string }[];
   preprocessRules: { find: string; replace: string; isRegex: boolean }[];
   itemCategoryOverrides?: Record<string, string>;
   itemNameOverrides?: Record<string, string>;
@@ -28,7 +30,19 @@ export function getActivePreset(): FormatPreset | null {
   return presets.find(p => p.id === settings.activePresetId) || null;
 }
 
-export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string {
+export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string | any[] {
+  if (preset && preset.type === 'json' && preset.rules && preset.rules.length > 0) {
+    const rule = preset.rules[0];
+    if (rule && rule.replace) {
+      try {
+        const raw = originalText.replace(new RegExp(rule.find, 'gm'), rule.replace);
+        return JSON.parse(raw);
+      } catch {
+        return [];
+      }
+    }
+  }
+
   let text = originalText;
 
   // 1. Replace common non-standard bullet styles

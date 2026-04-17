@@ -1,4 +1,4 @@
-## 2026-04-17 - Hardcoded JWT Secret Removed
-**Vulnerability:** A hardcoded, insecure default string (`"lunchpad-secret-key-123"`) was being used as a fallback for `jwtSecret` when the `JWT_SECRET` environment variable was not set.
-**Learning:** Hardcoded secrets in source code present a major security risk, especially in open-source or exposed codebases. If deployed without configuring the environment variable, attackers could easily forge valid JWTs to impersonate admins or bypass authorization checks.
-**Prevention:** Never provide fallback values for cryptographic secrets in production configurations. Enforce strict checks that throw an initialization error (`throw new Error(...)`) at startup if critical secrets like `JWT_SECRET` are missing from the environment.
+## 2025-02-27 - Express Rate Limit Bypass via trust proxy
+**Vulnerability:** IP-based rate limiting implemented using `express-rate-limit` was easily bypassable because `app.set('trust proxy', true)` was used. This instructed Express to trust the entire `X-Forwarded-For` chain, allowing an attacker to spoof their IP address by simply injecting a fake `X-Forwarded-For` header in their request.
+**Learning:** Setting `trust proxy` to `true` is dangerous when using IP-based security middleware behind a reverse proxy. It trusts all upstream IP addresses, including those supplied by the client.
+**Prevention:** When deployed behind a single reverse proxy (like Nginx or Cloudflare), always set `app.set('trust proxy', 1)`. This tells Express to trust only the immediate upstream proxy, ensuring the rate limiter uses the correct, unforgeable client IP provided by that proxy. Additionally, ensure the rate limit middleware is actually injected into the application using `app.use(limiter)`.
