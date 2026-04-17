@@ -29,6 +29,7 @@ import orderRoutes from "./server/routes/orderRoutes";
 import settingsRoutes from "./server/routes/settingsRoutes";
 import authRoutes from "./server/routes/authRoutes";
 import parserRoutes from "./server/routes/parserRoutes";
+import languageRoutes from "./server/routes/languageRoutes";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 
@@ -115,6 +116,7 @@ export async function startServer() {
   app.use("/api/settings", settingsRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/parser", parserRoutes);
+  app.use("/api/languages", languageRoutes);
   
   // Orders & History (special case for backward compatibility of /api/v1/order)
   app.use("/api", orderRoutes); 

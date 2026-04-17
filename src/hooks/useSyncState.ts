@@ -40,6 +40,28 @@ export function useSyncState() {
     }
   }, [token, setCards]);
 
+  const fetchLanguages = useCallback(async () => {
+    try {
+      const data = await api.fetchLanguages();
+      const allLangs = [...data.static, ...data.custom];
+      useStore.getState().setAvailableLanguages(allLangs);
+      
+      // Also fetch dynamic translation data for each custom language to populate dynamicTranslations
+      const dynamicData: Record<string, any> = {};
+      await Promise.all(data.custom.map(async (l) => {
+        try {
+          const tData = await api.fetchLanguageData(l.code);
+          dynamicData[l.code] = tData;
+        } catch (e) {
+          console.error(`Failed to load translations for ${l.code}`, e);
+        }
+      }));
+      useStore.getState().setDynamicTranslations(dynamicData);
+    } catch (err) {
+      console.error('Failed to fetch languages', err);
+    }
+  }, []);
+
   const fetchInitFallback = useCallback(async () => {
     try {
       const data = await api.fetchInitialState();
@@ -50,7 +72,7 @@ export function useSyncState() {
         setOrderButtonEnabled(data.orderButtonEnabled ?? true);
         setTestModeEnabled(data.testModeEnabled ?? false);
         setMenuVersion(data.menuVersion ?? 1);
-        if (data.systemLanguage) setLang(data.systemLanguage as Language);
+        if (data.systemLanguage) setLang(data.systemLanguage);
         if (data.menuDate) setMenuDate(data.menuDate);
         if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
         setConnectionError(null);
@@ -73,7 +95,7 @@ export function useSyncState() {
       if (data.deliveryFee !== undefined) setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
-      if (data.systemLanguage !== undefined) setLang(data.systemLanguage as Language);
+      if (data.systemLanguage !== undefined) setLang(data.systemLanguage);
       if (data.cards) setCards(data.cards);
       if (data.orders) setOrders(data.orders);
       if (data.menuDate) setMenuDate(data.menuDate);
@@ -81,6 +103,7 @@ export function useSyncState() {
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       setPublicAccessRequired(false);
+      fetchLanguages();
     },
     onMenuUpdate: (data) => {
       setMenu(data.menu);
@@ -97,7 +120,7 @@ export function useSyncState() {
       if (data.deliveryFee !== undefined) setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
-      if (data.systemLanguage !== undefined) setLang(data.systemLanguage as Language);
+      if (data.systemLanguage !== undefined) setLang(data.systemLanguage);
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
     },
     onPWASettingsUpdate: (data: any) => {
@@ -114,6 +137,9 @@ export function useSyncState() {
     onCardsUpdate: () => {
       if (token) fetchCards();
     },
+    onLanguagesUpdated: () => {
+      fetchLanguages();
+    },
     onConnectionError: (msg) => {
       if (msg === 'PUBLIC_ACCESS_REQUIRED') {
         setPublicAccessRequired(true);
@@ -123,6 +149,7 @@ export function useSyncState() {
       }
     },
   }, token || publicAccessToken);
+
 
   // Synchronize Manager Data — Batched for stability
   useEffect(() => {

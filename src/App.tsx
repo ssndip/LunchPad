@@ -10,7 +10,7 @@ import {
   useComputedKioskOpen 
 } from './store/selectors';
 import { useWebSocket } from './hooks/useWebSocket';
-import { translations, Language } from './translations';
+import { translations } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
 import { usePWA } from './hooks/usePWA';
@@ -512,6 +512,17 @@ export default function App() {
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
               bgnEnabled={s.bgnEnabled}
+              availableLanguages={s.availableLanguages}
+              onImportLanguage={async (code, name, data) => {
+                if (s.token) {
+                  await api.importLanguage(s.token, code, name, data);
+                }
+              }}
+              onDeleteLanguage={async (code) => {
+                if (s.token) {
+                  await api.deleteLanguage(s.token, code);
+                }
+              }}
               onInstallApp={() => {
                 if (deferredPrompt && !isIOS) {
                   installApp();

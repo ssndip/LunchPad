@@ -19,6 +19,7 @@ export interface WsHandlers {
   onOrderUpdate: (orders: any[]) => void;
   onNewOrder: (order: any) => void;
   onPWASettingsUpdate: (data: { kioskModeEnabled?: boolean; allowPWAInstall?: boolean }) => void;
+  onLanguagesUpdated: () => void;
   onConnectionError: (msg: string | null) => void;
 }
 
@@ -113,6 +114,10 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
               kioskModeEnabled: message.kioskModeEnabled,
               allowPWAInstall: message.allowPWAInstall
             });
+            break;
+          
+          case 'LANGUAGES_UPDATED':
+            h.onLanguagesUpdated();
             break;
         }
       };

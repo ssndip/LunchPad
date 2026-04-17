@@ -6,7 +6,9 @@ interface AppState {
   // --- View State ---
   mode: 'kiosk' | 'manager';
   activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
-  lang: Language;
+  lang: string;
+  dynamicTranslations: Record<string, any>;
+  availableLanguages: { code: string, name: string }[];
   
   // --- Data ---
   menu: MenuItem[];
@@ -124,6 +126,8 @@ interface AppState {
   setExpandedDate: (v: string | null) => void;
   setDailyDetails: (v: any[]) => void;
   setDailySides: (v: any[]) => void;
+  setDynamicTranslations: (translations: Record<string, any>) => void;
+  setAvailableLanguages: (languages: { code: string, name: string }[]) => void;
   
   // Complex Actions
   loginManager: (pin: string) => void;
@@ -139,7 +143,12 @@ export const useStore = create<AppState>((set) => ({
     return isManager ? 'manager' : 'kiosk';
   })(),
   activeTab: (new URLSearchParams(window.location.search).get('tab') as any) || 'menu',
-  lang: (localStorage.getItem('lang') as Language) || 'bg',
+  lang: localStorage.getItem('lang') || 'bg',
+  dynamicTranslations: {},
+  availableLanguages: [
+    { code: 'en', name: 'English' },
+    { code: 'bg', name: 'Български' }
+  ],
   menu: [],
   orders: [],
   history: [],
@@ -260,6 +269,8 @@ export const useStore = create<AppState>((set) => ({
   setExpandedDate: (expandedDate) => set({ expandedDate }),
   setDailyDetails: (dailyDetails) => set({ dailyDetails }),
   setDailySides: (dailySides) => set({ dailySides }),
+  setDynamicTranslations: (dynamicTranslations) => set({ dynamicTranslations }),
+  setAvailableLanguages: (availableLanguages) => set({ availableLanguages }),
 
   // Complex Actions
   loginManager: (token) => {

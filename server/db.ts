@@ -161,6 +161,12 @@ export const initDb = () => {
     );
 
     CREATE INDEX IF NOT EXISTS idx_parser_logs_timestamp ON parser_logs(timestamp DESC);
+
+    CREATE TABLE IF NOT EXISTS custom_languages (
+      code TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      translations TEXT NOT NULL -- JSON string
+    );
   `);
 };
 

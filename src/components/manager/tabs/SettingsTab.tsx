@@ -20,6 +20,9 @@ interface SettingsTabProps {
   confirmPin: string;
   setConfirmPin: (v: string) => void;
   pinUpdateStatus: 'idle' | 'loading' | 'success' | 'error';
+  availableLanguages: { code: string, name: string }[];
+  onImportLanguage: (code: string, name: string, data: any) => Promise<void>;
+  onDeleteLanguage: (code: string) => Promise<void>;
   onUpdateSettings: (
     access: boolean,
     orderBtn: boolean,
@@ -38,15 +41,55 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
   kioskModeEnabled, allowPWAInstall, bgnEnabled,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
+  availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
 }) => {
   const { t, lang } = useTranslation();
   const [localPublicCode, setLocalPublicCode] = React.useState(publicAccessCode);
   const { canInstall, installApp, isIOS, isAndroid, isStandalone, deferredPrompt } = usePWA();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   React.useEffect(() => {
     setLocalPublicCode(publicAccessCode);
   }, [publicAccessCode]);
+
+  const handleExportTemplate = () => {
+    // We import translations here to get the full object
+    import('../../../translations').then(({ translations }) => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(translations.en, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "translation_template_en.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    });
+  };
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const content = evt.target?.result as string;
+        const data = JSON.parse(content);
+        
+        const code = prompt("Enter language code (e.g. fr, de, es):");
+        if (!code) return;
+        const name = prompt("Enter language name (e.g. French, German):");
+        if (!name) return;
+
+        await onImportLanguage(code, name, data);
+        alert("Language imported successfully!");
+      } catch (err) {
+        alert("Failed to parse language file");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const Toggle = ({
     checked, onChange, color = 'bg-neutral-900', label,
@@ -72,30 +115,30 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       </div>
 
       <div className="max-w-2xl space-y-6 pb-20">
-        {/* Language */}
+        {/* Localization & Info */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-            <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                  <CreditCard className="w-5 h-5 text-neutral-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-neutral-900">{t('settings.enable_bgn')}</p>
-                  <p className="text-[10px] text-neutral-400 font-medium">{t('settings.enable_bgn_desc')}</p>
-                </div>
+          <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <CreditCard className="w-5 h-5 text-neutral-400" />
               </div>
-              <button
-                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                role="switch" aria-checked={bgnEnabled}
-                className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
-              >
-                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
-                  {bgnEnabled && <div className="w-1 h-1 bg-neutral-900 rounded-full" />}
-                </div>
-              </button>
+              <div>
+                <p className="text-sm font-bold text-neutral-900">{t('settings.enable_bgn')}</p>
+                <p className="text-[10px] text-neutral-400 font-medium">{t('settings.enable_bgn_desc')}</p>
+              </div>
             </div>
+            <button
+              onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
+              role="switch" aria-checked={bgnEnabled}
+              className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
+                {bgnEnabled && <div className="w-1 h-1 bg-neutral-900 rounded-full" />}
+              </div>
+            </button>
+          </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><Users className="w-6 h-6 text-neutral-900" /></div>
               <div>
@@ -103,14 +146,45 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.language')}</p>
               </div>
             </div>
-            <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl">
-              {(['en', 'bg'] as Language[]).map((l) => (
-                <button key={l} onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l, bgnEnabled)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${lang === l ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}>
-                  {l.toUpperCase()}
-                </button>
+            <div className="flex flex-wrap items-center justify-end gap-2 max-w-[240px]">
+              {availableLanguages.map((l) => (
+                <div key={l.code} className="group relative">
+                  <button
+                    onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l.code, bgnEnabled)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${lang === l.code ? 'bg-neutral-900 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 hover:text-neutral-700'}`}
+                  >
+                    {l.code.toUpperCase()}
+                  </button>
+                  {l.code !== 'en' && l.code !== 'bg' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Delete language ${l.name}?`)) onDeleteLanguage(l.code);
+                      }}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] shadow-sm"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
+          </div>
+
+          <div className="pt-6 border-t border-neutral-100 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleExportTemplate}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all text-xs"
+            >
+              <Download className="w-4 h-4" /> {t('cards.export_data')} (JSON)
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleFileImport} accept=".json" className="hidden" />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
+            >
+              <Plus className="w-4 h-4" /> {t('cards.import_file')}
+            </button>
           </div>
         </div>
 

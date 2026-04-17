@@ -285,3 +285,35 @@ export const getParserLogs = async (token: string) => {
   if (!res.ok) throw new Error('Failed to fetch parser logs');
   return res.json();
 };
+
+// ─── Language API ────────────────────────────────────────────────────────────
+export const fetchLanguages = async () => {
+  const res = await fetch('/api/languages');
+  if (!res.ok) throw new Error('Failed to fetch languages');
+  return res.json() as Promise<{ static: { code: string, name: string }[], custom: { code: string, name: string }[] }>;
+};
+
+export const fetchLanguageData = async (code: string) => {
+  const res = await fetch(`/api/languages/${code}`);
+  if (!res.ok) throw new Error('Failed to fetch language data');
+  return res.json();
+};
+
+export const importLanguage = async (token: string, code: string, name: string, translations: any) => {
+  const res = await fetch('/api/languages/import', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ code, name, translations }),
+  });
+  if (!res.ok) throw new Error('Failed to import language');
+  return res.json();
+};
+
+export const deleteLanguage = async (token: string, code: string) => {
+  const res = await fetch(`/api/languages/${code}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to delete language');
+  return res.json();
+};
