@@ -269,11 +269,6 @@ export const activateParserProfile = async (token: string, profileId: string) =>
   return res.json();
 };
 
-export const getParserFixtures = async (token: string) => {
-  const res = await fetch('/api/parser/fixtures', { headers: authHeaders(token) });
-  if (!res.ok) throw new Error('Failed to fetch parser fixtures');
-  return res.json();
-};
 
 export const saveParserFixture = async (token: string, fixture: any) => {
   const res = await fetch('/api/parser/fixtures', {
