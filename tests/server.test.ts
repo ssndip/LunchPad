@@ -5,11 +5,15 @@ import { db } from '../server/db';
 
 describe('POST /api/menu', () => {
   let app: any;
+  let token = '';
+
 
   beforeEach(async () => {
     // Make sure we are in test environment to avoid starting the server
     process.env.NODE_ENV = 'test';
     app = await startServer();
+    const loginRes = await request(app).post('/api/auth/login').send({ pin: '0000' });
+    token = loginRes.body.token;
   });
 
   afterEach(() => {

@@ -17,6 +17,27 @@ export const getMenu = (database = db) => {
   }));
 };
 
+let getMenuItemStmt: any = null;
+
+export const getMenuItemById = (database = db, id: number) => {
+  if (!getMenuItemStmt) {
+    getMenuItemStmt = database.prepare("SELECT * FROM menu WHERE id = ?");
+  }
+  const i = getMenuItemStmt.get(id) as any;
+  if (!i) return null;
+
+  return {
+    ...i,
+    available: i.available === 1,
+    requiresSideChoice: i.requiresSideChoice === 1,
+    hasIncludedSide: i.hasIncludedSide === 1,
+    sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
+    tags: i.tags ? JSON.parse(i.tags) : [],
+    packagingFee: i.packagingFee,
+    menuVersion: settings.menuVersion
+  };
+};
+
 export const fetchMenu = (req: Request, res: Response) => {
   res.json(getMenu(db));
 };
