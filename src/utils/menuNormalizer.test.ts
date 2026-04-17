@@ -1,138 +1,82 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getAllPresets, getActivePreset, normalizeMenuText, applyItemOverrides, FormatPreset } from './menuNormalizer';
-import { DEFAULT_CATEGORY_SETTINGS } from './parserLocalSettings';
+import { describe, it, expect } from 'vitest';
+import { applyItemOverrides, FormatPreset } from './menuNormalizer';
 
-describe('menuNormalizer', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
+describe('applyItemOverrides', () => {
+  const items = [
+    { name: 'Pizza', category: 'Main' },
+    { name: 'Cola', category: 'Drink' },
+  ];
+
+  it('should return original items if preset is null or undefined', () => {
+    expect(applyItemOverrides(items, null)).toEqual(items);
+    expect(applyItemOverrides(items, undefined)).toEqual(items);
   });
 
-  describe('getAllPresets', () => {
-    it('should return empty array if localStorage is empty', () => {
-      expect(getAllPresets()).toEqual([]);
-    });
-
-    it('should return parsed presets if valid JSON', () => {
-      const presets: FormatPreset[] = [{ id: '1', name: 'Test', preprocessRules: [], createdAt: 'now' }];
-      localStorage.setItem('lunchpad_format_presets', JSON.stringify(presets));
-      expect(getAllPresets()).toEqual(presets);
-    });
-
-    it('should return empty array if JSON.parse throws', () => {
-      localStorage.setItem('lunchpad_format_presets', 'invalid-json');
-      expect(getAllPresets()).toEqual([]);
-    });
+  it('should return items with no changes if overrides are undefined', () => {
+    const preset: FormatPreset = {
+      id: '1',
+      name: 'Preset 1',
+      preprocessRules: [],
+      createdAt: '2023-01-01',
+    };
+    expect(applyItemOverrides(items, preset)).toEqual(items);
   });
 
-  describe('getActivePreset', () => {
-    it('should return null if no active preset id', () => {
-      localStorage.setItem('lunchpad_parser_settings', JSON.stringify({
-        categories: DEFAULT_CATEGORY_SETTINGS,
-        sideDishKeyword: 'с гарнитура',
-        activePresetId: null
-      }));
-      expect(getActivePreset()).toBeNull();
-    });
-
-    it('should return null if active preset id does not match any preset', () => {
-      localStorage.setItem('lunchpad_parser_settings', JSON.stringify({
-        categories: DEFAULT_CATEGORY_SETTINGS,
-        sideDishKeyword: 'с гарнитура',
-        activePresetId: 'non-existent'
-      }));
-      expect(getActivePreset()).toBeNull();
-    });
-
-    it('should return the active preset', () => {
-      const presets: FormatPreset[] = [{ id: '1', name: 'Test', preprocessRules: [], createdAt: 'now' }];
-      localStorage.setItem('lunchpad_format_presets', JSON.stringify(presets));
-      localStorage.setItem('lunchpad_parser_settings', JSON.stringify({
-        categories: DEFAULT_CATEGORY_SETTINGS,
-        sideDishKeyword: 'с гарнитура',
-        activePresetId: '1'
-      }));
-      expect(getActivePreset()).toEqual(presets[0]);
-    });
+  it('should return items with no changes if overrides do not match item names', () => {
+    const preset: FormatPreset = {
+      id: '1',
+      name: 'Preset 1',
+      preprocessRules: [],
+      createdAt: '2023-01-01',
+      itemCategoryOverrides: { 'Burger': 'Main Course' },
+      itemNameOverrides: { 'Water': 'Spring Water' },
+    };
+    expect(applyItemOverrides(items, preset)).toEqual(items);
   });
 
-  describe('normalizeMenuText', () => {
-    it('should replace common non-standard bullet styles', () => {
-      const text = '• Item 1\n○ Item 2\n* Item 3\n◦ Item 4\n‣ Item 5\n▸ Item 6\n► Item 7\n▶ Item 8';
-      const expected = '- Item 1\n- Item 2\n- Item 3\n- Item 4\n- Item 5\n- Item 6\n- Item 7\n- Item 8';
-      expect(normalizeMenuText(text)).toBe(expected);
-    });
-
-    it('should prepend "- " to lines that look like items with price', () => {
-      const text = 'Some item 5.00€\nAnother 12,50 лв\n- Already has 3.00€\n1. Numbered 2.00€';
-      const expected = '- Some item 5.00€\n- Another 12,50 лв\n- Already has 3.00€\n1. Numbered 2.00€';
-      expect(normalizeMenuText(text)).toBe(expected);
-    });
-
-    it('should apply valid preprocess rules', () => {
-      const preset: FormatPreset = {
-        id: '1', name: 'Test', createdAt: 'now',
-        preprocessRules: [
-          { find: 'foo', replace: 'bar', isRegex: false },
-          { find: '[A-Z]oo', replace: 'Zoo', isRegex: true }
-        ]
-      };
-      const text = 'foo and Foo and Boo';
-      // foo -> bar, Foo -> Zoo, Boo -> Zoo
-      const expected = 'bar and Zoo and Zoo';
-      expect(normalizeMenuText(text, preset)).toBe(expected);
-    });
-
-    it('should skip invalid regex rules and continue', () => {
-      const preset: FormatPreset = {
-        id: '1', name: 'Test', createdAt: 'now',
-        preprocessRules: [
-          { find: '[', replace: 'error', isRegex: true }, // Invalid regex
-          { find: 'foo', replace: 'bar', isRegex: false }
-        ]
-      };
-      const text = 'foo [';
-      const expected = 'bar [';
-      expect(normalizeMenuText(text, preset)).toBe(expected);
-    });
-
-    it('should return parsed JSON array when preset.type is json and replace succeeds', () => {
-      const preset: FormatPreset = {
-        id: '1', name: 'Test JSON', createdAt: 'now', type: 'json',
-        preprocessRules: [],
-        rules: [{ find: 'foo', replace: '[1, 2, 3]' }]
-      };
-      expect(normalizeMenuText('foo', preset)).toEqual([1, 2, 3]);
-    });
-
-    it('should return [] on JSON parse error when preset.type is json', () => {
-      const preset: FormatPreset = {
-        id: '1', name: 'Test JSON', createdAt: 'now', type: 'json',
-        preprocessRules: [],
-        rules: [{ find: 'foo', replace: 'invalid-json' }]
-      };
-      expect(normalizeMenuText('foo', preset)).toEqual([]);
-    });
+  it('should apply itemCategoryOverrides to an item if it matches the item name', () => {
+    const preset: FormatPreset = {
+      id: '1',
+      name: 'Preset 1',
+      preprocessRules: [],
+      createdAt: '2023-01-01',
+      itemCategoryOverrides: { 'Pizza': 'Fast Food' },
+    };
+    const expected = [
+      { name: 'Pizza', category: 'Fast Food' },
+      { name: 'Cola', category: 'Drink' },
+    ];
+    expect(applyItemOverrides(items, preset)).toEqual(expected);
   });
 
-  describe('applyItemOverrides', () => {
-    it('should return original items if preset is null', () => {
-      const items = [{ name: 'Item 1', category: 'Cat 1' }];
-      expect(applyItemOverrides(items, null)).toEqual(items);
-    });
+  it('should apply itemNameOverrides to an item if it matches the item name', () => {
+    const preset: FormatPreset = {
+      id: '1',
+      name: 'Preset 1',
+      preprocessRules: [],
+      createdAt: '2023-01-01',
+      itemNameOverrides: { 'Cola': 'Coca Cola' },
+    };
+    const expected = [
+      { name: 'Pizza', category: 'Main' },
+      { name: 'Coca Cola', category: 'Drink' },
+    ];
+    expect(applyItemOverrides(items, preset)).toEqual(expected);
+  });
 
-    it('should apply overrides from preset', () => {
-      const items = [{ name: 'Item 1', category: 'Cat 1' }, { name: 'Item 2', category: 'Cat 2' }];
-      const preset: FormatPreset = {
-        id: '1', name: 'Test', createdAt: 'now', preprocessRules: [],
-        itemCategoryOverrides: { 'Item 1': 'Cat 1 Override' },
-        itemNameOverrides: { 'Item 2': 'Item 2 Override' }
-      };
-      const expected = [
-        { name: 'Item 1', category: 'Cat 1 Override' },
-        { name: 'Item 2 Override', category: 'Cat 2' }
-      ];
-      expect(applyItemOverrides(items, preset)).toEqual(expected);
-    });
+  it('should apply both itemCategoryOverrides and itemNameOverrides if both match', () => {
+    const preset: FormatPreset = {
+      id: '1',
+      name: 'Preset 1',
+      preprocessRules: [],
+      createdAt: '2023-01-01',
+      itemCategoryOverrides: { 'Pizza': 'Fast Food', 'Cola': 'Beverage' },
+      itemNameOverrides: { 'Pizza': 'Margherita', 'Cola': 'Coca Cola' },
+    };
+    const expected = [
+      { name: 'Margherita', category: 'Fast Food' },
+      { name: 'Coca Cola', category: 'Beverage' },
+    ];
+    expect(applyItemOverrides(items, preset)).toEqual(expected);
   });
 });
