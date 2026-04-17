@@ -126,16 +126,20 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   return (
     <div 
-      className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch"
+      className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch transition-colors duration-500"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* 1. Header — Compact 48px */}
-      <header className="h-12 shrink-0 bg-white border-b border-neutral-200 px-4 flex items-center justify-between z-20 shadow-sm">
+      {/* 1. Header — Compact 48px with Glassmorphism */}
+      <header className="h-12 shrink-0 glass-morphism px-4 flex items-center justify-between z-20 shadow-sm border-b-neutral-200/50">
         <div className="flex items-center gap-3">
-          <h1 className="text-base font-black text-neutral-900 tracking-tight uppercase">
+          <motion.h1 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-base font-black text-neutral-900 tracking-tight uppercase"
+          >
             {t('kiosk.daily_menu')}
-          </h1>
+          </motion.h1>
           <div className="h-4 w-[1px] bg-neutral-200" />
           <span className="text-xs font-bold text-neutral-400 uppercase">
             {displayDate}
@@ -249,17 +253,41 @@ export const KioskView: React.FC<KioskViewProps> = ({
 export const KioskClosed: React.FC<{ onGoToManager: () => void; }> = ({ onGoToManager }) => {
   const { t } = useTranslation();
   return (
-    <div className="h-screen w-screen overflow-hidden bg-neutral-50 flex items-center justify-center p-8 fixed-viewport">
-      <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center max-w-md w-full border border-neutral-100">
-        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <LogOut className="w-10 h-10 text-red-500" />
-        </div>
-        <h1 className="text-3xl font-black text-neutral-900 mb-2 uppercase tracking-tight">{t('kiosk.ordering_closed')}</h1>
-        <p className="text-neutral-400 text-sm">{t('kiosk.check_back_tomorrow')}</p>
-        <button onClick={onGoToManager} className="mt-8 w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all">
+    <div className="h-screen w-screen overflow-hidden bg-white flex items-center justify-center p-8 fixed-viewport">
+      {/* Dynamic background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-100/30 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-100/20 rounded-full blur-[100px]" />
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative z-10 glass-morphism p-12 rounded-[48px] shadow-2xl text-center max-w-md w-full border border-white/60"
+      >
+        <motion.div 
+          initial={{ rotate: -10, scale: 0.8 }}
+          animate={{ rotate: 0, scale: 1 }}
+          transition={{ type: "spring", damping: 10 }}
+          className="w-24 h-24 premium-gradient-neutral rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-neutral-200"
+        >
+          <LogOut className="w-10 h-10 text-white" />
+        </motion.div>
+        
+        <h1 className="text-3xl font-black text-neutral-900 mb-3 uppercase tracking-tighter leading-none">
+          {t('kiosk.ordering_closed')}
+        </h1>
+        <p className="text-neutral-500 font-medium text-sm mb-10 px-4">
+          {t('kiosk.check_back_tomorrow')}
+        </p>
+        
+        <button 
+          onClick={onGoToManager} 
+          className="w-full py-5 premium-gradient-neutral text-white rounded-3xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-neutral-200 hover:scale-[1.02] active:scale-95 transition-all"
+        >
           {t('navigation.admin_login')}
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -38,27 +38,26 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 pb-[180px] md:p-4 md:pb-6">
-      <div className="flex flex-col divide-y divide-neutral-100 bg-white rounded-2xl md:rounded-3xl shadow-sm border border-neutral-100 mb-0 md:mb-6">
+    <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 pb-[180px] md:p-6 md:pb-6">
+      <div className="flex flex-col gap-3 mb-0 md:mb-6">
         {items.filter(i => i.available).map((item) => {
           const isSelected = selectedItemIds.has(item.id);
           const cartItem = selectedItems.find(i => i.id === item.id);
           const needsSide = !!(item.requiresSideChoice || item.hasIncludedSide);
 
           return (
-            <div key={item.id} className={`flex flex-col transition-colors overflow-hidden ${isSelected ? 'bg-neutral-50/50' : 'bg-white hover:bg-neutral-50/30'}`}>
+            <div key={item.id} className={`flex flex-col transition-all overflow-hidden rounded-[24px] md:rounded-[32px] border ${isSelected ? 'glass-morphism border-neutral-900/10 shadow-lg' : 'bg-white border-white hover:border-neutral-200 shadow-sm'} hover-lift no-tap-highlight`}>
               <motion.div
-                whileTap={{ scale: 0.99 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   triggerHaptic('light');
                   if (needsSide) {
-                    // Always expand/collapse picker for side-dish items, don't auto-add to cart
                     setExpandedItemId(expandedItemId === item.id ? null : item.id);
                   } else {
                     onToggle(item);
                   }
                 }}
-                className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 cursor-pointer"
+                className="flex items-center justify-between px-5 py-4 md:px-8 md:py-6 cursor-pointer"
               >
                 <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-4">
                   <div className="shrink-0">

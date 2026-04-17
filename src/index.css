@@ -71,6 +71,52 @@
   .no-tap-highlight {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* --- Glassmorphism & Premium Utilities --- */
+  
+  .glass-morphism {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40;
+  }
+
+  .glass-morphism-dark {
+    @apply bg-neutral-900/80 backdrop-blur-xl border border-white/10;
+  }
+
+  .premium-shadow {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.04),
+      0 4px 6px -2px rgba(0, 0, 0, 0.01),
+      0 20px 25px -5px rgba(0, 0, 0, 0.03);
+  }
+
+  .premium-gradient-violet {
+    @apply bg-gradient-to-br from-violet-600 to-indigo-700;
+  }
+
+  .premium-gradient-neutral {
+    @apply bg-gradient-to-br from-neutral-900 to-neutral-700;
+  }
+
+  /* Micro-animations */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1 active:scale-[0.98];
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Smooth category active pill transition */
+  .active-pill-shadow {
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12);
+  }
 }
 
 html, body, #root {
