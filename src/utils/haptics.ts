@@ -13,7 +13,7 @@ export const triggerHaptic = (type: 'light' | 'medium' | 'heavy' | 'success' | '
         navigator.vibrate(10);
         break;
       case 'medium':
-        navigator.vibrate(25);
+        navigator.vibrate(20);
         break;
       case 'heavy':
         navigator.vibrate(50);
