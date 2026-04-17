@@ -98,8 +98,9 @@ export const initDb = () => {
       value TEXT
     );
 
-    -- ⚡ Bolt: Indexes for O(1) descending sorts
+    -- ⚡ Bolt: Indexes for O(1) descending sorts & filters
     CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date DESC);
     CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
 
     -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
@@ -124,6 +125,8 @@ export const initDb = () => {
       FOREIGN KEY(profileId) REFERENCES parser_profiles(id)
     );
 
+    CREATE INDEX IF NOT EXISTS idx_parser_versions_profile ON parser_versions(profileId);
+
     CREATE TABLE IF NOT EXISTS parser_fixtures (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -139,6 +142,8 @@ export const initDb = () => {
       unmatchedLines TEXT,
       configId TEXT
     );
+
+    CREATE INDEX IF NOT EXISTS idx_parser_logs_timestamp ON parser_logs(timestamp DESC);
   `);
 };
 

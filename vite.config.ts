@@ -17,9 +17,10 @@ export default defineConfig(({mode}) => {
           id: '/lunchpad-kiosk/',
           name: 'LunchPad Kiosk',
           short_name: 'LunchPad',
-          description: 'Smart Kiosk Management System',
+          description: 'Premium Kiosk & Order Management System for modern dining.',
+          categories: ['food', 'productivity', 'business'],
           theme_color: '#171717',
-          background_color: '#F4F4F5',
+          background_color: '#ffffff',
           display: 'standalone',
           orientation: 'any',
           scope: '/',
@@ -44,7 +45,10 @@ export default defineConfig(({mode}) => {
           ]
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -67,7 +71,7 @@ export default defineConfig(({mode}) => {
                 cacheName: 'api-cache',
                 networkTimeoutSeconds: 5,
                 expiration: {
-                  maxEntries: 50,
+                  maxEntries: 100,
                   maxAgeSeconds: 60 * 60 * 24
                 },
                 cacheableResponse: {
