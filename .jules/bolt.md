@@ -1,3 +1,3 @@
-## 2024-05-18 - Fix N+1 Query in SQLite
-**Learning:** Calling `db.prepare` inside a loop within a `db.transaction` for SQLite queries causes severe N+1 compilation overhead (measurably 5x slower), degrading performance when performing batch updates like fee splitting.
-**Action:** Always extract the `db.prepare` statement outside the loop but within the transaction function scope (or before it) to ensure the query is compiled only once.
+## 2025-02-12 - Prevent RegExp Recompilation Inside Parsing Loops
+**Learning:** Calling `new RegExp()` repeatedly inside inner loops of text parsing engines creates significant CPU overhead due to continuous regex compilation. Additionally, `MenuParserEngine` was recompiling patterns globally configured per-instance.
+**Action:** Always precompile and cache `RegExp` instances as class properties or within module scope when configurations or patterns are static for the lifecycle of the object. When using global (`/g`) flags, ensure they are used safely (e.g. within `String.replace`) to avoid `lastIndex` pollution across iterations.

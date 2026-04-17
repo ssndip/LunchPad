@@ -40,6 +40,9 @@ export function isCategoryAutoBox(categoryDisplayName: string): boolean {
  *  3. Legacy fallback: category name contains known BG keywords
  */
 export function isItemAutoBox(item: MenuItem): boolean {
+  if (!item) return false;
+  if (item.packagingFee && item.packagingFee > 0) return true;
+
   const tags = item.tags || [];
 
   // 1. Explicit tag on the item

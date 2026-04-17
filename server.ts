@@ -41,7 +41,8 @@ export const appPromise = startServer();
 
 export async function startServer() {
   const app = express();
-  app.set("trust proxy", true); 
+  // Trust only the immediate reverse proxy (e.g., Nginx, Cloudflare) rather than any number of hops
+  app.set("trust proxy", 1);
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
   setWssInstance(wss);
@@ -69,7 +70,11 @@ export async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
+
+  // Apply the rate limiter to all requests
+  app.use(limiter);
 
   app.use(express.json({ limit: '500kb' }));
 
