@@ -1,6 +1,10 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable must be set");
+}
+
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
   globalAccess: true,
@@ -13,7 +17,7 @@ export const settings = {
   kioskModeEnabled: false,
   allowPWAInstall: true,
   adminPin: process.env.ADMIN_PIN || "0000",
-  jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
+  jwtSecret: process.env.JWT_SECRET
 };
 
 // --- Setters ---

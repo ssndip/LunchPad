@@ -41,7 +41,13 @@ describe('getMenu', () => {
       description: "Desc",
       price: 1.5,
       available: true,
-      category: "Category 1"
+      category: "Category 1",
+      hasIncludedSide: false,
+      menuVersion: 1,
+      packagingFee: undefined,
+      requiresSideChoice: false,
+      sideChoices: [],
+      tags: [],
     });
     expect(result[1]).toEqual({
       id: 2,
@@ -49,7 +55,13 @@ describe('getMenu', () => {
       description: "Desc",
       price: 2.0,
       available: false,
-      category: "Category 2"
+      category: "Category 2",
+      hasIncludedSide: false,
+      menuVersion: 1,
+      packagingFee: undefined,
+      requiresSideChoice: false,
+      sideChoices: [],
+      tags: [],
     });
   });
 
