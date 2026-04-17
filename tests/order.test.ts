@@ -26,7 +26,7 @@ describe('POST /api/v1/order', () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid request: Missing RFID or items');
+    expect(res.body.error).toBe('Invalid request: Missing RFID/PIN or items');
   });
 
   it('should return 400 if items is not an array', async () => {
@@ -35,7 +35,7 @@ describe('POST /api/v1/order', () => {
       .send({ rfid: '1234567890', items: 1 });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid request: Missing RFID or items');
+    expect(res.body.error).toBe('Invalid request: Missing RFID/PIN or items');
   });
 
   it('should return 404 if card is not found', async () => {
@@ -57,6 +57,9 @@ describe('POST /api/v1/order', () => {
   });
 
   it('should process a valid order successfully', async () => {
+    const { setKioskOpen } = await import('../server/controllers/statusController');
+    setKioskOpen(true);
+
     const cardsBeforeRes = await request(app).get('/api/cards').set('Authorization', `Bearer ${authToken}`);
     const userCardBefore = Array.isArray(cardsBeforeRes.body) ? cardsBeforeRes.body.find((c: any) => c.rfid === '1234567890') : null;
     const initialBalance = userCardBefore ? userCardBefore.balance : 0;
@@ -92,7 +95,8 @@ describe('POST /api/v1/order', () => {
   });
 
   it('should return 403 if kiosk is closed', async () => {
-    await request(app).post('/api/status').set('Authorization', `Bearer ${authToken}`).send({ open: false });
+    const { setKioskOpen } = await import('../server/controllers/statusController');
+    setKioskOpen(false);
 
     const res = await request(app)
       .post('/api/v1/order')
@@ -101,7 +105,7 @@ describe('POST /api/v1/order', () => {
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('Kiosk is closed.');
 
-    await request(app).post('/api/status').set('Authorization', `Bearer ${authToken}`).send({ open: true });
+    setKioskOpen(true);
   });
 
   it('should handle rfid string cleaning correctly', async () => {

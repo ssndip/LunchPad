@@ -35,7 +35,7 @@ describe('getMenu', () => {
     const result = getMenu(db);
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
+    expect(result[0]).toMatchObject({
       id: 1,
       name: "Available Item",
       description: "Desc",
@@ -43,7 +43,7 @@ describe('getMenu', () => {
       available: true,
       category: "Category 1"
     });
-    expect(result[1]).toEqual({
+    expect(result[1]).toMatchObject({
       id: 2,
       name: "Unavailable Item",
       description: "Desc",

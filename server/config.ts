@@ -1,5 +1,9 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+const isRandomPin = !process.env.ADMIN_PIN && process.env.NODE_ENV !== 'test';
+const initialPin = process.env.ADMIN_PIN || (process.env.NODE_ENV === 'test' ? "0000" : crypto.randomInt(100000, 1000000).toString());
 
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
@@ -12,7 +16,7 @@ export const settings = {
   deliveryFee: 5.00,
   kioskModeEnabled: false,
   allowPWAInstall: true,
-  adminPin: process.env.ADMIN_PIN || "0000",
+  adminPin: initialPin,
   jwtSecret: process.env.JWT_SECRET || "lunchpad-secret-key-123"
 };
 
@@ -130,6 +134,13 @@ export const initSettings = () => {
 
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
   let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
+
+  if (!adminPinRecord && isRandomPin) {
+    console.log(`\n======================================================`);
+    console.log(`[SECURITY] No ADMIN_PIN provided. A secure random 6-digit PIN has been generated: ${settings.adminPin}`);
+    console.log(`[SECURITY] Please save this PIN and change it in the Settings menu later.`);
+    console.log(`======================================================\n`);
+  }
 
   // Auto-migration: If PIN is not hashed, hash it now
   const isHashed = currentPin.startsWith("$2a$") || currentPin.startsWith("$2b$");
