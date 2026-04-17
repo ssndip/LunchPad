@@ -5,6 +5,7 @@ import { CartItem, MenuItem } from '../../types';
 import { useStore } from '../../store/useStore';
 import { isItemAutoBox } from '../../utils/categoryAutobox';
 import { useResponsive } from '../../hooks/useResponsive';
+import { triggerHaptic } from '../../utils/haptics';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface KioskOrderPanelProps {
@@ -41,11 +42,15 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
   t,
 }) => {
   const packagingFee = useStore(s => s.packagingFee);
+  const bgnEnabled = useStore(s => s.bgnEnabled);
   const { isPhone } = useResponsive();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
-  const bgTotal = (totalPrice * 1.95).toFixed(2);
-  const orderDisabled = !selectedItems.length || (!rfid && !testModeEnabled) || isScanning || !computedKioskOpen;
+  const bgTotal = (totalPrice * 1.95583).toFixed(2);
+  const orderDisabled = !selectedItems.length || 
+    (!rfid && !testModeEnabled && !isPhone) || 
+    isScanning || 
+    !computedKioskOpen;
   const itemCount = selectedItems.reduce((acc, i) => acc + i.quantity, 0);
 
   // Phone Sticky Bottom Layout
@@ -71,21 +76,32 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
           animate={{ 
             height: isExpanded ? '80vh' : 'auto',
           }}
-          transition={{ duration: 0.3, ease: 'circOut' }}
+          transition={{ 
+            type: "spring",
+            damping: 30,
+            stiffness: 400,
+            restDelta: 0.001
+          }}
           drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={0.2}
           onDragEnd={(_, info) => {
-            if (info.offset.y > 100) setIsExpanded(false);
+            if (info.offset.y > 100) {
+              triggerHaptic('light');
+              setIsExpanded(false);
+            }
           }}
-          className={`fixed bottom-0 left-0 right-0 z-[70] overflow-hidden rounded-t-[36px] border-t border-white/60 flex flex-col transition-shadow ${isExpanded ? 'bg-white/85 backdrop-blur-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.2)]' : 'bg-white/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.1)]'}`}
+          className={`fixed bottom-0 left-0 right-0 z-[70] overflow-hidden rounded-t-[36px] border-t border-white/60 flex flex-col transition-shadow ${isExpanded ? 'bg-white shadow-[0_-20px_50px_rgba(0,0,0,0.25)]' : 'bg-white/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.1)]'}`}
         >
           {/* Draggable Handle */}
           <div 
-            className="w-full flex items-center justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
-            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full flex items-center justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+            onClick={() => {
+              triggerHaptic('light');
+              setIsExpanded(!isExpanded);
+            }}
           >
-            <div className="w-12 h-1.5 bg-neutral-200/50 rounded-full" />
+            <div className="w-12 h-1.5 bg-neutral-200 rounded-full" />
           </div>
 
           {/* Expanded Content Area (Item List) */}
@@ -170,30 +186,62 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
               </div>
             </div>
             
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isExpanded && selectedItems.length > 0) {
-                  setIsExpanded(true);
-                  return;
-                }
-                onOrder();
-              }}
-              disabled={orderDisabled}
-              className={`px-5 py-3.5 rounded-2xl font-black text-[11px] whitespace-nowrap uppercase tracking-widest transition-all active:scale-95 flex-1 ${orderDisabled ? 'bg-neutral-100 text-neutral-400' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'}`}
-            >
-              {isScanning ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (!rfid && !testModeEnabled && isExpanded ? t('kiosk.please_scan_card') : (isExpanded ? t('modals.confirm') : t('kiosk.view_cart')))}
-            </button>
-
-            {isExpanded && !orderDisabled && (
+            <div className="flex-1 flex gap-2">
               <button
-                onClick={(e) => { e.stopPropagation(); onPinOrder(); }}
-                className="p-3.5 rounded-2xl bg-white border-2 border-neutral-900 text-neutral-900 active:scale-95 transition-all shadow-sm flex items-center justify-center"
-                title="PIN Order"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isExpanded && selectedItems.length > 0) {
+                    triggerHaptic('medium');
+                    setIsExpanded(true);
+                    return;
+                  }
+                  
+                  // On mobile, if not in test mode and no RFID, trigger PIN order
+                  if (!testModeEnabled && !rfid) {
+                    onPinOrder();
+                  } else {
+                    onOrder();
+                  }
+                }}
+                disabled={isExpanded ? orderDisabled : (!selectedItems.length || isScanning)}
+                className={`flex-1 px-5 py-3.5 rounded-2xl font-black text-[11px] whitespace-nowrap uppercase tracking-widest transition-all active:scale-95 ${
+                  (isExpanded ? orderDisabled : (!selectedItems.length || isScanning)) 
+                    ? 'bg-neutral-100 text-neutral-400' 
+                    : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'
+                }`}
               >
-                <Lock className="w-5 h-5" />
+                {isScanning ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{t('kiosk.processing')}</span>
+                  </div>
+                ) : !isExpanded ? (
+                  t('kiosk.view_cart')
+                ) : testModeEnabled && !rfid ? (
+                  t('kiosk.place_order')
+                ) : rfid ? (
+                  t('modals.confirm')
+                ) : (
+                  t('kiosk.pin_order')
+                )}
               </button>
-            )}
+
+              {/* PIN Code Quick Access (Available even when collapsed) */}
+              {selectedItems.length > 0 && !isScanning && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPinOrder(); }}
+                  disabled={!computedKioskOpen && !testModeEnabled}
+                  className={`p-3.5 rounded-2xl active:scale-95 transition-all shadow-sm flex items-center justify-center ${
+                    !computedKioskOpen && !testModeEnabled
+                    ? 'bg-neutral-50 text-neutral-300 border-neutral-100'
+                    : 'bg-white border-2 border-neutral-900 text-neutral-900'
+                  }`}
+                  title="PIN Order"
+                >
+                  <Lock className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Safe Area Spacer for iOS Home Indicator */}
@@ -291,15 +339,17 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
             <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('orders.total')}</span>
             <span className="text-2xl font-black text-neutral-900 font-mono">€{totalPrice.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-baseline leading-none opacity-60">
-            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{t('kiosk.in_leva')} (×1.95)</span>
-            <div className="flex flex-col items-end">
-              <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}{t('kiosk.currency_bg')}</span>
-              <span className="text-[9px] font-bold text-neutral-400">
-                ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)} {t('menu.items')})
-              </span>
+          {bgnEnabled && (
+            <div className="flex justify-between items-baseline leading-none opacity-60">
+              <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{t('kiosk.in_leva')} (×1.95583)</span>
+              <div className="flex flex-col items-end">
+                <span className="text-sm font-black text-neutral-900 font-mono">{bgTotal}{t('kiosk.currency_bg')}</span>
+                <span className="text-[9px] font-bold text-neutral-400">
+                  ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)} {t('menu.items')})
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Action Button */}
@@ -350,7 +400,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
         </div>
 
         {/* RFID hint if scanning */}
-        {!orderDisabled && !rfid && !testModeEnabled && (
+        {!orderDisabled && !rfid && !testModeEnabled && !isPhone && (
            <div className="flex items-center justify-center gap-1.5 p-2 bg-yellow-50 text-yellow-700 rounded-xl border border-yellow-100">
              <Loader2 className="w-3 h-3 animate-spin" />
              <span className="text-[9px] font-black uppercase tracking-tighter">{t('kiosk.user_history_scan_prompt')}</span>

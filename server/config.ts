@@ -17,6 +17,8 @@ export const settings = {
   kioskModeEnabled: false,
   allowPWAInstall: true,
   systemLanguage: "bg",
+  menuDate: "",
+  bgnEnabled: true,
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET
 };
@@ -31,6 +33,7 @@ export const setDeliveryFeeConfig = (val: number) => settings.deliveryFee = val;
 export const setKioskModeConfig = (val: boolean) => settings.kioskModeEnabled = val;
 export const setAllowPWAInstallConfig = (val: boolean) => settings.allowPWAInstall = val;
 export const setSystemLanguageConfig = (val: string) => settings.systemLanguage = val;
+export const setBgnEnabledConfig = (val: boolean) => settings.bgnEnabled = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -142,6 +145,22 @@ export const initSettings = () => {
     settings.systemLanguage = systemLanguageRecord.value;
   }
 
+  const menuDateRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("menu_date") as { value: string } | undefined;
+  if (!menuDateRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("menu_date", "");
+    settings.menuDate = "";
+  } else {
+    settings.menuDate = menuDateRecord.value || "";
+  }
+  
+  const bgnEnabledRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("bgn_enabled") as { value: string } | undefined;
+  if (!bgnEnabledRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("bgn_enabled", "1");
+    settings.bgnEnabled = true;
+  } else {
+    settings.bgnEnabled = bgnEnabledRecord.value === "1";
+  }
+  
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
   let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
 

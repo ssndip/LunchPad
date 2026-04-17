@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone } from 'lucide-react';
+import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { Language } from '../../translations';
 import { KioskCategorySidebar } from './KioskCategorySidebar';
@@ -40,6 +40,7 @@ interface KioskViewProps {
   onOrder: (rfidOverride?: string, pinOverride?: string) => void;
   onClearCart: () => void;
   onGoToManager: () => void;
+  menuDate?: string;
 }
 
 export const KioskView: React.FC<KioskViewProps> = ({
@@ -66,6 +67,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   onOrder,
   onClearCart,
   onGoToManager,
+  menuDate,
 }) => {
   const { t, lang } = useTranslation();
   const rfidInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +107,24 @@ export const KioskView: React.FC<KioskViewProps> = ({
     return target.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: 'numeric', month: 'short' });
   })();
 
+  const isMenuOutdated = useMemo(() => {
+    if (!menuDate) return false;
+    
+    // Try to parse DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
+    const parts = menuDate.split(/[.\-/]/);
+    if (parts.length !== 3) return false;
+    
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const year = parts[2].length === 2 ? 2000 + parseInt(parts[2], 10) : parseInt(parts[2], 10);
+    
+    const menuD = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return menuD < today;
+  }, [menuDate]);
+
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -142,8 +162,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
           </motion.h1>
           <div className="h-4 w-[1px] bg-neutral-200" />
           <span className="text-xs font-bold text-neutral-400 uppercase">
-            {displayDate}
+            {menuDate || displayDate}
           </span>
+          {isMenuOutdated && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 rounded-full border border-orange-100 shadow-sm animate-pulse">
+              <AlertTriangle className="w-3 h-3 text-orange-600" />
+              <span className="text-[10px] font-black text-orange-600 uppercase tracking-tighter">
+                {t('kiosk.menu_outdated')}
+              </span>
+            </div>
+          )}
           {kioskModeEnabled && isStandalone && (
             <div className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-violet-50 rounded-full border border-violet-100">
               <Smartphone className="w-3 h-3 text-violet-600" />
@@ -171,6 +199,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
           </button>
         </div>
       </header>
+      
+
 
       {/* 2. Main Area — 3 Columns (Responsive) */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">

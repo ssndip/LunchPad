@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, Plus, CreditCard, RotateCcw, Pencil } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { Card } from '../../../types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -12,7 +13,7 @@ interface CardsTabProps {
   onResetCardBalance: (rfid: string) => void;
   onResetAllBalances: () => void;
   onAddManualCard: () => void;
-  onBatchAddCards: () => void;
+  onBatchAddCards: (data?: Card[]) => void;
   // New card form
   newCardRfid: string;
   setNewCardRfid: (v: string) => void;
@@ -61,6 +62,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   const [editingRfid, setEditingRfid] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<Partial<Card>>({});
   const [isSaving, setIsSaving] = React.useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEditing = (card: Card) => {
     setEditingRfid(card.rfid);
@@ -81,9 +83,59 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     setEditValues({});
   };
 
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const data = cards.map(c => ({
+      RFID: c.rfid,
+      Name: c.ownerName,
+      PIN: c.pin || '',
+      IsAdmin: c.isAdmin ? 'Yes' : 'No',
+      Balance: c.balance.toFixed(2)
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cards');
+    
+    XLSX.writeFile(wb, `cards_export_${new Date().toISOString().split('T')[0]}.${format}`);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        const mappedCards: Card[] = data.map((row: any) => ({
+          rfid: String(row.RFID || row.rfid || '').trim(),
+          ownerName: String(row.Name || row.name || row.ownerName || 'User').trim(),
+          pin: row.PIN || row.pin ? String(row.PIN || row.pin).trim() : undefined,
+          isAdmin: row.IsAdmin === 'Yes' || row.isAdmin === true || row.isAdmin === 1,
+          balance: parseFloat(row.Balance || row.balance || '0')
+        })).filter(c => c.rfid);
+
+        if (mappedCards.length > 0) {
+          onBatchAddCards(mappedCards);
+        } else {
+          alert(t('cards.import_error'));
+        }
+      } catch (err) {
+        console.error('Import failed', err);
+        alert(t('cards.import_error'));
+      }
+    };
+    reader.readAsBinaryString(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
     <>
-      {/* Header logic ... (omitted if no change) */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
@@ -92,17 +144,50 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           <p className="text-neutral-500 text-sm md:text-base">{t('cards.management_desc')}</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept=".csv, .xlsx, .xls"
+            className="hidden" 
+          />
+          
+          <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
+            <button
+              onClick={() => handleExport('xlsx')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
+              title={t('cards.export_xlsx')}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">XLSX</span>
+            </button>
+            <button
+              onClick={() => handleExport('csv')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
+              title={t('cards.export_csv')}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all text-xs shadow-lg shadow-indigo-100"
+          >
+            <Upload className="w-4 h-4" /> {t('cards.import_file')}
+          </button>
+
           <button
             onClick={onResetAllBalances}
-            tabIndex={-1}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-sm"
+            className="flex items-center gap-2 px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-xs"
           >
-            <Trash2 className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
+            <RotateCcw className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
           </button>
+          
           <button
             onClick={() => setIsPasteCardsModalOpen(true)}
-            tabIndex={-1}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm"
+            className="flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-xs"
           >
             <Plus className="w-4 h-4" /> {t('cards.import_cards')}
           </button>

@@ -27,6 +27,8 @@ export function useSyncState() {
   const setPublicAccessCode = useStore(s => s.setPublicAccessCode);
   const setConnectionError = useStore(s => s.setConnectionError);
   const setPublicAccessRequired = useStore(s => s.setPublicAccessRequired);
+  const setMenuDate = useStore(s => s.setMenuDate);
+  const setBgnEnabled = useStore(s => s.setBgnEnabled);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -49,6 +51,8 @@ export function useSyncState() {
         setTestModeEnabled(data.testModeEnabled ?? false);
         setMenuVersion(data.menuVersion ?? 1);
         if (data.systemLanguage) setLang(data.systemLanguage as Language);
+        if (data.menuDate) setMenuDate(data.menuDate);
+        if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
         setConnectionError(null);
       }
     } catch {
@@ -72,6 +76,8 @@ export function useSyncState() {
       if (data.systemLanguage !== undefined) setLang(data.systemLanguage as Language);
       if (data.cards) setCards(data.cards);
       if (data.orders) setOrders(data.orders);
+      if (data.menuDate) setMenuDate(data.menuDate);
+      if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       setPublicAccessRequired(false);
@@ -79,6 +85,7 @@ export function useSyncState() {
     onMenuUpdate: (data) => {
       setMenu(data.menu);
       setMenuVersion(data.menuVersion);
+      if (data.menuDate) setMenuDate(data.menuDate);
     },
     onStatusUpdate: (data: any) => {
       if (data.kioskOpen !== undefined) setKioskOpen(data.kioskOpen);
@@ -91,10 +98,18 @@ export function useSyncState() {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
       if (data.systemLanguage !== undefined) setLang(data.systemLanguage as Language);
+      if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
+    },
+    onOrderUpdate: (orders) => {
+      setOrders(orders);
+    },
+    onNewOrder: (order) => {
+      // Instead of manual append, trigger a full fetch to be sure we have the latest
+      if (token) api.fetchOrders(token).then(setOrders).catch(console.error);
     },
     onCardsUpdate: () => {
       if (token) fetchCards();
@@ -109,23 +124,40 @@ export function useSyncState() {
     },
   }, token || publicAccessToken);
 
-  // Synchronize Manager Data
+  // Synchronize Manager Data — Batched for stability
   useEffect(() => {
     if (isManagerLoggedIn && token) {
-      fetchCards();
-      api.fetchOrders(token).then(setOrders).catch(console.error);
-      api.fetchSummaries(token).then(setSummaries).catch(console.error);
-      api.fetchSettings(token).then((res) => {
-        setGlobalAccess(res.globalAccess);
-        setPublicAccessCode(res.publicAccessCode);
-        setOrderButtonEnabled(res.orderButtonEnabled);
-        setTestModeEnabled(res.testModeEnabled);
-        if (res.packagingFee !== undefined) setPackagingFee(res.packagingFee);
-        if (res.deliveryFee !== undefined) setDeliveryFee(res.deliveryFee);
-        if (res.systemLanguage) setLang(res.systemLanguage as Language);
-      }).catch(console.error);
+      const loadManagerData = async () => {
+        try {
+          const [cards, orders, summaries, settings] = await Promise.all([
+            api.fetchCards(token),
+            api.fetchOrders(token),
+            api.fetchSummaries(token),
+            api.fetchSettings(token)
+          ]);
+
+          useStore.setState({
+            cards,
+            orders,
+            summaries,
+            globalAccess: settings.globalAccess,
+            publicAccessCode: settings.publicAccessCode,
+            orderButtonEnabled: settings.orderButtonEnabled,
+            testModeEnabled: settings.testModeEnabled,
+            packagingFee: settings.packagingFee !== undefined ? settings.packagingFee : 0.1,
+            deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : 0,
+            lang: settings.systemLanguage ? settings.systemLanguage as Language : useStore.getState().lang,
+            menuDate: settings.menuDate || useStore.getState().menuDate,
+            bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled
+          });
+        } catch (err) {
+          console.error('[Sync] Failed to load batched manager data', err);
+        }
+      };
+
+      loadManagerData();
     }
-  }, [isManagerLoggedIn, token, fetchCards, setOrders, setSummaries, setGlobalAccess, setPublicAccessCode, setOrderButtonEnabled, setTestModeEnabled, setLang, setPackagingFee, setDeliveryFee]);
+  }, [isManagerLoggedIn, token]);
 
   // Initialization & Fallbacks
   useEffect(() => {

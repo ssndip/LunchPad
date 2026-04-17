@@ -1,10 +1,11 @@
-import { MenuItem } from './index';
+import { MenuItem } from '../types';
 
 export type WsMessageType = 
   | 'INITIAL_STATE'
   | 'PING'
   | 'PONG'
   | 'MENU_UPDATE'
+  | 'NEW_ORDER'
   | 'ORDER_UPDATE'
   | 'STATUS_UPDATE'
   | 'SETTINGS_UPDATE'
@@ -28,6 +29,7 @@ export interface InitialStateMessage extends BaseWsMessage {
   deliveryFee: number;
   packagingFee: number;
   menuVersion: number;
+  menuDate?: string;
   globalAccess: boolean;
   publicAccessCode?: string;
   orderButtonEnabled: boolean;
@@ -50,6 +52,12 @@ export interface MenuUpdateMessage extends BaseWsMessage {
   type: 'MENU_UPDATE';
   menu: MenuItem[];
   version: number;
+  menuDate?: string;
+}
+
+export interface NewOrderMessage extends BaseWsMessage {
+  type: 'NEW_ORDER';
+  data: any;
 }
 
 export interface OrderUpdateMessage extends BaseWsMessage {
@@ -83,6 +91,7 @@ export type WsMessage =
   | PingMessage 
   | PongMessage 
   | MenuUpdateMessage 
+  | NewOrderMessage
   | OrderUpdateMessage 
   | StatusUpdateMessage 
   | SettingsUpdateMessage

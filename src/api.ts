@@ -42,11 +42,11 @@ export const fetchMenu = async (): Promise<MenuItem[]> => {
   return res.json();
 };
 
-export const updateMenu = async (token: string, menu: MenuItem[]): Promise<void> => {
+export const updateMenu = async (token: string, menu: MenuItem[], date?: string): Promise<void> => {
   const res = await fetch('/api/menu', {
     method: 'POST',
     headers: jsonHeaders(token),
-    body: JSON.stringify(menu),
+    body: JSON.stringify({ items: menu, date }),
   });
   if (!res.ok) throw new Error('Failed to update menu');
 };

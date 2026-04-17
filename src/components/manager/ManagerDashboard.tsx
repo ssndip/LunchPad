@@ -48,7 +48,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
   // Desktop Side Navigation
   const DesktopNav = () => (
-    <aside className="hidden lg:flex w-80 bg-white border-r border-neutral-100 flex-col shrink-0 z-20">
+    <aside className="hidden lg:flex w-80 bg-white border-r border-neutral-100 flex-col shrink-0 z-40">
       <div className="p-8 pb-6">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white shadow-md">
@@ -98,7 +98,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
   // Tablet Top Navigation
   const TabletNav = () => (
-    <nav className="hidden md:flex lg:hidden w-full bg-white border-b border-neutral-100 shrink-0 z-20 overflow-x-auto no-scrollbar items-center px-4 h-16">
+    <nav className="hidden md:flex lg:hidden w-full bg-white border-b border-neutral-100 shrink-0 z-40 overflow-x-auto no-scrollbar items-center px-4 h-16">
       <div className="flex items-center gap-2 mr-6 shrink-0">
         <div className="w-8 h-8 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
           <ShoppingBag className="w-4 h-4" />
@@ -172,7 +172,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         <TabletNav />
         
         {/* Top Header Shell (Visible on all breakpoints, but adjusted for mobile) */}
-        <header className="h-16 lg:h-20 bg-white/80 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-between px-4 lg:px-10 z-10 sticky top-0">
+        <header className="h-16 lg:h-20 bg-white/80 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-between px-4 lg:px-10 z-30 sticky top-0">
           <div className="flex items-center gap-2 lg:gap-4">
             <div className="flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-1.5 lg:py-2 bg-white rounded-full border border-neutral-100 shadow-sm">
               <div className={`w-2 h-2 rounded-full animate-pulse ${kioskOpen ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -219,7 +219,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </header>
 
         {/* Dynamic Content — scrolls internally */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 hide-scrollbar-on-mobile">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 hide-scrollbar-on-mobile relative z-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

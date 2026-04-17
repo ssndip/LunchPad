@@ -131,7 +131,9 @@ export async function startServer() {
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage
+      systemLanguage: settings.systemLanguage,
+      bgnEnabled: settings.bgnEnabled,
+      menuDate: settings.menuDate
     });
   });
 
@@ -202,7 +204,9 @@ export async function startServer() {
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage
+      systemLanguage: settings.systemLanguage,
+      bgnEnabled: settings.bgnEnabled,
+      menuDate: settings.menuDate
     } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {

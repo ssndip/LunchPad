@@ -179,7 +179,23 @@ export const resetOrders = (req: Request, res: Response, next: NextFunction) => 
       db.prepare("DELETE FROM orders").run();
       db.prepare("DELETE FROM daily_summaries").run();
     })();
-    broadcast({ type: "INITIAL_STATE", menu: getMenu(db), orders: [], kioskOpen, cards: [] });
+    broadcast({ 
+      type: "INITIAL_STATE", 
+      menu: getMenu(db), 
+      orders: [], 
+      kioskOpen, 
+      cards: [],
+      deliveryFee: settings.deliveryFee,
+      packagingFee: settings.packagingFee,
+      menuVersion: settings.menuVersion,
+      globalAccess: settings.globalAccess,
+      orderButtonEnabled: settings.orderButtonEnabled,
+      testModeEnabled: settings.testModeEnabled,
+      kioskModeEnabled: settings.kioskModeEnabled,
+      allowPWAInstall: settings.allowPWAInstall,
+      systemLanguage: settings.systemLanguage,
+      menuDate: settings.menuDate
+    });
     res.json({ success: true });
   } catch (err: any) {
     next(err);
@@ -187,7 +203,13 @@ export const resetOrders = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const fetchSummaries = (req: Request, res: Response) => {
-  const summaries = db.prepare("SELECT * FROM daily_summaries ORDER BY date DESC LIMIT 30").all();
+  const summaries = db.prepare(`
+    SELECT 
+      ds.*,
+      (SELECT COUNT(DISTINCT rfid) FROM orders WHERE orders.date = ds.date) as uniqueUserCount
+    FROM daily_summaries ds
+    ORDER BY date DESC LIMIT 30
+  `).all();
   res.json(summaries);
 };
 
@@ -327,7 +349,14 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
       return res.status(400).json({ error: "Invalid date or fee amount" });
     }
 
-    // 1. Find all unique RFIDs that ordered on that target date
+    // 1. Check if fee has already been distributed for this date
+    const summary = db.prepare("SELECT feeDistributed FROM daily_summaries WHERE date = ?").get(date) as { feeDistributed: number } | undefined;
+    
+    if (summary && summary.feeDistributed) {
+      return res.status(409).json({ error: "Fee already distributed for this date" });
+    }
+
+    // 2. Find all unique RFIDs that ordered on that target date
     const rows = db.prepare("SELECT DISTINCT rfid FROM orders WHERE date = ?").all(date) as { rfid: string }[];
     
     if (rows.length === 0) {
@@ -339,13 +368,16 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
 
     const now = new Date().toISOString();
 
-    // 2. Perform updates in a transaction
-    const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
+    // 3. Perform updates in a transaction
     db.transaction(() => {
       const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
       for (const row of rows) {
         updateStmt.run(splitFee, now, row.rfid);
       }
+      
+      // Mark as distributed in summary
+      db.prepare("UPDATE daily_summaries SET feeDistributed = 1, distributedAmount = ? WHERE date = ?")
+        .run(fee, date);
     })();
 
     console.log(`[Fee] Distributed ${fee}€ to ${uniqueUsersCount} users (${splitFee}€ each) for ${date}`);

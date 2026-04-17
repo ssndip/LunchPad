@@ -208,6 +208,12 @@ export const translations = {
       recent_orders: "Recent Orders",
       last_order: "Last Order",
       previous_history: "Previous History",
+      export_data: "Export Data",
+      import_file: "Import File",
+      export_csv: "Export CSV",
+      export_xlsx: "Export XLSX",
+      import_success: "Successfully imported {{count}} cards",
+      import_error: "Failed to parse file. Please ensure correct format.",
     },
     orders: {
       order_id: "Order ID",
@@ -230,7 +236,8 @@ export const translations = {
       delivery_fee: "Delivery Fee",
       fee_placeholder: "e.g. 5.00",
       distribute_confirm: "Distribute {{fee}}€ fee among {{count}} users?",
-      distribute_success: "Success! Split {{split}}€ to {{count}} users."
+      distribute_success: "Success! Split {{split}}€ to {{count}} users.",
+      fee_distributed: "Fee Distributed",
     },
     settings: {
       global_access: "Global Access",
@@ -275,6 +282,8 @@ export const translations = {
       remote_access_active: "Web Remote Access Active",
       invalid_code: "Invalid code",
       connection_err: "Connection error",
+      enable_bgn: "Enable BGN (Secondary Informative Price)",
+      enable_bgn_desc: "Show calculated leva prices (1.95583 rate) alongside Euro",
     },
     pwa: {
       title: "PWA & Kiosk Settings",
@@ -367,7 +376,8 @@ export const translations = {
       monthly_history_title: "Monthly History",
       enter_pin: "Enter PIN",
       invalid_pin: "Invalid PIN code",
-      pin_order: "PIN Order"
+      pin_order: "PIN Order",
+      menu_outdated: "Warning: This menu is from a past date!"
     },
     categories: {
       mains: "Main Dishes",
@@ -591,6 +601,12 @@ export const translations = {
       recent_orders: "Последни поръчки",
       last_order: "Последна поръчка",
       previous_history: "Предишна история",
+      export_data: "Експорт на данни",
+      import_file: "Импорт от файл",
+      export_csv: "Експорт в CSV",
+      export_xlsx: "Експорт в XLSX",
+      import_success: "Успешно импортирани {{count}} карти",
+      import_error: "Грешка при четене на файла. Проверете формата.",
     },
     orders: {
       order_id: "ID на поръчка",
@@ -612,8 +628,9 @@ export const translations = {
       distribute_fee: "Разпредели такса",
       delivery_fee: "Такса доставка",
       fee_placeholder: "напр. 5.00",
-      distribute_confirm: "Разпределяне на такса от {{fee}}€ между {{count}} потребители?",
-      distribute_success: "Успешно! Разпределени по {{split}}€ на {{count}} потребители."
+      distribute_confirm: "Разпределение на такса от {{fee}}€ между {{count}} потребители?",
+      distribute_success: "Успех! Разделени {{split}}€ на {{count}} потребители.",
+      fee_distributed: "Таксата е разпределена",
     },
     settings: {
       global_access: "Глобален достъп",
@@ -658,6 +675,8 @@ export const translations = {
       remote_access_active: "Активен отдалечен достъп",
       invalid_code: "Невалиден код",
       connection_err: "Грешка при свързване",
+      enable_bgn: "Активиране на BGN (вторична информативна цена)",
+      enable_bgn_desc: "Показване на изчислени цени в лева (курс 1.95583) заедно с евро",
     },
     pwa: {
       title: "PWA и Терминални Настройки",
@@ -750,7 +769,8 @@ export const translations = {
       monthly_history_title: "История за месеца",
       enter_pin: "Въведете ПИН",
       invalid_pin: "Невалиден ПИН код",
-      pin_order: "Поръчка с ПИН"
+      pin_order: "Поръчка с ПИН",
+      menu_outdated: "Внимание: Това меню е от изминала дата!"
     },
     categories: {
       mains: "ОСНОВНИ ЯСТИЯ",

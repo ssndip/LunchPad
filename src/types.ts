@@ -60,6 +60,9 @@ export interface DailySummary {
   date: string;
   totalSales: number;
   orderCount: number;
+  uniqueUserCount: number;
+  feeDistributed?: boolean;
+  distributedAmount?: number;
 }
 
 // Feature 3: User profile returned by /api/cards/:rfid/profile

@@ -17,6 +17,7 @@ interface AppState {
   cards: Card[];
   summaries: DailySummary[];
   menuVersion: number;
+  menuDate: string;
   
   // --- Kiosk Ordering ---
   selectedItems: CartItem[];
@@ -60,6 +61,7 @@ interface AppState {
   kioskCloseDay: number;
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
+  bgnEnabled: boolean;
   
   // --- PIN Change ---
   newPin: string;
@@ -83,6 +85,7 @@ interface AppState {
   setPackagingFee: (fee: number) => void;
   setSummaries: (summaries: DailySummary[]) => void;
   setMenuVersion: (v: number) => void;
+  setMenuDate: (date: string) => void;
   setSelectedItems: (items: CartItem[]) => void;
   setRfid: (rfid: string) => void;
   setIsScanning: (v: boolean) => void;
@@ -111,6 +114,7 @@ interface AppState {
   setKioskCloseDay: (v: number) => void;
   setKioskModeEnabled: (v: boolean) => void;
   setAllowPWAInstall: (v: boolean) => void;
+  setBgnEnabled: (v: boolean) => void;
   setPublicAccessCode: (v: string) => void;
   setPublicAccessToken: (v: string | null) => void;
   setNewPin: (v: string) => void;
@@ -144,6 +148,7 @@ export const useStore = create<AppState>((set) => ({
   cards: [],
   summaries: [],
   menuVersion: 1,
+  menuDate: '',
   selectedItems: [],
   rfid: '',
   isScanning: false,
@@ -179,6 +184,7 @@ export const useStore = create<AppState>((set) => ({
   kioskCloseDay: 0,
   kioskModeEnabled: false,
   allowPWAInstall: true,
+  bgnEnabled: true,
   newPin: '',
   confirmPin: '',
   pinUpdateStatus: 'idle',
@@ -211,6 +217,7 @@ export const useStore = create<AppState>((set) => ({
   setPackagingFee: (packagingFee) => set({ packagingFee }),
   setSummaries: (summaries) => set({ summaries }),
   setMenuVersion: (menuVersion) => set({ menuVersion }),
+  setMenuDate: (menuDate) => set({ menuDate }),
   setSelectedItems: (selectedItems) => set({ selectedItems }),
   setRfid: (rfid) => set({ rfid }),
   setIsScanning: (isScanning) => set({ isScanning }),
@@ -239,6 +246,7 @@ export const useStore = create<AppState>((set) => ({
   setKioskCloseDay: (kioskCloseDay) => set({ kioskCloseDay }),
   setKioskModeEnabled: (v) => set({ kioskModeEnabled: v }),
   setAllowPWAInstall: (v) => set({ allowPWAInstall: v }),
+  setBgnEnabled: (v) => set({ bgnEnabled: v }),
   setPublicAccessCode: (publicAccessCode) => set({ publicAccessCode }),
   setPublicAccessToken: (token) => {
     if (token) localStorage.setItem('public_access_token', token);

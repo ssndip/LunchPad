@@ -8,7 +8,7 @@ import { WsMessage, InitialStateMessage } from '../types/websocket';
 
 export interface WsHandlers {
   onInitialState: (data: InitialStateMessage) => void;
-  onMenuUpdate: (data: { menu: MenuItem[]; menuVersion: number }) => void;
+  onMenuUpdate: (data: { menu: MenuItem[]; menuVersion: number; menuDate?: string }) => void;
   onStatusUpdate: (data: {
     kioskOpen?: boolean;
     orderButtonEnabled?: boolean;
@@ -16,6 +16,8 @@ export interface WsHandlers {
     globalAccess?: boolean;
   }) => void;
   onCardsUpdate: () => void;
+  onOrderUpdate: (orders: any[]) => void;
+  onNewOrder: (order: any) => void;
   onPWASettingsUpdate: (data: { kioskModeEnabled?: boolean; allowPWAInstall?: boolean }) => void;
   onConnectionError: (msg: string | null) => void;
 }
@@ -75,26 +77,26 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
             break;
 
           case 'INITIAL_STATE':
-            h.onInitialState({
-              menu: message.menu ?? [],
-              orders: message.orders,
-              cards: message.cards,
-              kioskOpen: !!message.kioskOpen,
-              globalAccess: !!message.globalAccess,
-              orderButtonEnabled: !!message.orderButtonEnabled,
-              testModeEnabled: !!message.testModeEnabled,
-              menuVersion: message.menuVersion ?? 1,
-            } as any);
+            h.onInitialState(message);
             break;
 
           case 'MENU_UPDATE':
             h.onMenuUpdate({ 
               menu: message.menu, 
-              menuVersion: message.version 
+              menuVersion: message.version,
+              menuDate: message.menuDate
             });
             break;
 
-          case 'CARDS_UPDATE' as any: // Keep for backward compatibility or future use
+          case 'NEW_ORDER':
+            h.onNewOrder(message.data);
+            break;
+
+          case 'ORDER_UPDATE':
+            h.onOrderUpdate(message.orders);
+            break;
+
+          case 'CARDS_UPDATE' as any: 
             h.onCardsUpdate();
             break;
 

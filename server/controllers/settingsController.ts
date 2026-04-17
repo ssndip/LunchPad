@@ -12,6 +12,7 @@ import {
   setKioskModeConfig,
   setAllowPWAInstallConfig,
   setSystemLanguageConfig,
+  setBgnEnabledConfig,
   hashAndSetAdminPin
 } from "../config";
 import { globalAccessGuard } from "../middleware/auth";
@@ -27,7 +28,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     deliveryFee: settings.deliveryFee,
     kioskModeEnabled: settings.kioskModeEnabled,
     allowPWAInstall: settings.allowPWAInstall,
-    systemLanguage: settings.systemLanguage
+    systemLanguage: settings.systemLanguage,
+    bgnEnabled: settings.bgnEnabled
   });
 };
 
@@ -36,7 +38,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
     const { 
       globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
-      systemLanguage 
+      systemLanguage, bgnEnabled 
     } = req.body;
     
     if (globalAccess !== undefined) {
@@ -108,6 +110,13 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setSystemLanguageConfig(systemLanguage);
       broadcast({ type: "SETTINGS_UPDATE", settings: { systemLanguage } as any });
     }
+    
+    if (bgnEnabled !== undefined) {
+      if (typeof bgnEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for bgnEnabled" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("bgn_enabled", bgnEnabled ? "1" : "0");
+      setBgnEnabledConfig(bgnEnabled);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { bgnEnabled } as any });
+    }
 
     res.json({ 
       success: true, 
@@ -119,7 +128,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       deliveryFee: settings.deliveryFee,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage
+      systemLanguage: settings.systemLanguage,
+      bgnEnabled: settings.bgnEnabled
     });
   } catch (err: any) {
     next(err);

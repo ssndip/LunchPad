@@ -14,7 +14,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ onNeedInstru
   const { canInstall, installApp, isStandalone, isIOS, isAndroid, deferredPrompt } = usePWA();
   const [dismissed, setDismissed] = React.useState(false);
 
-  if (isStandalone || !canInstall || dismissed) return null;
+  if (isStandalone || !canInstall || dismissed || (!isIOS && !isAndroid)) return null;
 
   const handleInstall = () => {
     if (isIOS || (isAndroid && !deferredPrompt)) {

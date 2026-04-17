@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share } from 'lucide-react';
+import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard } from 'lucide-react';
 import { Language } from '../../../translations';
 import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
@@ -14,6 +14,7 @@ interface SettingsTabProps {
   testModeEnabled: boolean;
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
+  bgnEnabled: boolean;
   newPin: string;
   setNewPin: (v: string) => void;
   confirmPin: string;
@@ -27,6 +28,7 @@ interface SettingsTabProps {
     kioskMode?: boolean,
     allowPwa?: boolean,
     systemLanguage?: string,
+    bgnEnabled?: boolean,
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -34,7 +36,7 @@ interface SettingsTabProps {
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
-  kioskModeEnabled, allowPWAInstall,
+  kioskModeEnabled, allowPWAInstall, bgnEnabled,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   onUpdateSettings, onUpdatePin, onInstallApp,
 }) => {
@@ -72,6 +74,27 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       <div className="max-w-2xl space-y-6 pb-20">
         {/* Language */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+            <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                  <CreditCard className="w-5 h-5 text-neutral-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-neutral-900">{t('settings.enable_bgn')}</p>
+                  <p className="text-[10px] text-neutral-400 font-medium">{t('settings.enable_bgn_desc')}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
+                role="switch" aria-checked={bgnEnabled}
+                className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
+              >
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
+                  {bgnEnabled && <div className="w-1 h-1 bg-neutral-900 rounded-full" />}
+                </div>
+              </button>
+            </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><Users className="w-6 h-6 text-neutral-900" /></div>
@@ -82,7 +105,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl">
               {(['en', 'bg'] as Language[]).map((l) => (
-                <button key={l} onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l)}
+                <button key={l} onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l, bgnEnabled)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${lang === l ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}>
                   {l.toUpperCase()}
                 </button>
@@ -109,7 +132,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={kioskModeEnabled} 
-                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, !kioskModeEnabled, allowPWAInstall)} 
+                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Kiosk Mode" 
               />
@@ -122,13 +145,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={allowPWAInstall} 
-                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, !allowPWAInstall)} 
+                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Allow Install" 
               />
             </div>
 
-            {allowPWAInstall && !isStandalone && (
+            {allowPWAInstall && !isStandalone && (isIOS || isAndroid) && (
               <div className="pt-6 border-t border-neutral-100">
                 {(isIOS || (isAndroid && !deferredPrompt)) ? (
                   <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100">
@@ -170,7 +193,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.global_access_desc')}</p>
               </div>
             </div>
-            <Toggle checked={globalAccess} onChange={() => onUpdateSettings(!globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall)} label="Toggle Global Access" />
+            <Toggle checked={globalAccess} onChange={() => onUpdateSettings(!globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Global Access" />
           </div>
           <div className="p-5 bg-neutral-50 rounded-3xl border border-neutral-100">
             <div className="flex items-start gap-3">
@@ -190,7 +213,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm"
               />
               <button
-                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, localPublicCode, kioskModeEnabled, allowPWAInstall)}
+                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, localPublicCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)}
                 disabled={localPublicCode === publicAccessCode}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
               >
@@ -211,7 +234,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.ordering_desc')}</p>
               </div>
             </div>
-            <Toggle checked={orderButtonEnabled} onChange={() => onUpdateSettings(globalAccess, !orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall)} label="Toggle Ordering" />
+            <Toggle checked={orderButtonEnabled} onChange={() => onUpdateSettings(globalAccess, !orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Ordering" />
           </div>
         </div>
 
@@ -225,7 +248,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.test_mode_desc')}</p>
               </div>
             </div>
-            <Toggle checked={testModeEnabled} onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, !testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall)} label="Toggle Test Mode" color="bg-indigo-600" />
+            <Toggle checked={testModeEnabled} onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, !testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Test Mode" color="bg-indigo-600" />
           </div>
         </div>
 

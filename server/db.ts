@@ -63,6 +63,21 @@ export const initDb = () => {
       // Column likely already exists
     }
   });
+  
+  // Migration for daily_summaries table
+  const summaryMigrations = [
+    "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0",
+    "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0"
+  ];
+
+  summaryMigrations.forEach(migration => {
+    try {
+      db.exec(migration);
+      console.log(`[DB] Migration successful: ${migration.split('ADD COLUMN ')[1]}`);
+    } catch (e) {
+      // Column likely already exists
+    }
+  });
 
   console.log("[DB] Menu table schema verification complete");
 
@@ -90,7 +105,9 @@ export const initDb = () => {
     CREATE TABLE IF NOT EXISTS daily_summaries (
       date TEXT PRIMARY KEY,
       totalSales REAL DEFAULT 0,
-      orderCount INTEGER DEFAULT 0
+      orderCount INTEGER DEFAULT 0,
+      feeDistributed INTEGER DEFAULT 0,
+      distributedAmount REAL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (

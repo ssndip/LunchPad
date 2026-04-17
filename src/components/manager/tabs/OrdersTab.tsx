@@ -38,7 +38,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     // Feature 10: Custom confirmation modal
     confirm({
       title: t('orders.distribute_fee'),
-      message: t('orders.distribute_confirm').replace('{{fee}}', fee.toString()).replace('{{count}}', summaries.find(s => s.date === date)?.orderCount || '0'),
+      message: t('orders.distribute_confirm').replace('{{fee}}', fee.toString()).replace('{{count}}', (summaries.find(s => s.date === date)?.uniqueUserCount || 0).toString()),
       onConfirm: async () => {
         setDistributing(date);
         try {
@@ -102,9 +102,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       </div>
                     </td>
                     <td className="p-6 text-center">
-                      <span className="px-4 py-1.5 bg-neutral-100 rounded-full font-mono font-bold text-neutral-900 group-hover:bg-neutral-200 transition-colors">
-                        {Number(summary.orderCount) || 0}
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span className="px-4 py-1.5 bg-neutral-100 rounded-full font-mono font-bold text-neutral-900 group-hover:bg-neutral-200 transition-colors">
+                          {Number(summary.uniqueUserCount) || 0}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider mt-1">
+                          {Number(summary.orderCount) || 0} {t('orders.quantity').toLowerCase()}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-6 text-right font-mono font-bold text-neutral-900">
                       €{(Number(summary?.totalSales) || 0).toFixed(2)}
@@ -152,17 +157,23 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                     const fee = parseFloat(dailyFees[summary.date] || globalDeliveryFee.toString());
                                     handleDistributeFee(summary.date, fee); 
                                   }}
-                                  disabled={!!distributing}
-                                  className="h-full flex items-center gap-2 px-6 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
+                                  disabled={!!distributing || !!summary.feeDistributed}
+                                  className={`h-full flex items-center gap-2 px-6 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg ${
+                                    summary.feeDistributed 
+                                      ? 'bg-green-100 text-green-700 shadow-green-50 pointer-events-none' 
+                                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 disabled:opacity-50'
+                                  }`}
                                 >
                                   {distributing === summary.date ? (
                                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
                                       <Truck className="w-3.5 h-3.5" />
                                     </motion.div>
+                                  ) : summary.feeDistributed ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
                                   ) : (
                                     <Truck className="w-3.5 h-3.5" />
                                   )}
-                                  {t('orders.distribute_fee')}
+                                  {summary.feeDistributed ? `${t('orders.fee_distributed')} (€${Number(summary.distributedAmount).toFixed(2)})` : t('orders.distribute_fee')}
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onCopySummary(summary.date, Number(summary.totalSales) || 0); }}

@@ -30,15 +30,14 @@ export function getActivePreset(): FormatPreset | null {
   return presets.find(p => p.id === settings.activePresetId) || null;
 }
 
-export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string | any[] {
+export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string {
   if (preset && preset.type === 'json' && preset.rules && preset.rules.length > 0) {
     const rule = preset.rules[0];
     if (rule && rule.replace) {
       try {
-        const raw = originalText.replace(new RegExp(rule.find, 'gm'), rule.replace);
-        return JSON.parse(raw);
+        return originalText.replace(new RegExp(rule.find, 'gm'), rule.replace);
       } catch {
-        return [];
+        return originalText;
       }
     }
   }

@@ -10,7 +10,7 @@ import {
   useComputedKioskOpen 
 } from './store/selectors';
 import { useWebSocket } from './hooks/useWebSocket';
-import { translations } from './translations';
+import { translations, Language } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
 import { usePWA } from './hooks/usePWA';
@@ -53,7 +53,7 @@ export default function App() {
   const [confirmConfig, setConfirmConfig] = React.useState<any | null>(null);
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
 
-  // Sync mode with URL view param
+// Sync mode with URL view param
   useEffect(() => {
     const handleUrlChange = () => {
       const search = new URLSearchParams(window.location.search);
@@ -69,6 +69,17 @@ export default function App() {
     handleUrlChange();
     return () => window.removeEventListener('popstate', handleUrlChange);
   }, [s.setMode]);
+
+  // Reset modals on tab/mode change
+  useEffect(() => {
+    setConfirmConfig(null);
+    setShowPWAInstructions(false);
+    
+    // Feature: Force refresh cards when entering card management
+    if (s.mode === 'manager' && s.activeTab === 'cards') {
+      fetchCards();
+    }
+  }, [s.mode, s.activeTab, fetchCards]);
 
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
@@ -145,11 +156,12 @@ export default function App() {
   };
 
   // ─── Manager Handlers ──────────────────────────────────────────────────────
-  const handleApplyMenu = async (items: MenuItem[]) => {
+  const handleApplyMenu = async (items: MenuItem[], date?: string) => {
     if (!s.token) return;
     try {
-      await api.updateMenu(s.token, items);
+      await api.updateMenu(s.token, items, date);
       s.setMenu(items);
+      if (date) s.setMenuDate(date);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -173,7 +185,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kioskMode?: boolean, allowPwa?: boolean, systemLang?: string) => {
+  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean) => {
     if (!s.token) return;
     try {
       const update = {
@@ -181,18 +193,20 @@ export default function App() {
         orderButtonEnabled: orderBtn,
         testModeEnabled: test ?? s.testModeEnabled,
         publicAccessCode: publicCode ?? s.publicAccessCode,
-        kioskModeEnabled: kioskMode ?? s.kioskModeEnabled,
+        kioskModeEnabled: kiosk ?? s.kioskModeEnabled,
         allowPWAInstall: allowPwa ?? s.allowPWAInstall,
         systemLanguage: systemLang,
+        bgnEnabled: bgn ?? s.bgnEnabled,
       };
       await api.updateSettings(s.token, update);
       s.setGlobalAccess(access);
       s.setOrderButtonEnabled(orderBtn);
       if (test !== undefined) s.setTestModeEnabled(test);
       if (publicCode !== undefined) s.setPublicAccessCode(publicCode);
-      if (kioskMode !== undefined) s.setKioskModeEnabled(kioskMode);
+      if (kiosk !== undefined) s.setKioskModeEnabled(kiosk);
       if (allowPwa !== undefined) s.setAllowPWAInstall(allowPwa);
       if (systemLang) s.setLang(systemLang as Language);
+      if (bgn !== undefined) s.setBgnEnabled(bgn);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -233,6 +247,8 @@ export default function App() {
     }
   };
 
+
+
   // ─── Render Logic ──────────────────────────────────────────────────────────
   if (s.publicAccessRequired) {
     return <PublicAccessCodeEntry onUnlock={handleUnlock} />;
@@ -241,15 +257,17 @@ export default function App() {
   if (s.mode === 'manager') {
     if (!s.isManagerLoggedIn) {
       return (
-        <ManagerLogin
-          onLogin={(pin) => s.loginManager(pin)}
-          onBack={() => { window.location.href = window.location.origin + '/'; }}
-        />
+        <div key="manager-login-view">
+          <ManagerLogin
+            onLogin={(pin) => s.loginManager(pin)}
+            onBack={() => { window.location.href = window.location.origin + '/'; }}
+          />
+        </div>
       );
     }
 
     return (
-      <div className="min-h-screen bg-neutral-900">
+      <div key="manager-dashboard-view" className="min-h-screen bg-neutral-900">
         <ManagerDashboard
           activeTab={s.activeTab}
           onTabChange={s.setActiveTab}
@@ -430,18 +448,34 @@ export default function App() {
                   fetchCards();
                 }
               }}
-              onBatchAddCards={async () => {
-                if (s.token && s.pasteCardsText) {
-                  const lines = s.pasteCardsText.split('\n');
-                  const cardsToBatch: any[] = lines.map(line => {
-                    const [rfid, ownerName, pin] = line.trim().split(',').map(part => part.trim());
-                    if (!rfid) return null;
-                    return { rfid, ownerName: ownerName || 'User', balance: 0, isAdmin: false, pin: pin || undefined };
-                  }).filter(Boolean);
-                  await api.batchAddCards(s.token, cardsToBatch);
-                  s.setIsPasteCardsModalOpen(false);
-                  s.setPasteCardsText('');
-                  fetchCards();
+              onBatchAddCards={async (data?: Card[]) => {
+                if (s.token) {
+                  let cardsToBatch: any[] = [];
+                  if (data) {
+                    cardsToBatch = data;
+                  } else if (s.pasteCardsText) {
+                    const lines = s.pasteCardsText.split('\n');
+                    cardsToBatch = lines.map(line => {
+                      // Support both comma-separated and space-separated for flexibility
+                      const parts = line.includes(',') ? line.split(',') : line.trim().split(/\s+/);
+                      const [rfid, ownerName, pin] = parts.map(part => part?.trim());
+                      if (!rfid) return null;
+                      return { 
+                        rfid, 
+                        ownerName: ownerName || 'User', 
+                        balance: 0, 
+                        isAdmin: false, 
+                        pin: pin || undefined 
+                      };
+                    }).filter(Boolean);
+                  }
+                  
+                  if (cardsToBatch.length > 0) {
+                    await api.batchAddCards(s.token, cardsToBatch);
+                    s.setIsPasteCardsModalOpen(false);
+                    s.setPasteCardsText('');
+                    fetchCards();
+                  }
                 }
               }}
               newCardRfid={s.newCardRfid}
@@ -463,8 +497,6 @@ export default function App() {
           )}
           {s.activeTab === 'settings' && (
             <SettingsTab
-              lang={s.lang}
-              setLang={s.setLang}
               globalAccess={s.globalAccess}
               publicAccessCode={s.publicAccessCode}
               orderButtonEnabled={s.orderButtonEnabled}
@@ -474,9 +506,12 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings, systemLang) => {
-                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings, systemLang);
+              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings, systemLang, bgn) => {
+                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings, systemLang, bgn);
               }}
+              kioskModeEnabled={s.kioskModeEnabled}
+              allowPWAInstall={s.allowPWAInstall}
+              bgnEnabled={s.bgnEnabled}
               onInstallApp={() => {
                 if (deferredPrompt && !isIOS) {
                   installApp();
@@ -484,8 +519,6 @@ export default function App() {
                   setShowPWAInstructions(true);
                 }
               }}
-              kioskModeEnabled={s.kioskModeEnabled}
-              allowPWAInstall={s.allowPWAInstall}
               onUpdatePin={async () => {
                 if (s.token && s.newPin === s.confirmPin) {
                   s.setPinUpdateStatus('loading');
@@ -585,101 +618,105 @@ export default function App() {
   }
 
   return (
-    <PullToRefresh>
-      <KioskView
-        menu={s.menu}
-        groupedMenu={groupedMenu}
-        sideItems={sideItems}
-        selectedItems={s.selectedItems}
-        selectedItemIds={selectedItemIds}
-        totalPrice={totalPrice}
-        rfid={s.rfid}
-        setRfid={s.setRfid}
-        isScanning={s.isScanning}
-        showSuccess={s.showSuccess}
-        error={s.error}
-        connectionError={s.connectionError}
-        orderButtonEnabled={s.orderButtonEnabled}
-        testModeEnabled={s.testModeEnabled}
-        computedKioskOpen={computedKioskOpen}
-        kioskAutoTiming={s.kioskAutoTiming}
-        kioskCloseTime={s.kioskCloseTime}
-        lang={s.lang}
-        onToggleItem={handleToggleItem}
-        onAddWithSide={handleAddWithSide}
-        onUpdateQuantity={s.updateItemQuantity}
-        onOrder={handleOrder}
-        onClearCart={s.resetCart}
-        onGoToManager={() => { 
-          const url = new URL(window.location.href);
-          url.searchParams.set('view', 'manager');
-          window.history.pushState({}, '', url);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }}
-      />
-      <PwaInstallBanner onNeedInstructions={() => setShowPWAInstructions(true)} />
+    <div key="kiosk-main-view">
+      <PullToRefresh>
+        <KioskView
+          menu={s.menu}
+          groupedMenu={groupedMenu}
+          sideItems={sideItems}
+          selectedItems={s.selectedItems}
+          selectedItemIds={selectedItemIds}
+          totalPrice={totalPrice}
+          rfid={s.rfid}
+          setRfid={s.setRfid}
+          isScanning={s.isScanning}
+          showSuccess={s.showSuccess}
+          error={s.error}
+          connectionError={s.connectionError}
+          orderButtonEnabled={s.orderButtonEnabled}
+          testModeEnabled={s.testModeEnabled}
+          computedKioskOpen={computedKioskOpen}
+          kioskAutoTiming={s.kioskAutoTiming}
+          kioskCloseTime={s.kioskCloseTime}
+          lang={s.lang}
+          onToggleItem={handleToggleItem}
+          onAddWithSide={handleAddWithSide}
+          onUpdateQuantity={s.updateItemQuantity}
+          onOrder={handleOrder}
+          onClearCart={s.resetCart}
+          menuDate={s.menuDate}
+          onGoToManager={() => { 
+            const url = new URL(window.location.href);
+            url.searchParams.set('view', 'manager');
+            window.history.pushState({}, '', url);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
+        />
+        <PwaInstallBanner onNeedInstructions={() => setShowPWAInstructions(true)} />
 
-      <AnimatePresence>
-        {showPWAInstructions && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-neutral-900/80 backdrop-blur-xl flex items-center justify-center p-6"
-          >
+        <AnimatePresence>
+          {showPWAInstructions && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] w-full max-w-sm overflow-hidden shadow-2xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-neutral-900/80 backdrop-blur-xl flex items-center justify-center p-6"
             >
-              <div className="p-8 border-b border-neutral-100 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-                    <Smartphone className="w-6 h-6 text-violet-600" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-[40px] w-full max-w-sm overflow-hidden shadow-2xl"
+              >
+                <div className="p-8 border-b border-neutral-100 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                      <Smartphone className="w-6 h-6 text-violet-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-neutral-900">{t('pwa.how_to_install')}</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-neutral-900">{t('pwa.how_to_install')}</h3>
-                </div>
-                <button
-                  onClick={() => setShowPWAInstructions(false)}
-                  className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="p-8 space-y-6">
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 1</div>
-                  <p className="text-sm font-medium text-neutral-700">
-                    {isIOS ? t('pwa.ios_share') : t('pwa.android_menu')}
-                  </p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 2</div>
-                  <p className="text-sm font-medium text-neutral-700">
-                    {isIOS ? t('pwa.ios_add') : t('pwa.android_install')}
-                  </p>
+                  <button
+                    onClick={() => setShowPWAInstructions(false)}
+                    className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
                 
-                <div className="pt-4 p-4 bg-violet-50 rounded-2xl flex items-center gap-3">
-                  <Info className="w-5 h-5 text-violet-500" />
-                  <p className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">{t('pwa.install_description')}</p>
+                <div className="p-8 space-y-6">
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 1</div>
+                    <p className="text-sm font-medium text-neutral-700">
+                      {isIOS ? t('pwa.ios_share') : t('pwa.android_menu')}
+                    </p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{t('pwa.step')} 2</div>
+                    <p className="text-sm font-medium text-neutral-700">
+                      {isIOS ? t('pwa.ios_add') : t('pwa.android_install')}
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4 p-4 bg-violet-50 rounded-2xl flex items-center gap-3">
+                    <Info className="w-5 h-5 text-violet-500" />
+                    <p className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">{t('pwa.install_description')}</p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="p-8 pt-0">
-                <button
-                  onClick={() => setShowPWAInstructions(false)}
-                  className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase tracking-widest text-sm"
-                >
-                  {t('menu.OK')}
-                </button>
-              </div>
+                
+                <div className="p-8 pt-0">
+                  <button
+                    onClick={() => setShowPWAInstructions(false)}
+                    className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase tracking-widest text-sm"
+                  >
+                    {t('menu.OK')}
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </PullToRefresh>
+          )}
+        </AnimatePresence>
+      </PullToRefresh>
+    </div>
   );
 }
+

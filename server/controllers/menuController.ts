@@ -13,7 +13,8 @@ export const getMenu = (database = db) => {
     sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
     tags: i.tags ? JSON.parse(i.tags) : [],
     packagingFee: i.packagingFee,
-    menuVersion: settings.menuVersion
+    menuVersion: settings.menuVersion,
+    menuDate: settings.menuDate
   }));
 };
 
@@ -34,7 +35,8 @@ export const getMenuItemById = (database = db, id: number) => {
     sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
     tags: i.tags ? JSON.parse(i.tags) : [],
     packagingFee: i.packagingFee,
-    menuVersion: settings.menuVersion
+    menuVersion: settings.menuVersion,
+    menuDate: settings.menuDate
   };
 };
 
@@ -44,12 +46,21 @@ export const fetchMenu = (req: Request, res: Response) => {
 
 export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const items = req.body;
-    if (!Array.isArray(items)) {
+    const { items, date } = req.body;
+    const finalItems = Array.isArray(items) ? items : (Array.isArray(req.body) ? req.body : null);
+    
+    if (!finalItems) {
       return res.status(400).json({ error: "Expected an array of menu items" });
     }
-    // Validation (omitted for brevity in this replace block, usually keep it)
+
     db.transaction(() => {
+      // Save menuDate if provided
+      if (date !== undefined) {
+        settings.menuDate = date || "";
+        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+          .run("menu_date", settings.menuDate);
+      }
+
       db.prepare("DELETE FROM menu").run();
       const insert = db.prepare(`
         INSERT INTO menu (
@@ -58,7 +69,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
           tags, packagingFee
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      items.forEach((i: any) => insert.run(
+      finalItems.forEach((i: any) => insert.run(
         i.id, 
         i.name, 
         i.description, 
@@ -75,8 +86,8 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
     })();
     const newVersion = incrementMenuVersion();
     const updated = getMenu(db);
-    broadcast({ type: "MENU_UPDATE", menu: updated, version: newVersion });
-    res.json({ success: true, menu: updated, menuVersion: newVersion });
+    broadcast({ type: "MENU_UPDATE", menu: updated, version: newVersion, menuDate: settings.menuDate });
+    res.json({ success: true, menu: updated, menuVersion: newVersion, menuDate: settings.menuDate });
   } catch (err: any) {
     next(err);
   }

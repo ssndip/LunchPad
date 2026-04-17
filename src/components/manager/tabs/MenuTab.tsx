@@ -18,7 +18,7 @@ interface MenuTabProps {
   onUpdateItem: (id: number, field: keyof MenuItem, value: unknown) => void;
   onRemoveItem: (id: number) => void;
   onDeleteAll: () => void;
-  onApplyMenu: (items: MenuItem[]) => void;
+  onApplyMenu: (items: MenuItem[], date?: string) => void;
   confirm: (config: any) => void;
 }
 
@@ -168,7 +168,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         title: t('modals.confirm') || 'Confirm',
         message: t('modals.overwrite_warning') || 'This will replace the existing menu. Continue?',
         onConfirm: () => {
-          onApplyMenu(parsed.items);
+          onApplyMenu(parsed.items, parsed.date);
           setIsPasteOpen(false);
           setPasteText('');
           setParsed(null);
@@ -176,7 +176,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
       });
       return;
     }
-    onApplyMenu(parsed.items);
+    onApplyMenu(parsed.items, parsed.date);
     setIsPasteOpen(false);
     setPasteText('');
     setParsed(null);
