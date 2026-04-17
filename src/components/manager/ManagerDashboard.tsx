@@ -8,7 +8,6 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  ChevronRight,
   TrendingUp,
   BarChart2,
   Terminal,
