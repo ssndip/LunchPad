@@ -64,8 +64,6 @@ export async function startServer() {
     validate: { trustProxy: false },
   });
 
-  // Apply the rate limiter to all requests
-  app.use(limiter);
 
   // Global Access & Security Middleware
   // Apply mostly to /api, but exclude /api/auth/login so admins can actually log in to fix things!
@@ -76,6 +74,7 @@ export async function startServer() {
     return globalAccessGuard(req, res, next);
   });
 
+  app.use(limiter);
   app.use(express.json({ limit: '500kb' }));
 
   // --- API Routes ---
