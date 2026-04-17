@@ -61,6 +61,7 @@ export async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Apply the rate limiter to all requests
