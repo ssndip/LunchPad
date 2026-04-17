@@ -2,7 +2,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, X, Smartphone } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
-import { useResponsive } from '../../hooks/useResponsive';
 
 interface PwaInstallBannerProps {
   t: (key: string) => string;
@@ -10,14 +9,13 @@ interface PwaInstallBannerProps {
 }
 
 export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ t, onNeedInstructions }) => {
-  const { canInstall, installApp, isStandalone, isIOS } = usePWA();
-  const { isPhone } = useResponsive();
+  const { canInstall, installApp, isStandalone, isIOS, isAndroid, deferredPrompt } = usePWA();
   const [dismissed, setDismissed] = React.useState(false);
 
-  if (isStandalone || !canInstall || dismissed || !isPhone) return null;
+  if (isStandalone || !canInstall || dismissed) return null;
 
   const handleInstall = () => {
-    if (isIOS) {
+    if (isIOS || (isAndroid && !deferredPrompt)) {
       onNeedInstructions?.();
     } else {
       installApp();

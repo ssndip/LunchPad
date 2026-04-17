@@ -36,6 +36,7 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
   const { kioskModeEnabled, allowPWAInstall } = useStore();
 
   useEffect(() => {
@@ -74,8 +75,16 @@ export const usePWA = () => {
       setIsIOS(!!ios);
     };
 
+    // 3. Detect Android
+    const checkAndroid = () => {
+      const ua = window.navigator.userAgent;
+      const android = /Android/.test(ua);
+      setIsAndroid(!!android);
+    };
+
     checkStandalone();
     checkIOS();
+    checkAndroid();
   }, []);
 
   const installApp = async () => {
@@ -130,9 +139,10 @@ export const usePWA = () => {
   }, [kioskModeEnabled, isStandalone, enterFullscreen, exitFullscreen]);
 
   return {
-    canInstall: (!!deferredPrompt || isIOS) && allowPWAInstall,
+    canInstall: (!!deferredPrompt || isIOS || isAndroid) && allowPWAInstall,
     isStandalone,
     isIOS,
+    isAndroid,
     installApp,
     enterFullscreen,
     exitFullscreen,

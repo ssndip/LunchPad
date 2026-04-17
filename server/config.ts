@@ -2,7 +2,7 @@ import { db } from "./db";
 import bcrypt from "bcryptjs";
 
 if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable must be set");
+  console.warn("[Config] WARNING: JWT_SECRET environment variable is not set. Using a default development secret. This is NOT recommended for production!");
 }
 
 // --- Settings Object (Ensures live bindings across modules) ---

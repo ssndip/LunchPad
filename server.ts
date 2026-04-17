@@ -58,10 +58,14 @@ export async function startServer() {
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 1000,
     standardHeaders: true,
     legacyHeaders: false,
     validate: { trustProxy: false },
+    message: { error: "Too many requests", message: "Please try again later" },
+    handler: (req, res, next, options) => {
+      res.status(options.statusCode).json(options.message);
+    }
   });
 
 

@@ -129,13 +129,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
             {allowPWAInstall && !isStandalone && (
               <div className="pt-6 border-t border-neutral-100">
-                {isIOS ? (
+                {(isIOS || (isAndroid && !deferredPrompt)) ? (
                   <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100">
                     <div className="flex items-center gap-3 mb-3 text-violet-600">
                       <Share className="w-5 h-5" />
-                      <h4 className="font-bold text-sm tracking-tight">{t('pwa.ios_install_title')}</h4>
+                      <h4 className="font-bold text-sm tracking-tight">{isIOS ? t('pwa.ios_install_title') : t('pwa.android_install_title')}</h4>
                     </div>
-                    <p className="text-xs text-neutral-500 leading-relaxed italic mb-4">{t('pwa.ios_install_desc')}</p>
+                    <p className="text-xs text-neutral-500 leading-relaxed italic mb-4">{isIOS ? t('pwa.ios_install_desc') : t('pwa.android_install_desc')}</p>
                     <button
                       onClick={onInstallApp}
                       className="w-full py-3 bg-white border border-violet-200 text-violet-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-50 transition-all flex items-center justify-center gap-2"
