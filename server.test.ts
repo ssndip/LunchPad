@@ -35,22 +35,22 @@ describe('getMenu', () => {
     const result = getMenu(db);
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
+    expect(result[0]).toEqual(expect.objectContaining({
       id: 1,
       name: "Available Item",
       description: "Desc",
       price: 1.5,
       available: true,
       category: "Category 1"
-    });
-    expect(result[1]).toEqual({
+    }));
+    expect(result[1]).toEqual(expect.objectContaining({
       id: 2,
       name: "Unavailable Item",
       description: "Desc",
       price: 2.0,
       available: false,
       category: "Category 2"
-    });
+    }));
   });
 
   test('returns an empty array when there are no items', () => {

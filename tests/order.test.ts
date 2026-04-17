@@ -26,7 +26,7 @@ describe('POST /api/v1/order', () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid request: Missing RFID or items');
+    expect(res.body.error).toBe('Invalid request: Missing RFID/PIN or items');
   });
 
   it('should return 400 if items is not an array', async () => {
@@ -35,7 +35,7 @@ describe('POST /api/v1/order', () => {
       .send({ rfid: '1234567890', items: 1 });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid request: Missing RFID or items');
+    expect(res.body.error).toBe('Invalid request: Missing RFID/PIN or items');
   });
 
   it('should return 404 if card is not found', async () => {
