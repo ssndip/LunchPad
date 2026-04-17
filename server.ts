@@ -9,6 +9,7 @@ import { createServer as createViteServer } from "vite";
 import cors from "cors";
 
 // Modular Imports
+import { logger } from "./server/logger";
 import { db, initDb, seedInitialData } from "./server/db";
 import { initSettings, settings, incrementMenuVersion } from "./server/config";
 import { setWssInstance } from "./server/broadcast";
@@ -112,7 +113,7 @@ export async function startServer() {
 
   // Global Error Handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error("[Global Error]", err);
+    logger.error(`[Global Error] ${err.message}`, { stack: err.stack, path: req.path });
     res.status(500).json({ 
       error: "Internal Server Error", 
       message: "An unexpected error occurred",
@@ -153,7 +154,7 @@ export async function startServer() {
       (!settings.publicAccessCode || settings.publicAccessCode.trim() === "" || isPublicSession)
     );
 
-    console.log(`[WS] Connection attempt: origin=${origin}, gAccess=${settings.globalAccess}, local=${isLocal}, admin=${isAdmin}, public=${isPublicSession} -> ${isAllowed ? 'ALLOWED' : 'REJECTED'}`);
+    logger.ws(`Connection attempt: origin=${origin}, gAccess=${settings.globalAccess}, local=${isLocal}, admin=${isAdmin}, public=${isPublicSession} -> ${isAllowed ? 'ALLOWED' : 'REJECTED'}`);
 
     if (!isAllowed) {
       // Use 4001 for "Access Code Required" to distinguish from 4003 "Global Access Disabled"
@@ -223,7 +224,7 @@ export async function startServer() {
 
   if (process.env.NODE_ENV !== "test") {
     server.listen(Number(PORT), "0.0.0.0", () => {
-      console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+      logger.info(`Server Running on http://0.0.0.0:${PORT}`);
     });
   }
   return app;

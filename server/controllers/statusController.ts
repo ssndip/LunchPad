@@ -11,6 +11,6 @@ export const getStatus = (req: Request, res: Response) => {
 
 export const updateStatus = (req: Request, res: Response) => {
   kioskOpen = !!req.body.open;
-  broadcast({ type: "STATUS_UPDATE", data: { kioskOpen } });
+  broadcast({ type: "STATUS_UPDATE", kioskOpen });
   res.json({ success: true, kioskOpen });
 };

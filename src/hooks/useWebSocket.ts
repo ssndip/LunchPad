@@ -4,6 +4,7 @@
  */
 import { useRef, useEffect } from 'react';
 import { MenuItem } from '../types';
+import { WsMessage } from '../types/websocket';
 
 export interface WsHandlers {
   onInitialState: (data: {
@@ -67,7 +68,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
       };
 
       ws.current.onmessage = (event) => {
-        const message = JSON.parse(event.data as string);
+        const message = JSON.parse(event.data as string) as WsMessage;
         const h = handlersRef.current;
 
         // Reset heartbeat on any message (especially PING)
@@ -77,7 +78,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
 
         switch (message.type) {
           case 'PING':
-            ws.current?.send(JSON.stringify({ type: 'PONG', ts: Date.now() }));
+            ws.current?.send(JSON.stringify({ type: 'PONG' }));
             break;
 
           case 'INITIAL_STATE':
@@ -93,21 +94,28 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
 
           case 'MENU_UPDATE':
             h.onMenuUpdate({ 
-              menu: message.data, 
-              menuVersion: message.menuVersion 
+              menu: message.menu, 
+              menuVersion: message.version 
             });
             break;
 
-          case 'CARDS_UPDATE':
+          case 'CARDS_UPDATE' as any: // Keep for backward compatibility or future use
             h.onCardsUpdate();
             break;
 
           case 'STATUS_UPDATE':
-            h.onStatusUpdate(message.data);
+            h.onStatusUpdate({ kioskOpen: message.kioskOpen });
+            break;
+
+          case 'SETTINGS_UPDATE':
+            h.onStatusUpdate(message.settings);
             break;
 
           case 'PWA_SETTINGS_UPDATE':
-            h.onPWASettingsUpdate(message.data);
+            h.onPWASettingsUpdate({
+              kioskModeEnabled: message.kioskModeEnabled,
+              allowPWAInstall: message.allowPWAInstall
+            });
             break;
         }
       };

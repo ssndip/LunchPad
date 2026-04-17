@@ -75,7 +75,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
     })();
     const newVersion = incrementMenuVersion();
     const updated = getMenu(db);
-    broadcast({ type: "MENU_UPDATE", data: updated, menuVersion: newVersion });
+    broadcast({ type: "MENU_UPDATE", menu: updated, version: newVersion });
     res.json({ success: true, menu: updated, menuVersion: newVersion });
   } catch (err: any) {
     next(err);
