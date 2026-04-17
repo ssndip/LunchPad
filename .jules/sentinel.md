@@ -1,4 +1,4 @@
-## 2025-03-09 - Missing Rate Limiter Middleware
-**Vulnerability:** A rate limiter was configured but never applied to the Express application pipeline using `app.use()`.
-**Learning:** Middleware configurations in Express must be explicitly attached to the request pipeline to be effective. Merely instantiating them does nothing.
-**Prevention:** Always verify that security middleware is both configured and injected into `app` with `app.use()`.
+## 2025-02-27 - Express Rate Limit Bypass via trust proxy
+**Vulnerability:** IP-based rate limiting implemented using `express-rate-limit` was easily bypassable because `app.set('trust proxy', true)` was used. This instructed Express to trust the entire `X-Forwarded-For` chain, allowing an attacker to spoof their IP address by simply injecting a fake `X-Forwarded-For` header in their request.
+**Learning:** Setting `trust proxy` to `true` is dangerous when using IP-based security middleware behind a reverse proxy. It trusts all upstream IP addresses, including those supplied by the client.
+**Prevention:** When deployed behind a single reverse proxy (like Nginx or Cloudflare), always set `app.set('trust proxy', 1)`. This tells Express to trust only the immediate upstream proxy, ensuring the rate limiter uses the correct, unforgeable client IP provided by that proxy. Additionally, ensure the rate limit middleware is actually injected into the application using `app.use(limiter)`.
