@@ -75,7 +75,7 @@ export async function startServer() {
 
   const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5000, // Increased to 5000 for more headroom
+    max: process.env.NODE_ENV === 'test' ? 100 : 5000, // Reduced for tests, 5000 for production headroom
     standardHeaders: true,
     legacyHeaders: false,
     validate: { trustProxy: false },

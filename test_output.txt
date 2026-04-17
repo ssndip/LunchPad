@@ -1,0 +1,301 @@
+
+ RUN  v4.1.3 /home/ssndip/lunchpadgit
+
+ × server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to true and broadcast STATUS_UPDATE 14ms
+   → expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": true,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ × server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to false and broadcast STATUS_UPDATE 2ms
+   → expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": false,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ × server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to false if open is missing/falsy 2ms
+   → expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": false,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ ✓ server/controllers/statusController.test.ts > statusController > getStatus > should return current kioskOpen status when true 1ms
+ ✓ server/controllers/statusController.test.ts > statusController > getStatus > should return current kioskOpen status when false 1ms
+stdout | server.test.ts
+[DB] Initializing database at: :memory:
+
+stdout | server/controllers/cardController.test.ts
+[DB] Initializing database at: :memory:
+
+stdout | server/controllers/settingsController.test.ts
+[DB] Initializing database at: :memory:
+
+stdout | server/controllers/cardController.test.ts > cardController > resetAllBalances
+[DB] Added pin column to cards table
+[DB] Menu table schema verification complete
+
+ ✓ server/controllers/cardController.test.ts > cardController > resetAllBalances > should reset all card balances to 0, broadcast update and return success 4ms
+ ✓ server/controllers/cardController.test.ts > cardController > resetAllBalances > should pass error to next if a database error occurs 1ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > should have standard categoryLabels and categoryKeywords 4ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > should have default fees set to 0 1ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > should have expected settings 0ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > rules > box_fee_logic should match Side Dishes and Salads and apply autobox tag 1ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > rules > bbq_logic should match BBQ and apply bbq tag 0ms
+ ✓ src/utils/menuConfig.test.ts > MENU_CONFIG > rules > main_with_side_logic should match Main Dishes or BBQ with included side and do nothing on apply 0ms
+ ✓ server/controllers/settingsController.test.ts > settingsController > updatePin > should return 400 when newPin is missing 5ms
+ ✓ server/controllers/settingsController.test.ts > settingsController > updatePin > should return 400 when newPin is not a string 1ms
+ ✓ server/controllers/settingsController.test.ts > settingsController > updatePin > should call hashAndSetAdminPin and return success for a valid newPin 1ms
+ ✓ server/controllers/settingsController.test.ts > settingsController > updatePin > should pass error to next if an exception is thrown 1ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > defaults to light type if no arguments provided 4ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > calls vibrate with 10 for light 0ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > calls vibrate with 20 for medium 0ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > calls vibrate with 50 for heavy 1ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > calls vibrate with [10, 50, 30] for success 0ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > calls vibrate with [30, 40, 30, 40, 50] for error 1ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > does nothing if navigator is undefined 1ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > does nothing if navigator.vibrate is undefined 0ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > does nothing if window is undefined 1ms
+ ✓ src/utils/haptics.test.ts > triggerHaptic > catches and ignores errors thrown by navigator.vibrate 1ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns false if item is falsy 3ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true if item has a packagingFee > 0 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns false if item has a packagingFee <= 0 1ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true if item has autobox tag 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true if item has has_custom_box tag 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true if item has bbq tag 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true if category has autoBox set to true in settings (Salads) 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns false if category has autoBox set to false in settings (Soups) 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true for legacy category fallback: side dishes 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true for legacy category fallback: гарнитури 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true for legacy category fallback: bbq 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns true for legacy category fallback: скара 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns false for unknown category without tags 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isItemAutoBox > returns false if item lacks category and tags 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isCategoryAutoBox > returns true for categories configured with autoBox: true 1ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isCategoryAutoBox > returns false for categories configured with autoBox: false 0ms
+ ✓ src/utils/categoryAutobox.test.ts > categoryAutobox > isCategoryAutoBox > returns false for unmapped categories 0ms
+ ✓ server.test.ts > getMenu > maps available 1 to true and 0 to false 5ms
+ ✓ server.test.ts > getMenu > returns an empty array when there are no items 1ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should return original items if preset is null or undefined 4ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should return items with no changes if overrides are undefined 1ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should return items with no changes if overrides do not match item names 0ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should apply itemCategoryOverrides to an item if it matches the item name 0ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should apply itemNameOverrides to an item if it matches the item name 0ms
+ ✓ src/utils/menuNormalizer.test.ts > applyItemOverrides > should apply both itemCategoryOverrides and itemNameOverrides if both match 0ms
+ ✓ server/controllers/orderController.test.ts > orderController > resetOrders > should successfully reset orders, daily summaries, broadcast state, and return success 5ms
+ ✓ server/controllers/orderController.test.ts > orderController > resetOrders > should pass error to next if an exception occurs during db operations 1ms
+ ✓ src/utils/parserEngine.test.ts > MenuParserEngine > should parse the menu correctly 4ms
+ ✓ src/utils/parserEngine.test.ts > MenuParserEngine > should handle unmatched lines correctly 1ms
+stdout | tests/order.test.ts
+[DB] Initializing database at: :memory:
+
+stdout | tests/server.test.ts
+[DB] Initializing database at: :memory:
+
+stdout | tests/order.test.ts
+[DB] Added pin column to cards table
+[DB] Menu table schema verification complete
+[DB] Seeded initial menu
+[DB] Seeded initial cards
+[DB] Seeded TEST-ADMIN card for RFID-less ordering
+[DB] Seeded Default Parser Profile
+[DB] Ensured PWA settings exist
+[Config] Migrating plain-text PIN to bcrypt hash...
+
+stdout | tests/server.test.ts
+[DB] Added pin column to cards table
+[DB] Menu table schema verification complete
+[DB] Seeded initial menu
+[DB] Seeded initial cards
+[DB] Seeded TEST-ADMIN card for RFID-less ordering
+[DB] Seeded Default Parser Profile
+[DB] Ensured PWA settings exist
+[Config] Migrating plain-text PIN to bcrypt hash...
+
+stderr | tests/server.test.ts > Server API tests > POST /api/menu > should return 500 when database transaction fails
+[2026-04-17T20:21:45.467Z] ❌ ERROR: [Global Error] Database transaction failed {
+  stack: 'Error: Database transaction failed\n' +
+    '    at Database.<anonymous> (/home/ssndip/lunchpadgit/tests/server.test.ts:27:15)\n' +
+    '    at Database.transaction (file:///home/ssndip/lunchpadgit/node_modules/@vitest/spy/dist/index.js:332:34)\n' +
+    '    at updateMenu (/home/ssndip/lunchpadgit/server/controllers/menuController.ts:52:8)\n' +
+    '    at Layer.handle [as handle_request] (/home/ssndip/lunchpadgit/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/home/ssndip/lunchpadgit/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at requireAuth (/home/ssndip/lunchpadgit/server/middleware/auth.ts:95:12)\n' +
+    '    at Layer.handle [as handle_request] (/home/ssndip/lunchpadgit/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/home/ssndip/lunchpadgit/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at Route.dispatch (/home/ssndip/lunchpadgit/node_modules/express/lib/router/route.js:119:3)\n' +
+    '    at Layer.handle [as handle_request] (/home/ssndip/lunchpadgit/node_modules/express/lib/router/layer.js:95:5)',
+  path: '/api/menu'
+}
+
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 400 if RFID or items are missing 5ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 400 if items is not an array 2ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 404 if card is not found 2ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 400 if no valid items are selected 2ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should process a valid order successfully 8ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 409 if menu version mismatch 2ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should return 403 if kiosk is closed 6ms
+ ✓ tests/order.test.ts > POST /api/v1/order > should handle rfid string cleaning correctly 2ms
+ ✓ tests/server.test.ts > Server API tests > POST /api/menu > should return 500 when database transaction fails 91ms
+ × tests/server.test.ts > Server API tests > Rate Limiter > should return 429 Too Many Requests when rate limit is exceeded 203ms
+   → expected 200 to be 429 // Object.is equality
+stdout | src/App.test.tsx > App Component > renders the initial kiosk view correctly
+[WS] Connecting to ws://localhost:3000...
+
+stdout | src/App.test.tsx
+[WS] Disconnected. Code: 1006
+
+ ✓ src/App.test.tsx > App Component > renders the initial kiosk view correctly 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/server.test.ts > Server API tests > Rate Limiter > should return 429 Too Many Requests when rate limit is exceeded
+AssertionError: expected 200 to be 429 // Object.is equality
+
+- Expected
++ Received
+
+- 429
++ 200
+
+ ❯ tests/server.test.ts:60:31
+     58|       // The 101st request should be rate limited
+     59|       const response = await request(app).get('/api/menu').set('Author…
+     60|       expect(response.status).toBe(429);
+       |                               ^
+     61|     });
+     62|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to true and broadcast STATUS_UPDATE
+AssertionError: expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": true,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ ❯ server/controllers/statusController.test.ts:38:25
+     36|       updateStatus(mockReq as Request, mockRes as Response);
+     37|
+     38|       expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', …
+       |                         ^
+     39|       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kiosk…
+     40|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to false and broadcast STATUS_UPDATE
+AssertionError: expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": false,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ ❯ server/controllers/statusController.test.ts:47:25
+     45|       updateStatus(mockReq as Request, mockRes as Response);
+     46|
+     47|       expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', …
+       |                         ^
+     48|       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kiosk…
+     49|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  server/controllers/statusController.test.ts > statusController > updateStatus > should update kioskOpen to false if open is missing/falsy
+AssertionError: expected "vi.fn()" to be called with arguments: [ { type: 'STATUS_UPDATE', …(1) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    {
+-     "data": {
+      "kioskOpen": false,
+-     },
+      "type": "STATUS_UPDATE",
+    },
+  ]
+
+
+Number of calls: 1
+
+ ❯ server/controllers/statusController.test.ts:56:25
+     54|       updateStatus(mockReq as Request, mockRes as Response);
+     55|
+     56|       expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', …
+       |                         ^
+     57|       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kiosk…
+     58|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 11 passed (13)
+      Tests  4 failed | 63 passed (67)
+   Start at  23:21:43
+   Duration  1.87s (transform 1.27s, setup 1.10s, import 1.95s, tests 503ms, environment 7.84s)
+

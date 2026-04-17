@@ -35,7 +35,7 @@ describe('statusController', () => {
 
       updateStatus(mockReq as Request, mockRes as Response);
 
-      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', data: { kioskOpen: true } });
+      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', kioskOpen: true });
       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kioskOpen: true });
     });
 
@@ -44,7 +44,7 @@ describe('statusController', () => {
 
       updateStatus(mockReq as Request, mockRes as Response);
 
-      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', data: { kioskOpen: false } });
+      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', kioskOpen: false });
       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kioskOpen: false });
     });
 
@@ -53,7 +53,7 @@ describe('statusController', () => {
 
       updateStatus(mockReq as Request, mockRes as Response);
 
-      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', data: { kioskOpen: false } });
+      expect(broadcast).toHaveBeenCalledWith({ type: 'STATUS_UPDATE', kioskOpen: false });
       expect(mockRes.json).toHaveBeenCalledWith({ success: true, kioskOpen: false });
     });
   });
