@@ -210,12 +210,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               <button 
                 onClick={() => onTabChange('settings')} 
                 className={`p-2 rounded-full transition-all active:scale-95 ${activeTab === 'settings' ? 'bg-neutral-900 text-white shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-600'}`}
+                aria-label={t('navigation.system_settings')}
+                title={t('navigation.system_settings')}
               >
                 <Settings className="w-4 h-4" />
               </button>
               <button 
                 onClick={onLogout} 
                 className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95"
+                aria-label={t('navigation.logout')}
+                title={t('navigation.logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>
