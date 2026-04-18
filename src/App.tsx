@@ -33,6 +33,7 @@ import { CardsTab } from './components/manager/tabs/CardsTab';
 import { SettingsTab } from './components/manager/tabs/SettingsTab';
 import { ParserRulesTab } from './components/manager/tabs/ParserRulesTab';
 import { AnalyticsTab } from './components/manager/tabs/AnalyticsTab';
+import { HistoryReport } from './components/manager/tabs/HistoryReport';
 
 import { useTranslation } from './hooks/useTranslation';
 import { useSyncState } from './hooks/useSyncState';
@@ -625,6 +626,16 @@ export default function App() {
                 </div>
               </motion.div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {s.showHistoryReport && (
+            <HistoryReport 
+              orders={s.history} 
+              filters={s.historyFilters} 
+              onClose={() => s.setShowHistoryReport(false)} 
+            />
           )}
         </AnimatePresence>
       </div>

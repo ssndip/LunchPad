@@ -17,6 +17,7 @@ if (!fs.existsSync(DB_DIR)) {
 const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
 console.log(`[DB] Initializing database at: ${dbPath}`);
 export const db = new Database(dbPath);
+db.pragma('foreign_keys = ON');
 
 // Create tables and indexes
 export const initDb = () => {
@@ -30,56 +31,30 @@ export const initDb = () => {
     );
   `);
 
-  // Migration for existing databases
-  try {
-    db.exec("ALTER TABLE cards ADD COLUMN isAdmin INTEGER DEFAULT 0");
-    console.log("[DB] Added isAdmin column to cards table");
-  } catch (e) {
-    // Column already exists
-  }
-
-  try {
-    db.exec("ALTER TABLE cards ADD COLUMN pin TEXT");
-    console.log("[DB] Added pin column to cards table");
-  } catch (e) {
-    // Column already exists
-  }
-
-  // Individual migrations for menu table
-  const menuMigrations = [
-    "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0",
-    "ALTER TABLE menu ADD COLUMN sideChoices TEXT",
-    "ALTER TABLE menu ADD COLUMN selectedSide TEXT",
-    "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0",
-    "ALTER TABLE menu ADD COLUMN tags TEXT",
-    "ALTER TABLE menu ADD COLUMN packagingFee REAL"
+  // --- Database Migrations ---
+  const migrations = [
+    { name: "isAdmin", sql: "ALTER TABLE cards ADD COLUMN isAdmin INTEGER DEFAULT 0" },
+    { name: "pin", sql: "ALTER TABLE cards ADD COLUMN pin TEXT" },
+    { name: "requiresSideChoice", sql: "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0" },
+    { name: "sideChoices", sql: "ALTER TABLE menu ADD COLUMN sideChoices TEXT" },
+    { name: "selectedSide", sql: "ALTER TABLE menu ADD COLUMN selectedSide TEXT" },
+    { name: "hasIncludedSide", sql: "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0" },
+    { name: "tags", sql: "ALTER TABLE menu ADD COLUMN tags TEXT" },
+    { name: "packagingFee", sql: "ALTER TABLE menu ADD COLUMN packagingFee REAL" },
+    { name: "feeDistributed", sql: "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0" },
+    { name: "distributedAmount", sql: "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0" }
   ];
 
-  menuMigrations.forEach(migration => {
+  migrations.forEach(m => {
     try {
-      db.exec(migration);
-      console.log(`[DB] Migration successful: ${migration.split('ADD COLUMN ')[1]}`);
-    } catch (e) {
-      // Column likely already exists
-    }
-  });
-  
-  // Migration for daily_summaries table
-  const summaryMigrations = [
-    "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0",
-    "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0"
-  ];
-
-  summaryMigrations.forEach(migration => {
-    try {
-      db.exec(migration);
-      console.log(`[DB] Migration successful: ${migration.split('ADD COLUMN ')[1]}`);
+      db.exec(m.sql);
+      console.log(`[DB] Migration applied: ${m.name}`);
     } catch (e) {
       // Column likely already exists
     }
   });
 
-  console.log("[DB] Menu table schema verification complete");
+  console.log("[DB] Schema verification complete");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS menu (

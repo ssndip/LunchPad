@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { getMenu, getMenuItemById } from "./menuController";
 import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
 import { settings } from "../config";
+import * as OrderService from "../services/orderService";
 
 export const getOrders = (limit = 50) => {
   try {
@@ -34,7 +34,7 @@ interface RequestedItem {
 
 export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: RequestedItem[], menuVersion?: number };
+    const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: OrderService.RequestedItem[], menuVersion?: number };
 
     const isBypass = settings.testModeEnabled && !rfid && !pin;
 
@@ -42,7 +42,6 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: "Invalid request: Missing RFID/PIN or items" });
     }
     
-    // Concurrency Check: Menu version must match
     if (requestedVersion !== undefined && requestedVersion !== settings.menuVersion) {
       return res.status(409).json({ 
         error: "Menu Updated", 
@@ -56,113 +55,34 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     let card: any;
 
     if (pin) {
-      // PIN Lookup (must be exactly 6 digits)
       if (pin.length !== 6) return res.status(400).json({ error: "PIN must be 6 digits" });
       card = db.prepare("SELECT * FROM cards WHERE pin = ?").get(pin) as any;
-      if (!card) {
-        console.warn(`[Order] Failed PIN login attempt: ${pin}`);
-        return res.status(401).json({ error: "Incorrect or unknown PIN" });
-      }
+      if (!card) return res.status(401).json({ error: "Incorrect or unknown PIN" });
     } else if (rfid) {
       const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
       
-      const isTestAdmin = cleanRfid === 'test-admin';
-      if (!card && !isTestAdmin) {
-        return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
+      if (!card && cleanRfid === 'test-admin' && settings.enableTestBypass) {
+        card = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
       }
-    } else if (settings.testModeEnabled) {
-      // Test Mode Bypass: Use TEST-ADMIN as fallback
+
+      if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
+    } else if (settings.testModeEnabled && settings.enableTestBypass) {
       card = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
-      if (!card) {
-        // Fallback if TEST-ADMIN was somehow deleted or not seeded
-        card = { rfid: "test-bypass", ownerName: "Test Mode User", balance: 0 };
-      }
+      if (!card) card = { rfid: "test-bypass", ownerName: "Test Mode User", balance: 0 };
     } else {
-      // No identification provided at all
       return res.status(401).json({ error: "No RFID or PIN provided" });
     }
 
-    // Strict Validation & Enrichment
-    const enrichedItems: any[] = [];
-
-    for (const ri of requestedItems) {
-      const baseItem = getMenuItemById(db, ri.id);
-      if (!baseItem) continue;
-
-      // Feature 7: Strict Side-Dish Validation
-      if (baseItem.requiresSideChoice || baseItem.hasIncludedSide) {
-        if (!ri.side) {
-          return res.status(400).json({ 
-            error: "Side Dish Required", 
-            message: `Please select a side dish for ${baseItem.name}.` 
-          });
-        }
-        
-        // If there are specific constrained choices, validate against them
-        if (baseItem.sideChoices && baseItem.sideChoices.length > 0) {
-          const isValid = baseItem.sideChoices.includes(ri.side);
-          if (!isValid) {
-            return res.status(400).json({ 
-              error: "Invalid Side Dish", 
-              message: `The selected side "${ri.side}" is not allowed for ${baseItem.name}.` 
-            });
-          }
-        }
-      }
-
-      enrichedItems.push({ ...baseItem, side: ri.side });
+    // Use OrderService for validation, enrichment, and processing
+    let enrichedItems;
+    try {
+      enrichedItems = OrderService.validateAndEnrichItems(requestedItems);
+    } catch (err: any) {
+      return res.status(400).json({ error: "Validation Error", message: err.message });
     }
 
-    if (enrichedItems.length === 0) return res.status(400).json({ error: "No valid items selected" });
-
-    const total = enrichedItems.reduce((sum: number, i) => {
-      const basePrice = Number(i.price) || 0;
-      // Mirror the frontend logic: Tag-aware packaging fee
-      const tags = i.tags || [];
-      const isAutobox = tags.some((t: string) => t === 'autobox' || t === 'has_custom_box' || t === 'bbq');
-      const category = (i.category || '').toLowerCase();
-      const isCategorizedBox = category.includes('side dishes') || category.includes('гарнитури') || category.includes('bbq') || category.includes('скара');
-      
-      const itemFee = (i.packagingFee !== undefined && i.packagingFee !== null) 
-        ? i.packagingFee 
-        : ((isAutobox || isCategorizedBox) ? (settings.packagingFee || 0.1) : 0);
-
-      const itemTotal = basePrice + itemFee;
-      return sum + itemTotal;
-    }, 0);
-
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const orderId = `ORD-${Date.now()}`;
-
-    const newOrder = {
-      id: orderId,
-      rfid: card.rfid, 
-      ownerName: card.ownerName,
-      items: enrichedItems,
-      totalPrice: Number(total.toFixed(2)),
-      timestamp: now.toISOString(),
-      date: dateStr,
-      status: "completed"
-    };
-
-    db.transaction(() => {
-      db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?")
-        .run(total, now.toISOString(), card.rfid);
-      
-      db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(orderId, card.rfid, card.ownerName, JSON.stringify(enrichedItems), total, now.toISOString(), dateStr, "completed");
-
-      const summary = db.prepare("SELECT * FROM daily_summaries WHERE date = ?").get(dateStr) as any;
-      if (!summary) {
-        db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount) VALUES (?, ?, ?)")
-          .run(dateStr, total, 1);
-      } else {
-        db.prepare("UPDATE daily_summaries SET totalSales = totalSales + ?, orderCount = orderCount + 1 WHERE date = ?")
-          .run(total, dateStr);
-      }
-    })();
+    const newOrder = OrderService.processOrderTransaction(card, enrichedItems);
 
     const { rfid: _rfid, ...sanitizedOrder } = newOrder;
     broadcast({ type: "NEW_ORDER", data: sanitizedOrder });
@@ -216,44 +136,26 @@ export const fetchSummaries = (req: Request, res: Response) => {
 export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { date } = req.params;
-    const orders = db.prepare("SELECT items FROM orders WHERE date = ?").all(date) as any[];
     
-    const itemMap: Record<string, { name: string, quantity: number, total: number, price: number, category: string }> = {};
-    const sideMap: Record<string, { name: string, quantity: number }> = {};
-    
-    orders.forEach(order => {
-      let items = [];
-      try {
-        items = order.items ? JSON.parse(order.items) : [];
-      } catch (e) {
-        console.error("[DB Error] Failed to parse summary items", e);
-      }
-
-      if (Array.isArray(items)) {
-        items.forEach((item: any) => {
-          if (!item || !item.name) return;
-          
-          const sideName = item.side ? item.side.trim() : "";
-          const displayName = sideName ? `${item.name} (${sideName})` : item.name;
-          const aggregationKey = `${item.name}|${sideName}`;
-
-          if (!itemMap[aggregationKey]) {
-            itemMap[aggregationKey] = { 
-              name: displayName, 
-              quantity: 0, 
-              total: 0, 
-              price: Number(item.price) || 0, 
-              category: item.category || 'Uncategorized' 
-            };
-          }
-          itemMap[aggregationKey].quantity += 1;
-          itemMap[aggregationKey].total += (Number(item.price) || 0);
-        });
-      }
-    });
+    const items = db.prepare(`
+      SELECT 
+        CASE 
+          WHEN json_extract(value, '$.side') IS NOT NULL AND json_extract(value, '$.side') != '' 
+          THEN json_extract(value, '$.name') || ' (' || json_extract(value, '$.side') || ')'
+          ELSE json_extract(value, '$.name')
+        END as name,
+        COUNT(*) as quantity,
+        SUM(json_extract(value, '$.price')) as total,
+        json_extract(value, '$.price') as price,
+        json_extract(value, '$.category') as category
+      FROM orders, json_each(items)
+      WHERE date = ?
+      GROUP BY name
+      ORDER BY name ASC
+    `).all(date);
     
     res.json({
-      items: Object.values(itemMap).sort((a, b) => a.name.localeCompare(b.name)),
+      items,
       sides: []
     });
   } catch (err: any) {
@@ -301,89 +203,76 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
 export const fetchAnalytics = (req: Request, res: Response) => {
   try {
     const { startDate, endDate, rfid, ownerName } = req.query;
-    let sql = "SELECT * FROM orders WHERE 1=1";
+    let whereClause = " WHERE 1=1";
     const params: any[] = [];
 
-    if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
-    if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
-    if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
+    if (startDate) { whereClause += " AND date >= ?"; params.push(startDate); }
+    if (endDate) { whereClause += " AND date <= ?"; params.push(endDate); }
+    if (rfid) { whereClause += " AND rfid = ?"; params.push(rfid); }
     if (ownerName) {
-      sql += " AND ownerName LIKE ? ESCAPE '\\'";
+      whereClause += " AND ownerName LIKE ? ESCAPE '\\'";
       const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
       params.push(`%${escapedOwnerName}%`);
     }
 
-    const orders = db.prepare(sql).all(...params) as any[];
-    
-    // 1. Aggregates
-    const mealCounts: Record<string, number> = {};
-    const sideCounts: Record<string, number> = {};
-    const hourlyDistribution: Record<number, number> = {};
-    const customerSpending: Record<string, { rfid: string, name: string, total: number, count: number }> = {};
-    const dailyData: Record<string, { date: string, revenue: number, orders: number }> = {};
+    // 1. Popular Meals
+    const popularMeals = db.prepare(`
+      SELECT json_extract(value, '$.name') as name, COUNT(*) as count
+      FROM orders, json_each(items)
+      ${whereClause}
+      GROUP BY name
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(...params);
 
-    let totalRevenue = 0;
+    // 2. Popular Sides
+    const popularSides = db.prepare(`
+      SELECT json_extract(value, '$.side') as name, COUNT(*) as count
+      FROM orders, json_each(items)
+      ${whereClause} AND json_extract(value, '$.side') IS NOT NULL AND json_extract(value, '$.side') != ''
+      GROUP BY name
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(...params);
 
-    orders.forEach(o => {
-      let items = [];
-      try {
-        items = o.items ? JSON.parse(o.items) : [];
-      } catch {}
+    // 3. Peak Times
+    const peakTimes = db.prepare(`
+      SELECT strftime('%H:00', timestamp) as hour, COUNT(*) as count
+      FROM orders
+      ${whereClause}
+      GROUP BY hour
+      ORDER BY hour ASC
+    `).all(...params);
 
-      const orderTotal = Number(o.totalPrice) || 0;
-      totalRevenue += orderTotal;
+    // 4. Top Customers
+    const topCustomers = db.prepare(`
+      SELECT rfid, ownerName as name, SUM(totalPrice) as total, COUNT(*) as count
+      FROM orders
+      ${whereClause}
+      GROUP BY rfid
+      ORDER BY total DESC
+      LIMIT 10
+    `).all(...params);
 
-      // Items Stats
-      if (Array.isArray(items)) {
-        items.forEach((item: any) => {
-          mealCounts[item.name] = (mealCounts[item.name] || 0) + 1;
-          if (item.side) {
-            sideCounts[item.side] = (sideCounts[item.side] || 0) + 1;
-          }
-        });
-      }
+    // 5. Timeline
+    const timeline = db.prepare(`
+      SELECT date, SUM(totalPrice) as revenue, COUNT(*) as orders
+      FROM orders
+      ${whereClause}
+      GROUP BY date
+      ORDER BY date ASC
+    `).all(...params);
 
-      // Hourly distribution
-      const hour = new Date(o.timestamp).getHours();
-      hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
-
-      // Customer spending
-      const cRfid = o.rfid || 'unknown';
-      if (!customerSpending[cRfid]) {
-        customerSpending[cRfid] = { rfid: cRfid, name: o.ownerName || 'Unknown', total: 0, count: 0 };
-      }
-      customerSpending[cRfid].total += orderTotal;
-      customerSpending[cRfid].count += 1;
-
-      // Daily distribution (for timeline chart)
-      const d = o.date;
-      if (!dailyData[d]) {
-        dailyData[d] = { date: d, revenue: 0, orders: 0 };
-      }
-      dailyData[d].revenue += orderTotal;
-      dailyData[d].orders += 1;
-    });
-
-    const popularMeals = Object.entries(mealCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    const popularSides = Object.entries(sideCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    const peakTimes = Object.entries(hourlyDistribution)
-      .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
-      .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
-
-    const topCustomers = Object.values(customerSpending)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-
-    const timeline = Object.values(dailyData)
-      .sort((a, b) => a.date.localeCompare(b.date));
+    // 6. Overall Summary
+    const summary = db.prepare(`
+      SELECT 
+        SUM(totalPrice) as totalRevenue,
+        COUNT(*) as totalOrders,
+        AVG(totalPrice) as avgOrderValue,
+        COUNT(DISTINCT rfid) as uniqueCustomers
+      FROM orders
+      ${whereClause}
+    `).get(...params) as any;
 
     res.json({ 
       popularMeals, 
@@ -392,10 +281,10 @@ export const fetchAnalytics = (req: Request, res: Response) => {
       topCustomers,
       timeline,
       summary: {
-        totalRevenue: Number(totalRevenue.toFixed(2)),
-        totalOrders: orders.length,
-        avgOrderValue: orders.length > 0 ? Number((totalRevenue / orders.length).toFixed(2)) : 0,
-        uniqueCustomers: Object.keys(customerSpending).length
+        totalRevenue: Number((summary.totalRevenue || 0).toFixed(2)),
+        totalOrders: summary.totalOrders || 0,
+        avgOrderValue: Number((summary.avgOrderValue || 0).toFixed(2)),
+        uniqueCustomers: summary.uniqueCustomers || 0
       }
     });
   } catch (err: any) {

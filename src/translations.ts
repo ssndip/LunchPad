@@ -154,6 +154,7 @@ export const translations = {
       revenue_timeline: 'Revenue Timeline',
       top_spenders: 'Top Spenders',
       total_spent: 'Total Spent',
+      summary_report: 'Summary Report',
     },
     menu: {
       category: 'Category',
@@ -235,6 +236,7 @@ export const translations = {
       export_xlsx: 'Export XLSX',
       import_success: 'Successfully imported {{count}} cards',
       import_error: 'Failed to parse file.',
+      print: 'Print Report',
     },
     orders: {
       order_id: 'Order ID',
@@ -568,6 +570,7 @@ export const translations = {
       revenue_timeline: 'Хронология на приходите',
       top_spenders: 'Най-големи платци',
       total_spent: 'Общо похарчени',
+      summary_report: 'Обобщен отчет',
     },
     menu: {
       category: 'Категория',
@@ -649,6 +652,7 @@ export const translations = {
       export_xlsx: 'Експорт в XLSX',
       import_success: 'Успешно импортирани {{count}} карти',
       import_error: 'Грешка при обработката на файла.',
+      print: 'Печат на отчет',
     },
     orders: {
       order_id: 'ID на поръчката',

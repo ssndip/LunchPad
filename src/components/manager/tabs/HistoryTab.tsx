@@ -1,6 +1,8 @@
 import React from 'react';
 import { Order } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { FileText } from 'lucide-react';
+import { useStore } from '../../../store/useStore';
 
 interface Filters {
   startDate: string;
@@ -23,6 +25,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   onApplyFilters,
 }) => {
   const { t } = useTranslation();
+  const setShowHistoryReport = useStore(s => s.setShowHistoryReport);
+
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -66,7 +70,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
       {/* Filters */}
       <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label htmlFor="startDate" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">
               {t('filters.start_date')}
@@ -108,9 +112,19 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
           <div className="flex items-end">
             <button
               onClick={onApplyFilters}
-              className="w-full py-2.5 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm"
+              className="w-full py-2.5 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-lg shadow-neutral-200"
             >
               {t('filters.apply')}
+            </button>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => setShowHistoryReport(true)}
+              disabled={!history || history.length === 0}
+              className="w-full py-2.5 bg-white text-neutral-900 border border-neutral-200 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileText className="w-4 h-4" />
+              {t('analytics.summary_report')}
             </button>
           </div>
         </div>

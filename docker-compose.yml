@@ -12,3 +12,5 @@ services:
       - PORT=3400
       - APP_URL=https://ss.plcnet.org:3402
       - JWT_SECRET=lunchpad-secret-key-change-me-in-production
+      - ADMIN_PIN=0000
+      - ENABLE_TEST_BYPASS=true
