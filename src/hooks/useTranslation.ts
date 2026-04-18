@@ -37,7 +37,7 @@ export function useTranslation() {
       }
     }
 
-    if (typeof val !== 'string') return key;
+    if (typeof val !== 'string') return undefined;
 
     // Handle replacements (e.g. {{count}})
     if (replacements) {

@@ -11,7 +11,9 @@ import {
   TrendingUp,
   BarChart2,
   Terminal,
+  Loader2,
 } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 import { Language } from '../../translations';
 import { useResponsive } from '../../hooks/useResponsive';
 
@@ -35,6 +37,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onToggleKiosk,
 }) => {
   const { t, lang } = useTranslation();
+  const isSyncing = useStore(s => s.isSyncing);
   const { isPhone, isTablet, isDesktop } = useResponsive();
 
   const menuItems = [
@@ -190,6 +193,14 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                 {kioskOpen ? t('modals.close') : t('modals.open')}
               </button>
             </div>
+            {isSyncing && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-full border border-blue-100 shadow-sm animate-in fade-in slide-in-from-top-1">
+                <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600">
+                  {t('kiosk.processing')}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -220,12 +231,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
         {/* Dynamic Content — scrolls internally */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 hide-scrollbar-on-mobile relative z-10">
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
               transition={{ duration: 0.2 }}
               className="max-w-[var(--app-max-width)] mx-auto"
             >

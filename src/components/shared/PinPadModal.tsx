@@ -43,7 +43,7 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({ isOpen, onClose, onSub
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          exit={{ opacity: 0, style: { pointerEvents: 'none' } }}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
         >
           <motion.div

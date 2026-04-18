@@ -159,9 +159,9 @@ export default function App() {
   const handleApplyMenu = async (items: MenuItem[], date?: string) => {
     if (!s.token) return;
     try {
-      await api.updateMenu(s.token, items, date);
       s.setMenu(items);
       if (date) s.setMenuDate(date);
+      await api.updateMenu(s.token, items, date);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -278,11 +278,11 @@ export default function App() {
           {s.activeTab === 'menu' && (
             <MenuTab
               editingMenu={s.menu}
-              onAddItem={() => {
+              onAddItem={async () => {
                 const newId = Math.max(0, ...s.menu.map((i) => i.id)) + 1;
                 const newItem: MenuItem = {
                   id: newId,
-                  name: 'New Item',
+                  name: t('menu.new_item'),
                   basePrice: 0,
                   price: 0,
                   available: true,
@@ -290,7 +290,20 @@ export default function App() {
                   tags: [],
                   extraFees: [],
                 };
-                handleApplyMenu([...s.menu, newItem]);
+                
+                // Optimistically update local state first
+                const updatedMenu = [...s.menu, newItem];
+                s.setMenu(updatedMenu);
+                
+                // Set as editing immediately to provide feedback
+                s.setEditingMenu(newItem);
+                
+                // Persist to server in background
+                try {
+                  await api.updateMenu(updatedMenu, token);
+                } catch (error) {
+                  console.error('Failed to persist new item:', error);
+                }
               }}
               onUpdateItem={handleUpdateMenuItem}
               onRemoveItem={handleRemoveMenuItem}

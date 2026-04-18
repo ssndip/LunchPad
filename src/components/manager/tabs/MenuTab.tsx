@@ -231,7 +231,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                   onConfirm: () => onDeleteAll()
                 });
               }}
-              tabIndex={-1}
               className="flex items-center gap-2 px-5 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all text-sm"
             >
               <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
@@ -251,7 +250,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <button 
               onClick={handleApplyDeliveryFee}
               className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
-              title="Apply Default Fee"
+              title={t('menu.apply_delivery_tax')}
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -271,24 +270,22 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <button 
               onClick={handleApplyPackagingFee}
               className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
-              title="Apply Fee"
+              title={t('menu.apply_box_fee')}
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </div>
           <button
             onClick={() => setIsPasteOpen(true)}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
           >
-            <FileText className="w-4 h-4" /> {t('menu.paste_title')}
+            <FileText className="w-4 h-4" /> {t('menu.paste_title') || 'Paste Menu Text'}
           </button>
           <button
             onClick={onAddItem}
-            tabIndex={-1}
             className="flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-md shadow-neutral-200"
           >
-            <Plus className="w-4 h-4" /> {t('menu.add_item')}
+            <Plus className="w-4 h-4" /> {t('menu.add_item') || 'Add Item'}
           </button>
         </div>
       </div>
@@ -384,7 +381,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               {editingMenu.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-12 text-center text-neutral-400 italic text-sm">
-                    No menu items yet. Add one above.
+                    {t('menu.no_items_yet')}
                   </td>
                 </tr>
               )}
@@ -399,13 +396,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 }, style: { pointerEvents: 'none' } }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.92, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 20 }}
+              exit={{ scale: 0.92, y: 20, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
               className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-neutral-100">

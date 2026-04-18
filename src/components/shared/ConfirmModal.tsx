@@ -38,8 +38,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const handleConfirm = () => {
     if (!config) return;
-    config.onConfirm(config.isPrompt ? inputValue : undefined);
+    const { onConfirm, isPrompt } = config;
     onClose();
+    onConfirm(isPrompt ? inputValue : undefined);
   };
 
   return (
@@ -49,14 +50,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, style: { pointerEvents: 'none' } }}
             onClick={onClose}
             className="absolute inset-0 bg-black/40 backdrop-blur-md"
           />
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
             className="relative bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl border border-neutral-100 overflow-hidden"
           >
             {/* Colour accent strip */}

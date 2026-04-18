@@ -70,6 +70,7 @@ interface AppState {
   confirmPin: string;
   pinUpdateStatus: 'idle' | 'loading' | 'success' | 'error';
   publicAccessRequired: boolean;
+  isSyncing: boolean;
   
   // --- Summaries ---
   expandedDate: string | null;
@@ -128,6 +129,7 @@ interface AppState {
   setDailySides: (v: any[]) => void;
   setDynamicTranslations: (translations: Record<string, any>) => void;
   setAvailableLanguages: (languages: { code: string, name: string }[]) => void;
+  setIsSyncing: (v: boolean) => void;
   
   // Complex Actions
   loginManager: (pin: string) => void;
@@ -198,6 +200,7 @@ export const useStore = create<AppState>((set) => ({
   confirmPin: '',
   pinUpdateStatus: 'idle',
   publicAccessRequired: false,
+  isSyncing: false,
   expandedDate: null,
   dailyDetails: [],
   dailySides: [],
@@ -271,7 +274,8 @@ export const useStore = create<AppState>((set) => ({
   setDailySides: (dailySides) => set({ dailySides }),
   setDynamicTranslations: (dynamicTranslations) => set({ dynamicTranslations }),
   setAvailableLanguages: (availableLanguages) => set({ availableLanguages }),
-
+  setIsSyncing: (isSyncing) => set({ isSyncing }),
+  
   // Complex Actions
   loginManager: (token) => {
     sessionStorage.setItem('token', token);

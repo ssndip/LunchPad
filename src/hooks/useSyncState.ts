@@ -155,6 +155,7 @@ export function useSyncState() {
   useEffect(() => {
     if (isManagerLoggedIn && token) {
       const loadManagerData = async () => {
+        useStore.getState().setIsSyncing(true);
         try {
           const [cards, orders, summaries, settings] = await Promise.all([
             api.fetchCards(token),
@@ -179,6 +180,8 @@ export function useSyncState() {
           });
         } catch (err) {
           console.error('[Sync] Failed to load batched manager data', err);
+        } finally {
+          useStore.getState().setIsSyncing(false);
         }
       };
 
