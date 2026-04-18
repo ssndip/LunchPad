@@ -75,6 +75,7 @@ export function useSyncState() {
         if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
         if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
         setConnectionError(null);
+        fetchLanguages();
       }
     } catch {
       // Keep existing error state
@@ -150,11 +151,12 @@ export function useSyncState() {
       const loadManagerData = async () => {
         useStore.getState().setIsSyncing(true);
         try {
-          const [cards, orders, summaries, settings] = await Promise.all([
+          const [cards, orders, summaries, settings, languages] = await Promise.all([
             api.fetchCards(token),
             api.fetchOrders(token),
             api.fetchSummaries(token),
-            api.fetchSettings(token)
+            api.fetchSettings(token),
+            api.fetchLanguages()
           ]);
 
           useStore.setState({
@@ -171,6 +173,9 @@ export function useSyncState() {
             bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled,
             adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist
           });
+          
+          const allLangs = [...languages.static, ...languages.custom];
+          useStore.getState().setAvailableLanguages(allLangs);
         } catch (err) {
           console.error('[Sync] Failed to load batched manager data', err);
         } finally {
@@ -198,5 +203,5 @@ export function useSyncState() {
     return () => clearInterval(id);
   }, [isManagerLoggedIn, fetchInitFallback]);
 
-  return { fetchCards, fetchInitFallback };
+  return { fetchCards, fetchInitFallback, fetchLanguages };
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard } from 'lucide-react';
+import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard, ChevronDown, X, Check, Globe } from 'lucide-react';
 import { Language } from '../../../translations';
 import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
@@ -35,6 +35,7 @@ interface SettingsTabProps {
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
+  confirm?: (config: any) => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -43,16 +44,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
+  confirm,
 }) => {
   const { t, lang } = useTranslation();
 
   const { canInstall, installApp, isIOS, isAndroid, isStandalone, deferredPrompt } = usePWA();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [localWhitelist, setLocalWhitelist] = React.useState(adminWhitelist);
+  const [pendingLanguage, setPendingLanguage] = React.useState(lang);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [importModalData, setImportModalData] = React.useState<any | null>(null);
   
   React.useEffect(() => {
     setLocalWhitelist(adminWhitelist);
   }, [adminWhitelist]);
+
+  React.useEffect(() => {
+    setPendingLanguage(lang);
+  }, [lang]);
 
 
 
@@ -78,16 +87,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       try {
         const content = evt.target?.result as string;
         const data = JSON.parse(content);
-        
-        const code = prompt("Enter language code (e.g. fr, de, es):");
-        if (!code) return;
-        const name = prompt("Enter language name (e.g. French, German):");
-        if (!name) return;
-
-        await onImportLanguage(code, name, data);
-        alert("Language imported successfully!");
+        setImportModalData(data);
       } catch (err) {
-        alert("Failed to parse language file");
+        if (confirm) {
+          confirm({
+            title: t('menu.Error'),
+            message: "Failed to parse language file",
+            confirmText: t('menu.OK'),
+            onConfirm: () => {}
+          });
+        } else {
+          alert("Failed to parse language file");
+        }
       }
     };
     reader.readAsText(file);
@@ -149,28 +160,94 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.language')}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 max-w-[240px]">
-              {availableLanguages.map((l) => (
-                <div key={l.code} className="group relative">
+            <div className="relative">
+              <div className="flex items-center gap-3">
+                <div className="relative">
                   <button
-                    onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, l.code, bgnEnabled)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${lang === l.code ? 'bg-neutral-900 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 hover:text-neutral-700'}`}
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center justify-between w-[200px] px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
                   >
-                    {l.code.toUpperCase()}
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-neutral-400" />
+                      {availableLanguages.find(l => l.code === pendingLanguage)?.name || pendingLanguage.toUpperCase()}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
-                  {l.code !== 'en' && l.code !== 'bg' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Delete language ${l.name}?`)) onDeleteLanguage(l.code);
-                      }}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] shadow-sm"
-                    >
-                      ×
-                    </button>
-                  )}
+
+                  <AnimatePresence>
+                    {isDropdownOpen && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="fixed inset-0 z-40"
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full mb-2 left-0 w-[240px] bg-white border border-neutral-100 rounded-3xl shadow-2xl z-50 overflow-hidden p-2"
+                        >
+                          <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                            {availableLanguages.map((l) => (
+                              <div
+                                key={l.code}
+                                className={`flex items-center justify-between p-2 rounded-xl transition-all ${pendingLanguage === l.code ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-50 text-neutral-600'}`}
+                              >
+                                <button
+                                  onClick={() => {
+                                    setPendingLanguage(l.code);
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className="flex-1 text-left px-2 py-1.5 font-bold text-sm"
+                                >
+                                  {l.name}
+                                </button>
+                                <div className="flex items-center gap-1">
+                                  {pendingLanguage === l.code && <Check className="w-4 h-4 mr-2" />}
+                                  {l.code !== 'en' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm) {
+                                          confirm({
+                                            title: `Delete ${l.name}?`,
+                                            message: `Are you sure you want to remove the ${l.name} language pack?`,
+                                            isDestructive: true,
+                                            onConfirm: () => onDeleteLanguage(l.code)
+                                          });
+                                        } else if (window.confirm(`Delete language ${l.name}?`)) {
+                                          onDeleteLanguage(l.code);
+                                        }
+                                      }}
+                                      className={`p-1.5 rounded-lg transition-all ${pendingLanguage === l.code ? 'hover:bg-white/10 text-white/50 hover:text-white' : 'hover:bg-red-50 text-neutral-400 hover:text-red-500'}`}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
-              ))}
+
+                {pendingLanguage !== lang && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, pendingLanguage, bgnEnabled)}
+                    className="px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
+                  >
+                    Apply
+                  </motion.button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -209,7 +286,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={kioskModeEnabled} 
-                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, publicAccessCode, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
+                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Kiosk Mode" 
               />
@@ -222,7 +299,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={allowPWAInstall} 
-                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
+                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Allow Install" 
               />
@@ -405,6 +482,121 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {importModalData && (
+          <LanguageImportModal
+            data={importModalData}
+            onClose={() => setImportModalData(null)}
+            onImport={async (code, name) => {
+              await onImportLanguage(code, name, importModalData);
+              setImportModalData(null);
+              if (confirm) {
+                confirm({
+                  title: t('modals.copy_success'),
+                  message: "Language imported successfully!",
+                  confirmText: t('menu.OK'),
+                  onConfirm: () => {}
+                });
+              }
+            }}
+            t={t}
+          />
+        )}
+      </AnimatePresence>
     </>
+  );
+};
+
+const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClose: () => void, onImport: (code: string, name: string) => Promise<void>, t: any }) => {
+  const [code, setCode] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [isImporting, setIsImporting] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code || !name) return;
+    setIsImporting(true);
+    try {
+      await onImport(code.toLowerCase().trim(), name.trim());
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/40 backdrop-blur-md"
+      />
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="relative bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl border border-neutral-100 overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-neutral-900" />
+        
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center text-neutral-900 shrink-0">
+            <Globe className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-neutral-900">Import Language</h3>
+            <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mt-1">
+              Configuration required
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Language Code</label>
+            <input
+              type="text"
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="e.g. fr, de, es"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Language Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. French, German"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
+            >
+              {t('modals.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={!code || !name || isImporting}
+              className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 text-sm disabled:opacity-30 flex items-center justify-center gap-2"
+            >
+              {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Import</>}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
   );
 };

@@ -40,7 +40,7 @@ import { useSyncState } from './hooks/useSyncState';
 export default function App() {
   const s = useStore();
   const { t } = useTranslation();
-  const { fetchInitFallback, fetchCards } = useSyncState();
+  const { fetchInitFallback, fetchCards, fetchLanguages } = useSyncState();
   
   // Selectors
   const groupedMenu = useGroupedMenu();
@@ -520,14 +520,17 @@ export default function App() {
               bgnEnabled={s.bgnEnabled}
               adminWhitelist={s.adminWhitelist}
               availableLanguages={s.availableLanguages}
+              confirm={setConfirmConfig}
               onImportLanguage={async (code, name, data) => {
                 if (s.token) {
                   await api.importLanguage(s.token, code, name, data);
+                  fetchLanguages();
                 }
               }}
               onDeleteLanguage={async (code) => {
                 if (s.token) {
                   await api.deleteLanguage(s.token, code);
+                  fetchLanguages();
                 }
               }}
               onInstallApp={() => {
