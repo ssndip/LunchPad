@@ -190,14 +190,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
             <button 
               onClick={enterFullscreen}
               className="p-1.5 rounded-lg bg-violet-600 text-white shadow-sm hover:bg-violet-700 transition-colors"
+              title="Fullscreen"
+              aria-label="Fullscreen"
             >
               <Maximize className="w-4 h-4" />
             </button>
           )}
-          <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors" title={t('kiosk.user_history_title')} aria-label={t('kiosk.user_history_title')}>
             <Users className="w-4 h-4" />
           </button>
-          <button onClick={onGoToManager} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
+          <button onClick={onGoToManager} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors" title={t('navigation.admin_login')} aria-label={t('navigation.admin_login')}>
             <Settings className="w-4 h-4" />
           </button>
         </div>
@@ -222,6 +224,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
               <button 
                 onClick={() => setAnnouncementDismissed(true)}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                title={t('modals.close')}
+                aria-label={t('modals.close')}
               >
                 <X className="w-5 h-5" />
               </button>

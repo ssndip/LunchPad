@@ -144,9 +144,9 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 bg-neutral-100/50 p-1.5 rounded-xl">
-                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
-                          <span className="text-xs font-black w-6 text-center">{item.quantity}</span>
-                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform">+</button>
+                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30" aria-label={`-1 ${item.name}`} title={`-1 ${item.name}`}>-</button>
+                          <span className="text-xs font-black w-6 text-center" aria-label={`${t('orders.quantity')}: ${item.quantity}`}>{item.quantity}</span>
+                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30" aria-label={`+1 ${item.name}`} title={`+1 ${item.name}`}>+</button>
                         </div>
                         
                         <div className="flex flex-col items-end gap-1">
@@ -236,7 +236,8 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                     ? 'bg-neutral-50 text-neutral-300 border-neutral-100'
                     : 'bg-white border-2 border-neutral-900 text-neutral-900'
                   }`}
-                  title="PIN Order"
+                  title={t('kiosk.pin_order')}
+                  aria-label={t('kiosk.pin_order')}
                 >
                   <Lock className="w-5 h-5" />
                 </button>
@@ -266,6 +267,8 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
           <button 
             onClick={onClearCart}
             className="p-1.5 hover:bg-red-50 text-neutral-300 hover:text-red-500 rounded-lg transition-all active:scale-90"
+            aria-label={t('modals.remove')}
+            title={t('modals.remove')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -393,6 +396,8 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
             <button
               onClick={onPinOrder}
               className="px-6 py-4 rounded-2xl bg-white border-2 border-neutral-900 text-neutral-900 font-black flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all shadow-md active:scale-95"
+              title={t('kiosk.pin_order')}
+              aria-label={t('kiosk.pin_order')}
             >
               <Lock className="w-5 h-5" />
             </button>
