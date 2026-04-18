@@ -188,7 +188,7 @@ export const resetOrders = (req: Request, res: Response, next: NextFunction) => 
       deliveryFee: settings.deliveryFee,
       packagingFee: settings.packagingFee,
       menuVersion: settings.menuVersion,
-      globalAccess: settings.globalAccess,
+      adminWhitelistEnabled: settings.adminWhitelistEnabled,
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,

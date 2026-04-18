@@ -13,7 +13,7 @@ import { logger } from "./server/logger";
 import { db, initDb, seedInitialData } from "./server/db";
 import { initSettings, settings, incrementMenuVersion } from "./server/config";
 import { setWssInstance } from "./server/broadcast";
-import { isLocalOrigin, globalAccessGuard } from "./server/middleware/auth";
+import { isLocalOrigin } from "./server/middleware/auth";
 
 // Controllers (for init/broadcast)
 import { getMenu } from "./server/controllers/menuController";
@@ -92,12 +92,6 @@ export async function startServer() {
     }
   });
 
-  // Global Access & Security Middleware
-  app.use("/api", (req, res, next) => {
-    if (req.path === "/auth/login" || req.path === "/auth/unlock" || req.path === "/init") return next();
-    return globalAccessGuard(req, res, next);
-  });
-
   // Apply General API Limiter to all /api routes (with its own skip logic for critical paths)
   app.use("/api", apiLimiter);
 
@@ -127,14 +121,14 @@ export async function startServer() {
       menu: getMenu(),
       menuVersion: settings.menuVersion, // ← Critical: fix for 409 Conflict errors
       kioskOpen,
-      globalAccess: settings.globalAccess,
-      publicAccessCode: settings.publicAccessCode ? "__REQUIRED__" : "", // Tell client a code is needed, but don't reveal it
+      adminWhitelistEnabled: settings.adminWhitelistEnabled,
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
       systemLanguage: settings.systemLanguage,
       bgnEnabled: settings.bgnEnabled,
+      adminWhitelist: settings.adminWhitelist,
       menuDate: settings.menuDate
     });
   });
@@ -164,7 +158,6 @@ export async function startServer() {
       try {
         const decoded = jwt.verify(token, settings.jwtSecret) as any;
         if (decoded && decoded.role === "admin") isAdmin = true;
-        if (decoded && decoded.role === "public") isPublicSession = true;
       } catch (err) {
         // Token invalid
       }
@@ -172,24 +165,16 @@ export async function startServer() {
 
     const isLocal = isLocalOrigin(origin);
     
-    // Core Access Logic:
-    // 1. Admin/Local ALWAYS allowed
-    // 2. If Global Access is ON:
-    //    - Allowed if no Public Access Code is set
-    //    - Allowed if a valid Public Session Token is provided
-    const isAllowed = isAdmin || isLocal || (
-      settings.globalAccess && 
-      (!settings.publicAccessCode || settings.publicAccessCode.trim() === "" || isPublicSession)
-    );
+    // 1. Determine if connection is allowed:
+    //    - Always allowed for Admin dashboard
+    //    - Always allowed for Local Origins (WiFi/LAN)
+    //    - Allowed for kiosk/remote public clients
+    const isAllowed = true; 
 
-    logger.ws(`Connection attempt: origin=${origin}, gAccess=${settings.globalAccess}, local=${isLocal}, admin=${isAdmin}, public=${isPublicSession} -> ${isAllowed ? 'ALLOWED' : 'REJECTED'}`);
+    logger.ws(`Connection attempt: origin=${origin}, local=${isLocal}, admin=${isAdmin} -> ALLOWED`);
 
-    if (!isAllowed) {
-      // Use 4001 for "Access Code Required" to distinguish from 4003 "Global Access Disabled"
-      const code = (settings.globalAccess && settings.publicAccessCode) ? 4001 : 4003;
-      ws.close(code, "Access Denied");
-      return;
-    }
+    // All public connections are now allowed by default
+    // We keep the check structure if we need to block for other reasons later.
 
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
@@ -200,14 +185,14 @@ export async function startServer() {
       deliveryFee: settings.deliveryFee || 0,
       packagingFee: settings.packagingFee || 0.1,
       menuVersion: settings.menuVersion,
-      globalAccess: settings.globalAccess,
-      publicAccessCode: settings.publicAccessCode ? "__REQUIRED__" : "", 
+      adminWhitelistEnabled: settings.adminWhitelistEnabled,
       orderButtonEnabled: settings.orderButtonEnabled,
       testModeEnabled: settings.testModeEnabled,
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
       systemLanguage: settings.systemLanguage,
       bgnEnabled: settings.bgnEnabled,
+      adminWhitelist: settings.adminWhitelist,
       menuDate: settings.menuDate
     } as any)); // Force type mapping for hydration
 

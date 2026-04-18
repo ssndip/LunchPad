@@ -3,8 +3,7 @@ import { db } from "../db";
 import { broadcast } from "../broadcast";
 import { 
   settings,
-  setGlobalAccessConfig, 
-  setPublicAccessCodeConfig,
+  setAdminWhitelistEnabledConfig, 
   setOrderButtonEnabledConfig, 
   setTestModeConfig,
   setPackagingFeeConfig,
@@ -13,15 +12,15 @@ import {
   setAllowPWAInstallConfig,
   setSystemLanguageConfig,
   setBgnEnabledConfig,
+  setAdminWhitelistConfig,
   hashAndSetAdminPin
 } from "../config";
-import { globalAccessGuard } from "../middleware/auth";
+import { kioskAccessGuard } from "../middleware/auth";
 import { kioskOpen } from "./statusController";
 
 export const fetchSettings = (req: Request, res: Response) => {
   res.json({ 
-    globalAccess: settings.globalAccess,
-    publicAccessCode: settings.publicAccessCode,
+    adminWhitelistEnabled: settings.adminWhitelistEnabled,
     orderButtonEnabled: settings.orderButtonEnabled,
     testModeEnabled: settings.testModeEnabled,
     packagingFee: settings.packagingFee,
@@ -29,36 +28,32 @@ export const fetchSettings = (req: Request, res: Response) => {
     kioskModeEnabled: settings.kioskModeEnabled,
     allowPWAInstall: settings.allowPWAInstall,
     systemLanguage: settings.systemLanguage,
-    bgnEnabled: settings.bgnEnabled
+    bgnEnabled: settings.bgnEnabled,
+    adminWhitelist: settings.adminWhitelist
   });
 };
 
 export const updateSettings = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { 
-      globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled, 
+      adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
-      systemLanguage, bgnEnabled 
+      systemLanguage, bgnEnabled, adminWhitelist 
     } = req.body;
     
-    if (globalAccess !== undefined) {
-      if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("global_access", globalAccess ? "1" : "0");
-      setGlobalAccessConfig(globalAccess); // ← critical: update in-memory state
+    if (adminWhitelistEnabled !== undefined) {
+      if (typeof adminWhitelistEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for adminWhitelistEnabled" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_whitelist_enabled", adminWhitelistEnabled ? "1" : "0");
+      setAdminWhitelistEnabledConfig(adminWhitelistEnabled);
       broadcast({ 
         type: "SETTINGS_UPDATE", 
         settings: { 
-          globalAccess: globalAccess,
+          adminWhitelistEnabled: adminWhitelistEnabled,
         } 
       });
     }
 
-    if (publicAccessCode !== undefined) {
-      if (typeof publicAccessCode !== 'string') return res.status(400).json({ error: "Invalid value for publicAccessCode" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("public_access_code", publicAccessCode);
-      setPublicAccessCodeConfig(publicAccessCode);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { publicAccessCode } });
-    }
+
 
     if (orderButtonEnabled !== undefined) {
       if (typeof orderButtonEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for orderButtonEnabled" });
@@ -117,11 +112,17 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setBgnEnabledConfig(bgnEnabled);
       broadcast({ type: "SETTINGS_UPDATE", settings: { bgnEnabled } as any });
     }
+    
+    if (adminWhitelist !== undefined) {
+      if (typeof adminWhitelist !== 'string') return res.status(400).json({ error: "Invalid value for adminWhitelist" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_whitelist", adminWhitelist);
+      setAdminWhitelistConfig(adminWhitelist);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { adminWhitelist } as any });
+    }
 
     res.json({ 
       success: true, 
-      globalAccess: settings.globalAccess, 
-      publicAccessCode: settings.publicAccessCode,
+      adminWhitelistEnabled: settings.adminWhitelistEnabled, 
       orderButtonEnabled: settings.orderButtonEnabled, 
       testModeEnabled: settings.testModeEnabled,
       packagingFee: settings.packagingFee,
@@ -129,7 +130,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       kioskModeEnabled: settings.kioskModeEnabled,
       allowPWAInstall: settings.allowPWAInstall,
       systemLanguage: settings.systemLanguage,
-      bgnEnabled: settings.bgnEnabled
+      bgnEnabled: settings.bgnEnabled,
+      adminWhitelist: settings.adminWhitelist
     });
   } catch (err: any) {
     next(err);

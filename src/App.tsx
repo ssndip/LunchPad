@@ -20,7 +20,7 @@ import { KioskView } from './components/kiosk/KioskView';
 import { KioskClosed } from './components/kiosk/KioskView';
 import { ManagerLogin } from './components/manager/ManagerLogin';
 import { ManagerDashboard } from './components/manager/ManagerDashboard';
-import { PublicAccessCodeEntry } from './components/shared/PublicAccessCodeEntry';
+
 import { ConfirmModal } from './components/shared/ConfirmModal';
 import { PwaInstallBanner } from './components/shared/PwaInstallBanner';
 import { PullToRefresh } from './components/shared/PullToRefresh';
@@ -185,28 +185,28 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (access: boolean, orderBtn: boolean, test?: boolean, publicCode?: string, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string) => {
     if (!s.token) return;
     try {
       const update = {
-        globalAccess: access,
+        adminWhitelistEnabled: whitelistEnabled,
         orderButtonEnabled: orderBtn,
         testModeEnabled: test ?? s.testModeEnabled,
-        publicAccessCode: publicCode ?? s.publicAccessCode,
         kioskModeEnabled: kiosk ?? s.kioskModeEnabled,
         allowPWAInstall: allowPwa ?? s.allowPWAInstall,
         systemLanguage: systemLang,
         bgnEnabled: bgn ?? s.bgnEnabled,
+        adminWhitelist: whitelist ?? s.adminWhitelist,
       };
       await api.updateSettings(s.token, update);
-      s.setGlobalAccess(access);
+      s.setAdminWhitelistEnabled(whitelistEnabled);
       s.setOrderButtonEnabled(orderBtn);
       if (test !== undefined) s.setTestModeEnabled(test);
-      if (publicCode !== undefined) s.setPublicAccessCode(publicCode);
       if (kiosk !== undefined) s.setKioskModeEnabled(kiosk);
       if (allowPwa !== undefined) s.setAllowPWAInstall(allowPwa);
       if (systemLang) s.setLang(systemLang as Language);
       if (bgn !== undefined) s.setBgnEnabled(bgn);
+      if (whitelist !== undefined) s.setAdminWhitelist(whitelist);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -229,21 +229,6 @@ export default function App() {
         confirmText: t('menu.OK'),
         onConfirm: () => {}
       });
-    }
-  };
-
-  const handleUnlock = async (code: string) => {
-    try {
-      const res = await api.unlock(code);
-      if (res.success && res.token) {
-        s.setPublicAccessToken(res.token);
-        s.setPublicAccessRequired(false);
-        // useWebSocket will auto-reconnect with the new token
-        return { success: true };
-      }
-      return { success: false, error: res.error };
-    } catch (err) {
-      return { success: false, error: 'Network error' };
     }
   };
 
@@ -510,8 +495,7 @@ export default function App() {
           )}
           {s.activeTab === 'settings' && (
             <SettingsTab
-              globalAccess={s.globalAccess}
-              publicAccessCode={s.publicAccessCode}
+              adminWhitelistEnabled={s.adminWhitelistEnabled}
               orderButtonEnabled={s.orderButtonEnabled}
               testModeEnabled={s.testModeEnabled}
               newPin={s.newPin}
@@ -519,12 +503,13 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(acc, ord, tst, code, kiosk, pwaSettings, systemLang, bgn) => {
-                handleUpdateSettings(acc, ord, tst, code, kiosk, pwaSettings, systemLang, bgn);
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
               bgnEnabled={s.bgnEnabled}
+              adminWhitelist={s.adminWhitelist}
               availableLanguages={s.availableLanguages}
               onImportLanguage={async (code, name, data) => {
                 if (s.token) {

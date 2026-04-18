@@ -2,10 +2,11 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { verifyAdminPin, settings } from "../config";
 import { db } from "../db";
+import { adminWhitelistGuard } from "../middleware/whitelist";
 
 const router = Router();
 
-router.post("/login", (req, res) => {
+router.post("/login", adminWhitelistGuard, (req, res) => {
   const { pin } = req.body;
 
   if (!pin) {

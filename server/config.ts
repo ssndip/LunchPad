@@ -7,8 +7,7 @@ if (!process.env.JWT_SECRET) {
 
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
-  globalAccess: true,
-  publicAccessCode: "",
+  adminWhitelistEnabled: true,
   orderButtonEnabled: true,
   testModeEnabled: false,
   menuVersion: 1,
@@ -20,12 +19,12 @@ export const settings = {
   menuDate: "",
   bgnEnabled: true,
   adminPin: process.env.ADMIN_PIN || "0000",
-  jwtSecret: process.env.JWT_SECRET
+  jwtSecret: process.env.JWT_SECRET,
+  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12"
 };
 
 // --- Setters ---
-export const setGlobalAccessConfig = (val: boolean) => settings.globalAccess = val;
-export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
+export const setAdminWhitelistEnabledConfig = (val: boolean) => settings.adminWhitelistEnabled = val;
 export const setOrderButtonEnabledConfig = (val: boolean) => settings.orderButtonEnabled = val;
 export const setTestModeConfig = (val: boolean) => settings.testModeEnabled = val;
 export const setPackagingFeeConfig = (val: number) => settings.packagingFee = val;
@@ -34,6 +33,7 @@ export const setKioskModeConfig = (val: boolean) => settings.kioskModeEnabled = 
 export const setAllowPWAInstallConfig = (val: boolean) => settings.allowPWAInstall = val;
 export const setSystemLanguageConfig = (val: string) => settings.systemLanguage = val;
 export const setBgnEnabledConfig = (val: boolean) => settings.bgnEnabled = val;
+export const setAdminWhitelistConfig = (val: string) => settings.adminWhitelist = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -65,20 +65,12 @@ export const hashAndSetAdminPin = (newPin: string) => {
 };
 
 export const initSettings = () => {
-  const globalAccess = db.prepare("SELECT value FROM settings WHERE key = ?").get("global_access") as { value: string } | undefined;
-  if (!globalAccess) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("global_access", "1");
-    settings.globalAccess = true;
+  const whitelistEnabled = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_whitelist_enabled") as { value: string } | undefined;
+  if (!whitelistEnabled) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist_enabled", "1");
+    settings.adminWhitelistEnabled = true;
   } else {
-    settings.globalAccess = globalAccess.value === "1";
-  }
-
-  const publicAccess = db.prepare("SELECT value FROM settings WHERE key = ?").get("public_access_code") as { value: string } | undefined;
-  if (!publicAccess) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("public_access_code", "");
-    settings.publicAccessCode = "";
-  } else {
-    settings.publicAccessCode = publicAccess.value;
+    settings.adminWhitelistEnabled = whitelistEnabled.value === "1";
   }
 
   const orderButton = db.prepare("SELECT value FROM settings WHERE key = ?").get("order_button_enabled") as { value: string } | undefined;
@@ -159,6 +151,13 @@ export const initSettings = () => {
     settings.bgnEnabled = true;
   } else {
     settings.bgnEnabled = bgnEnabledRecord.value === "1";
+  }
+  
+  const whitelistRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_whitelist") as { value: string } | undefined;
+  if (!whitelistRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist", settings.adminWhitelist);
+  } else {
+    settings.adminWhitelist = whitelistRecord.value;
   }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

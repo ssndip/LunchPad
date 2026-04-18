@@ -33,10 +33,6 @@ interface AppState {
   token: string | null;
   isManagerLoggedIn: boolean;
   editingMenu: MenuItem[];
-  publicAccessCode: string;
-  publicAccessToken: string | null;
-  
-  // --- Forms ---
   newCardRfid: string;
   newCardOwner: string;
   newCardIsAdmin: boolean;
@@ -53,7 +49,7 @@ interface AppState {
   };
   
   // --- Settings ---
-  globalAccess: boolean;
+  adminWhitelistEnabled: boolean;
   orderButtonEnabled: boolean;
   testModeEnabled: boolean;
   kioskOpen: boolean;
@@ -64,12 +60,12 @@ interface AppState {
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
   bgnEnabled: boolean;
+  adminWhitelist: string;
   
   // --- PIN Change ---
   newPin: string;
   confirmPin: string;
   pinUpdateStatus: 'idle' | 'loading' | 'success' | 'error';
-  publicAccessRequired: boolean;
   isSyncing: boolean;
   
   // --- Summaries ---
@@ -107,7 +103,7 @@ interface AppState {
   setPasteCardsText: (v: string) => void;
   setIsPasteCardsModalOpen: (v: boolean) => void;
   setHistoryFilters: (filters: any) => void;
-  setGlobalAccess: (v: boolean) => void;
+  setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
   setTestModeEnabled: (v: boolean) => void;
   setKioskOpen: (v: boolean) => void;
@@ -118,12 +114,10 @@ interface AppState {
   setKioskModeEnabled: (v: boolean) => void;
   setAllowPWAInstall: (v: boolean) => void;
   setBgnEnabled: (v: boolean) => void;
-  setPublicAccessCode: (v: string) => void;
-  setPublicAccessToken: (v: string | null) => void;
+  setAdminWhitelist: (v: string) => void;
   setNewPin: (v: string) => void;
   setConfirmPin: (v: string) => void;
   setPinUpdateStatus: (v: 'idle' | 'loading' | 'success' | 'error') => void;
-  setPublicAccessRequired: (v: boolean) => void;
   setExpandedDate: (v: string | null) => void;
   setDailyDetails: (v: any[]) => void;
   setDailySides: (v: any[]) => void;
@@ -169,9 +163,6 @@ export const useStore = create<AppState>((set) => ({
   token: sessionStorage.getItem('token'),
   isManagerLoggedIn: !!sessionStorage.getItem('token'),
   editingMenu: [],
-  publicAccessCode: '',
-  publicAccessToken: localStorage.getItem('public_access_token'),
-  newCardRfid: '',
   newCardOwner: '',
   newCardIsAdmin: false,
   newCardPin: '',
@@ -185,7 +176,7 @@ export const useStore = create<AppState>((set) => ({
     rfid: '',
     ownerName: '',
   },
-  globalAccess: true,
+  adminWhitelistEnabled: true,
   orderButtonEnabled: true,
   testModeEnabled: false,
   kioskOpen: true,
@@ -196,10 +187,10 @@ export const useStore = create<AppState>((set) => ({
   kioskModeEnabled: false,
   allowPWAInstall: true,
   bgnEnabled: true,
+  adminWhitelist: '',
   newPin: '',
   confirmPin: '',
   pinUpdateStatus: 'idle',
-  publicAccessRequired: false,
   isSyncing: false,
   expandedDate: null,
   dailyDetails: [],
@@ -248,7 +239,7 @@ export const useStore = create<AppState>((set) => ({
   setPasteCardsText: (pasteCardsText) => set({ pasteCardsText }),
   setIsPasteCardsModalOpen: (isPasteCardsModalOpen) => set({ isPasteCardsModalOpen }),
   setHistoryFilters: (historyFilters) => set({ historyFilters }),
-  setGlobalAccess: (globalAccess) => set({ globalAccess }),
+  setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (orderButtonEnabled) => set({ orderButtonEnabled }),
   setTestModeEnabled: (testModeEnabled) => set({ testModeEnabled }),
   setKioskOpen: (kioskOpen) => set({ kioskOpen }),
@@ -259,12 +250,7 @@ export const useStore = create<AppState>((set) => ({
   setKioskModeEnabled: (v) => set({ kioskModeEnabled: v }),
   setAllowPWAInstall: (v) => set({ allowPWAInstall: v }),
   setBgnEnabled: (v) => set({ bgnEnabled: v }),
-  setPublicAccessCode: (publicAccessCode) => set({ publicAccessCode }),
-  setPublicAccessToken: (token) => {
-    if (token) localStorage.setItem('public_access_token', token);
-    else localStorage.removeItem('public_access_token');
-    set({ publicAccessToken: token });
-  },
+  setAdminWhitelist: (v) => set({ adminWhitelist: v }),
   setNewPin: (newPin) => set({ newPin }),
   setConfirmPin: (confirmPin) => set({ confirmPin }),
   setPinUpdateStatus: (pinUpdateStatus) => set({ pinUpdateStatus }),

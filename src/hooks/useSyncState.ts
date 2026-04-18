@@ -6,7 +6,6 @@ import { Language } from '../translations';
 
 export function useSyncState() {
   const token = useStore(s => s.token);
-  const publicAccessToken = useStore(s => s.publicAccessToken);
   const isManagerLoggedIn = useStore(s => s.isManagerLoggedIn);
   const connectionError = useStore(s => s.connectionError);
 
@@ -15,7 +14,7 @@ export function useSyncState() {
   const setOrders = useStore(s => s.setOrders);
   const setSummaries = useStore(s => s.setSummaries);
   const setKioskOpen = useStore(s => s.setKioskOpen);
-  const setGlobalAccess = useStore(s => s.setGlobalAccess);
+  const setAdminWhitelistEnabled = useStore(s => s.setAdminWhitelistEnabled);
   const setOrderButtonEnabled = useStore(s => s.setOrderButtonEnabled);
   const setTestModeEnabled = useStore(s => s.setTestModeEnabled);
   const setMenuVersion = useStore(s => s.setMenuVersion);
@@ -24,11 +23,10 @@ export function useSyncState() {
   const setDeliveryFee = useStore(s => s.setDeliveryFee);
   const setKioskModeEnabled = useStore(s => s.setKioskModeEnabled);
   const setAllowPWAInstall = useStore(s => s.setAllowPWAInstall);
-  const setPublicAccessCode = useStore(s => s.setPublicAccessCode);
   const setConnectionError = useStore(s => s.setConnectionError);
-  const setPublicAccessRequired = useStore(s => s.setPublicAccessRequired);
   const setMenuDate = useStore(s => s.setMenuDate);
   const setBgnEnabled = useStore(s => s.setBgnEnabled);
+  const setAdminWhitelist = useStore(s => s.setAdminWhitelist);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -68,27 +66,27 @@ export function useSyncState() {
       if (data && data.menu) {
         setMenu(data.menu);
         setKioskOpen(data.kioskOpen ?? true);
-        setGlobalAccess(data.globalAccess ?? true);
+        setAdminWhitelistEnabled(data.adminWhitelistEnabled ?? true);
         setOrderButtonEnabled(data.orderButtonEnabled ?? true);
         setTestModeEnabled(data.testModeEnabled ?? false);
         setMenuVersion(data.menuVersion ?? 1);
         if (data.systemLanguage) setLang(data.systemLanguage);
         if (data.menuDate) setMenuDate(data.menuDate);
         if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
+        if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
         setConnectionError(null);
       }
     } catch {
       // Keep existing error state
     }
-  }, [setMenu, setKioskOpen, setGlobalAccess, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError]);
+  }, [setMenu, setKioskOpen, setAdminWhitelistEnabled, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError]);
 
   // WebSocket Handlers
   useWebSocket({
     onInitialState: (data) => {
       setMenu(data.menu);
       setKioskOpen(data.kioskOpen);
-      setGlobalAccess(data.globalAccess);
-      setPublicAccessCode(data.publicAccessCode || "");
+      setAdminWhitelistEnabled(data.adminWhitelistEnabled);
       setOrderButtonEnabled(data.orderButtonEnabled);
       setTestModeEnabled(data.testModeEnabled);
       if (data.packagingFee !== undefined) setPackagingFee(data.packagingFee);
@@ -100,9 +98,9 @@ export function useSyncState() {
       if (data.orders) setOrders(data.orders);
       if (data.menuDate) setMenuDate(data.menuDate);
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
+      if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
-      setPublicAccessRequired(false);
       fetchLanguages();
     },
     onMenuUpdate: (data) => {
@@ -114,14 +112,14 @@ export function useSyncState() {
       if (data.kioskOpen !== undefined) setKioskOpen(data.kioskOpen);
       if (data.orderButtonEnabled !== undefined) setOrderButtonEnabled(data.orderButtonEnabled);
       if (data.testModeEnabled !== undefined) setTestModeEnabled(data.testModeEnabled);
-      if (data.globalAccess !== undefined) setGlobalAccess(data.globalAccess);
-      if (data.publicAccessCode !== undefined) setPublicAccessCode(data.publicAccessCode);
+      if (data.adminWhitelistEnabled !== undefined) setAdminWhitelistEnabled(data.adminWhitelistEnabled);
       if (data.packagingFee !== undefined) setPackagingFee(data.packagingFee);
       if (data.deliveryFee !== undefined) setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
       if (data.systemLanguage !== undefined) setLang(data.systemLanguage);
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
+      if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
@@ -141,14 +139,9 @@ export function useSyncState() {
       fetchLanguages();
     },
     onConnectionError: (msg) => {
-      if (msg === 'PUBLIC_ACCESS_REQUIRED') {
-        setPublicAccessRequired(true);
-        setConnectionError(null);
-      } else {
-        setConnectionError(msg);
-      }
+      setConnectionError(msg);
     },
-  }, token || publicAccessToken);
+  }, token);
 
 
   // Synchronize Manager Data — Batched for stability
@@ -168,15 +161,15 @@ export function useSyncState() {
             cards,
             orders,
             summaries,
-            globalAccess: settings.globalAccess,
-            publicAccessCode: settings.publicAccessCode,
+            adminWhitelistEnabled: settings.adminWhitelistEnabled !== undefined ? settings.adminWhitelistEnabled : useStore.getState().adminWhitelistEnabled,
             orderButtonEnabled: settings.orderButtonEnabled,
             testModeEnabled: settings.testModeEnabled,
             packagingFee: settings.packagingFee !== undefined ? settings.packagingFee : 0.1,
             deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : 0,
             lang: settings.systemLanguage ? settings.systemLanguage as Language : useStore.getState().lang,
             menuDate: settings.menuDate || useStore.getState().menuDate,
-            bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled
+            bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled,
+            adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist
           });
         } catch (err) {
           console.error('[Sync] Failed to load batched manager data', err);

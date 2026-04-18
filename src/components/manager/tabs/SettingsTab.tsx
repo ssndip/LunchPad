@@ -8,13 +8,13 @@ import { usePWA } from '../../../hooks/usePWA';
 import { useTranslation } from '../../../hooks/useTranslation';
 
 interface SettingsTabProps {
-  globalAccess: boolean;
-  publicAccessCode: string;
+  adminWhitelistEnabled: boolean;
   orderButtonEnabled: boolean;
   testModeEnabled: boolean;
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
   bgnEnabled: boolean;
+  adminWhitelist: string;
   newPin: string;
   setNewPin: (v: string) => void;
   confirmPin: string;
@@ -24,34 +24,37 @@ interface SettingsTabProps {
   onImportLanguage: (code: string, name: string, data: any) => Promise<void>;
   onDeleteLanguage: (code: string) => Promise<void>;
   onUpdateSettings: (
-    access: boolean,
+    adminWhitelistEnabled: boolean,
     orderBtn: boolean,
     testMode?: boolean,
-    publicCode?: string,
     kioskMode?: boolean,
     allowPwa?: boolean,
     systemLanguage?: string,
     bgnEnabled?: boolean,
+    adminWhitelist?: string,
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
-  globalAccess, publicAccessCode, orderButtonEnabled, testModeEnabled,
-  kioskModeEnabled, allowPWAInstall, bgnEnabled,
+  adminWhitelistEnabled, orderButtonEnabled, testModeEnabled,
+  kioskModeEnabled, allowPWAInstall, bgnEnabled, adminWhitelist,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
 }) => {
   const { t, lang } = useTranslation();
-  const [localPublicCode, setLocalPublicCode] = React.useState(publicAccessCode);
+
   const { canInstall, installApp, isIOS, isAndroid, isStandalone, deferredPrompt } = usePWA();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [localWhitelist, setLocalWhitelist] = React.useState(adminWhitelist);
   
   React.useEffect(() => {
-    setLocalPublicCode(publicAccessCode);
-  }, [publicAccessCode]);
+    setLocalWhitelist(adminWhitelist);
+  }, [adminWhitelist]);
+
+
 
   const handleExportTemplate = () => {
     // We import translations here to get the full object
@@ -127,8 +130,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-[10px] text-neutral-400 font-medium">{t('settings.enable_bgn_desc')}</p>
               </div>
             </div>
-            <button
-              onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
+              <button
+                onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
               role="switch" aria-checked={bgnEnabled}
               className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
             >
@@ -150,7 +153,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               {availableLanguages.map((l) => (
                 <div key={l.code} className="group relative">
                   <button
-                    onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, l.code, bgnEnabled)}
+                    onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, l.code, bgnEnabled)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${lang === l.code ? 'bg-neutral-900 text-white shadow-sm' : 'bg-neutral-100 text-neutral-500 hover:text-neutral-700'}`}
                   >
                     {l.code.toUpperCase()}
@@ -206,7 +209,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={kioskModeEnabled} 
-                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
+                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, publicAccessCode, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Kiosk Mode" 
               />
@@ -219,7 +222,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <Toggle 
                 checked={allowPWAInstall} 
-                onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
+                onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
                 color="bg-violet-600"
                 label="Toggle Allow Install" 
               />
@@ -257,46 +260,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
 
-        {/* Global access */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><Settings className="w-6 h-6 text-neutral-900" /></div>
-              <div>
-                <h3 className="text-xl font-bold text-neutral-900">{t('settings.global_access')}</h3>
-                <p className="text-sm text-neutral-500 italic">{t('settings.global_access_desc')}</p>
-              </div>
-            </div>
-            <Toggle checked={globalAccess} onChange={() => onUpdateSettings(!globalAccess, orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Global Access" />
-          </div>
-          <div className="p-5 bg-neutral-50 rounded-3xl border border-neutral-100">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-neutral-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-neutral-500 leading-relaxed font-serif italic">{t('settings.global_access_warning')}</p>
-            </div>
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-neutral-100">
-            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.public_code')}</label>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                value={localPublicCode}
-                onChange={(e) => setLocalPublicCode(e.target.value)}
-                placeholder={t('settings.public_code_placeholder')}
-                className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm"
-              />
-              <button
-                onClick={() => onUpdateSettings(globalAccess, orderButtonEnabled, testModeEnabled, localPublicCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)}
-                disabled={localPublicCode === publicAccessCode}
-                className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
-              >
-                {t('settings.update')}
-              </button>
-            </div>
-            <p className="mt-2 text-[10px] text-neutral-400 italic">{t('settings.public_code_desc')}</p>
-          </div>
-        </div>
+
 
         {/* Ordering toggle */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
@@ -308,7 +272,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.ordering_desc')}</p>
               </div>
             </div>
-            <Toggle checked={orderButtonEnabled} onChange={() => onUpdateSettings(globalAccess, !orderButtonEnabled, testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Ordering" />
+            <Toggle checked={orderButtonEnabled} onChange={() => onUpdateSettings(adminWhitelistEnabled, !orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Ordering" />
           </div>
         </div>
 
@@ -322,7 +286,80 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-sm text-neutral-500 italic">{t('settings.test_mode_desc')}</p>
               </div>
             </div>
-            <Toggle checked={testModeEnabled} onChange={() => onUpdateSettings(globalAccess, orderButtonEnabled, !testModeEnabled, publicAccessCode, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Test Mode" color="bg-indigo-600" />
+            <Toggle checked={testModeEnabled} onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, !testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Test Mode" color="bg-indigo-600" />
+          </div>
+        </div>
+        {/* Admin Whitelist */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center"><CheckCircle2 className="w-6 h-6 text-amber-600" /></div>
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900">Admin Access Whitelist</h3>
+                <p className="text-sm text-neutral-500 italic">Restrict administrative access to specific IPs or hostnames</p>
+              </div>
+            </div>
+            <Toggle 
+              checked={adminWhitelistEnabled} 
+              onChange={() => onUpdateSettings(!adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
+              label="Toggle Whitelisting" 
+              color="bg-amber-600" 
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Whitelisted Hosts & IP Ranges</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={localWhitelist}
+                  onChange={(e) => setLocalWhitelist(e.target.value)}
+                  placeholder="e.g. 127.0.0.1, localhost, 192.168.1.0/24"
+                  className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
+                />
+                <button
+                  onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, localWhitelist)}
+                  disabled={localWhitelist === adminWhitelist}
+                  className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30 whitespace-nowrap"
+                >
+                  {t('settings.update')}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100/50">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                <div className="space-y-3">
+                  <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                    Localhost and local network access are allowed by default. Use comma-separated values for multiple entries.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Examples:</p>
+                      <ul className="text-[11px] text-amber-700/80 space-y-1 font-mono">
+                        <li>• 192.168.1.5 <span className="text-[9px] opacity-70">(Single IP)</span></li>
+                        <li>• 10.0.0.0/24 <span className="text-[9px] opacity-70">(Subnet)</span></li>
+                        <li>• office.local <span className="text-[9px] opacity-70">(Hostname)</span></li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Defaults Included:</p>
+                      <p className="text-[11px] text-amber-700/80 font-mono">
+                        127.0.0.1, localhost, ::1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-[10px] text-neutral-400 italic flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Changes take effect immediately for the next login attempt.
+            </p>
           </div>
         </div>
 

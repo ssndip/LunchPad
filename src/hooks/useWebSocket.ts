@@ -13,7 +13,7 @@ export interface WsHandlers {
     kioskOpen?: boolean;
     orderButtonEnabled?: boolean;
     testModeEnabled?: boolean;
-    globalAccess?: boolean;
+    adminWhitelistEnabled?: boolean;
   }) => void;
   onCardsUpdate: () => void;
   onOrderUpdate: (orders: any[]) => void;
@@ -127,9 +127,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
 
         if (event.code === 4003) {
-          handlersRef.current.onConnectionError('Global Access Disabled');
-        } else if (event.code === 4001) {
-          handlersRef.current.onConnectionError('PUBLIC_ACCESS_REQUIRED');
+          handlersRef.current.onConnectionError('Access Denied');
         } else {
           handlersRef.current.onConnectionError('Reconnecting...');
           reconnectTimer = setTimeout(() => {

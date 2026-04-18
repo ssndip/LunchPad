@@ -30,8 +30,7 @@ export interface InitialStateMessage extends BaseWsMessage {
   packagingFee: number;
   menuVersion: number;
   menuDate?: string;
-  globalAccess: boolean;
-  publicAccessCode?: string;
+  adminWhitelistEnabled: boolean;
   orderButtonEnabled: boolean;
   testModeEnabled: boolean;
   kioskModeEnabled: boolean;
@@ -73,10 +72,10 @@ export interface StatusUpdateMessage extends BaseWsMessage {
 export interface SettingsUpdateMessage extends BaseWsMessage {
   type: 'SETTINGS_UPDATE';
   settings: {
-    globalAccess?: boolean;
-    publicAccessCode?: string;
+    adminWhitelistEnabled?: boolean;
     orderButtonEnabled?: boolean;
     testModeEnabled?: boolean;
+    currency?: string;
   };
 }
 
