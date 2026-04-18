@@ -43,9 +43,10 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   const menuItems = [
     { id: 'menu', icon: MenuIcon, label: t('navigation.menu_management') },
     { id: 'orders', icon: TrendingUp, label: t('navigation.order_summary') },
+    { id: 'history', icon: History, label: t('navigation.history') },
     { id: 'cards', icon: CreditCard, label: t('navigation.card_management') },
     { id: 'analytics', icon: BarChart2, label: t('navigation.analytics') },
-    { id: 'parser_rules', icon: Terminal, label: 'Parser Rules' },
+    { id: 'parser_rules', icon: Terminal, label: t('navigation.parser_rules') },
     { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
   ];
 

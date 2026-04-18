@@ -339,13 +339,13 @@ export default function App() {
           )}
           {s.activeTab === 'history' && (
             <HistoryTab
-              history={s.orders}
+              history={s.history}
               filters={s.historyFilters}
               onFilterChange={(k, v) => s.setHistoryFilters({ ...s.historyFilters, [k]: v })}
               onApplyFilters={async () => {
                 if (s.token) {
                   const results = await api.fetchHistory(s.token, s.historyFilters);
-                  s.setOrders(results);
+                  s.setHistory(results);
                 }
               }}
             />
@@ -491,6 +491,15 @@ export default function App() {
               setPasteCardsText={s.setPasteCardsText}
               isPasteCardsModalOpen={s.isPasteCardsModalOpen}
               setIsPasteCardsModalOpen={s.setIsPasteCardsModalOpen}
+              onViewStats={async (rfid) => {
+                const newFilters = { ...s.historyFilters, rfid };
+                s.setHistoryFilters(newFilters);
+                s.setActiveTab('history');
+                if (s.token) {
+                  const results = await api.fetchHistory(s.token, newFilters);
+                  s.setHistory(results);
+                }
+              }}
             />
           )}
           {s.activeTab === 'settings' && (
@@ -535,7 +544,9 @@ export default function App() {
                   if (res.ok) {
                     s.setPinUpdateStatus('success');
                     s.loginManager(s.newPin);
-                    setTimeout(() => s.setPinUpdateStatus('idle'), 2000);
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 500);
                   } else {
                     s.setPinUpdateStatus('error');
                   }

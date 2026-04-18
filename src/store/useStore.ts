@@ -47,6 +47,11 @@ interface AppState {
     rfid: string;
     ownerName: string;
   };
+  analyticsFilters: {
+    startDate: string;
+    endDate: string;
+    rfid: string;
+  };
   
   // --- Settings ---
   adminWhitelistEnabled: boolean;
@@ -79,6 +84,7 @@ interface AppState {
   setLang: (lang: Language) => void;
   setMenu: (menu: MenuItem[]) => void;
   setOrders: (orders: Order[]) => void;
+  setHistory: (history: Order[]) => void;
   setCards: (cards: Card[]) => void;
   setDeliveryFee: (fee: number) => void;
   setPackagingFee: (fee: number) => void;
@@ -103,6 +109,7 @@ interface AppState {
   setPasteCardsText: (v: string) => void;
   setIsPasteCardsModalOpen: (v: boolean) => void;
   setHistoryFilters: (filters: any) => void;
+  setAnalyticsFilters: (filters: any) => void;
   setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
   setTestModeEnabled: (v: boolean) => void;
@@ -176,6 +183,11 @@ export const useStore = create<AppState>((set) => ({
     rfid: '',
     ownerName: '',
   },
+  analyticsFilters: {
+    startDate: '',
+    endDate: '',
+    rfid: '',
+  },
   adminWhitelistEnabled: true,
   orderButtonEnabled: true,
   testModeEnabled: false,
@@ -215,6 +227,7 @@ export const useStore = create<AppState>((set) => ({
   },
   setMenu: (menu) => set({ menu }),
   setOrders: (orders) => set({ orders }),
+  setHistory: (history) => set({ history }),
   setCards: (cards) => set({ cards }),
   setDeliveryFee: (deliveryFee) => set({ deliveryFee }),
   setPackagingFee: (packagingFee) => set({ packagingFee }),
@@ -239,6 +252,7 @@ export const useStore = create<AppState>((set) => ({
   setPasteCardsText: (pasteCardsText) => set({ pasteCardsText }),
   setIsPasteCardsModalOpen: (isPasteCardsModalOpen) => set({ isPasteCardsModalOpen }),
   setHistoryFilters: (historyFilters) => set({ historyFilters }),
+  setAnalyticsFilters: (analyticsFilters) => set({ analyticsFilters }),
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (orderButtonEnabled) => set({ orderButtonEnabled }),
   setTestModeEnabled: (testModeEnabled) => set({ testModeEnabled }),
@@ -266,6 +280,10 @@ export const useStore = create<AppState>((set) => ({
   loginManager: (token) => {
     sessionStorage.setItem('token', token);
     set({ token, isManagerLoggedIn: true });
+    // Refresh to ensure all sync hooks and state are fresh
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   },
   logoutManager: () => {
     sessionStorage.removeItem('token');

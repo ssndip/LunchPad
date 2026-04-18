@@ -268,7 +268,12 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
 
   if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
   if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
-  if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
+  if (rfid) { 
+    sql += " AND (rfid = ? OR ownerName LIKE ? ESCAPE '\\')"; 
+    params.push(rfid);
+    const escapedSearch = (rfid as string).replace(/[\\%_]/g, '\\$&');
+    params.push(`%${escapedSearch}%`);
+  }
   if (ownerName) {
     sql += " AND ownerName LIKE ? ESCAPE '\\'";
     const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
@@ -295,12 +300,29 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
 
 export const fetchAnalytics = (req: Request, res: Response) => {
   try {
-    const orders = db.prepare("SELECT * FROM orders").all() as any[];
+    const { startDate, endDate, rfid, ownerName } = req.query;
+    let sql = "SELECT * FROM orders WHERE 1=1";
+    const params: any[] = [];
+
+    if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
+    if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
+    if (rfid) { sql += " AND rfid = ?"; params.push(rfid); }
+    if (ownerName) {
+      sql += " AND ownerName LIKE ? ESCAPE '\\'";
+      const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
+      params.push(`%${escapedOwnerName}%`);
+    }
+
+    const orders = db.prepare(sql).all(...params) as any[];
     
     // 1. Aggregates
     const mealCounts: Record<string, number> = {};
     const sideCounts: Record<string, number> = {};
     const hourlyDistribution: Record<number, number> = {};
+    const customerSpending: Record<string, { rfid: string, name: string, total: number, count: number }> = {};
+    const dailyData: Record<string, { date: string, revenue: number, orders: number }> = {};
+
+    let totalRevenue = 0;
 
     orders.forEach(o => {
       let items = [];
@@ -308,6 +330,10 @@ export const fetchAnalytics = (req: Request, res: Response) => {
         items = o.items ? JSON.parse(o.items) : [];
       } catch {}
 
+      const orderTotal = Number(o.totalPrice) || 0;
+      totalRevenue += orderTotal;
+
+      // Items Stats
       if (Array.isArray(items)) {
         items.forEach((item: any) => {
           mealCounts[item.name] = (mealCounts[item.name] || 0) + 1;
@@ -317,28 +343,64 @@ export const fetchAnalytics = (req: Request, res: Response) => {
         });
       }
 
+      // Hourly distribution
       const hour = new Date(o.timestamp).getHours();
       hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
+
+      // Customer spending
+      const cRfid = o.rfid || 'unknown';
+      if (!customerSpending[cRfid]) {
+        customerSpending[cRfid] = { rfid: cRfid, name: o.ownerName || 'Unknown', total: 0, count: 0 };
+      }
+      customerSpending[cRfid].total += orderTotal;
+      customerSpending[cRfid].count += 1;
+
+      // Daily distribution (for timeline chart)
+      const d = o.date;
+      if (!dailyData[d]) {
+        dailyData[d] = { date: d, revenue: 0, orders: 0 };
+      }
+      dailyData[d].revenue += orderTotal;
+      dailyData[d].orders += 1;
     });
 
     const popularMeals = Object.entries(mealCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+      .slice(0, 10);
 
     const popularSides = Object.entries(sideCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .slice(0, 10);
 
     const peakTimes = Object.entries(hourlyDistribution)
       .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
       .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
 
-    res.json({ popularMeals, popularSides, peakTimes });
-  } catch (err) {
+    const topCustomers = Object.values(customerSpending)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    const timeline = Object.values(dailyData)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    res.json({ 
+      popularMeals, 
+      popularSides, 
+      peakTimes,
+      topCustomers,
+      timeline,
+      summary: {
+        totalRevenue: Number(totalRevenue.toFixed(2)),
+        totalOrders: orders.length,
+        avgOrderValue: orders.length > 0 ? Number((totalRevenue / orders.length).toFixed(2)) : 0,
+        uniqueCustomers: Object.keys(customerSpending).length
+      }
+    });
+  } catch (err: any) {
     console.error("[Analytics] Error:", err);
-    res.status(500).json({ error: "Failed to fetch analytics" });
+    res.status(500).json({ error: "Failed to fetch analytics", message: err.message });
   }
 };
 export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction) => {

@@ -36,6 +36,34 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
         </div>
       </div>
 
+      {/* Summary Bar */}
+      {Array.isArray(history) && history.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-neutral-900 p-4 rounded-2xl text-white shadow-lg">
+            <p className="text-[10px] font-mono uppercase tracking-widest opacity-50 mb-1">{t('analytics.result_count')}</p>
+            <p className="text-xl font-bold">{history.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-sm">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">{t('analytics.total_spending')}</p>
+            <p className="text-xl font-bold text-neutral-900">
+              €{history.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-sm">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">{t('analytics.avg_transaction')}</p>
+            <p className="text-xl font-bold text-neutral-900">
+              €{(history.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0) / history.length).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-sm">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">{t('analytics.unique_users')}</p>
+            <p className="text-xl font-bold text-neutral-900">
+              {new Set(history.map(o => o.rfid)).size}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -65,7 +93,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
           </div>
           <div>
             <label htmlFor="rfidSearch" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">
-              {t('cards.rfid')} / {t('cards.owner_name')}
+              RFID / {t('cards.owner_name')}
             </label>
             <input
               id="rfidSearch"
@@ -116,9 +144,14 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                     <p className="text-[10px] text-neutral-400 font-mono">{order.rfid ?? 'N/A'}</p>
                   </td>
                   <td className="p-6">
-                    <p className="text-xs text-neutral-600 max-w-[260px] truncate">
-                      {Array.isArray(order.items) ? order.items.map((i) => i.name).join(', ') : t('menu.no_items')}
-                    </p>
+                    <div className="space-y-1 max-h-24 overflow-y-auto pr-2 custom-scrollbar">
+                      {Array.isArray(order.items) ? order.items.map((i: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center gap-4 text-xs">
+                          <span className="font-bold text-neutral-900 truncate">{i.name}</span>
+                          <span className="text-neutral-400 font-mono">x{i.quantity || 1}</span>
+                        </div>
+                      )) : <p className="text-xs text-neutral-400 italic">{t('menu.no_items')}</p>}
+                    </div>
                   </td>
                   <td className="p-6 text-right font-mono font-bold text-neutral-900">
                     €{(Number(order.totalPrice) || 0).toFixed(2)}

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
-import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet, BarChart2 } from 'lucide-react';
 import { Card } from '../../../types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -31,6 +31,7 @@ interface CardsTabProps {
   setPasteCardsText: (v: string) => void;
   isPasteCardsModalOpen: boolean;
   setIsPasteCardsModalOpen: (v: boolean) => void;
+  onViewStats?: (rfid: string) => void;
 }
 
 export const CardsTab: React.FC<CardsTabProps> = ({
@@ -56,6 +57,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   setIsPasteCardsModalOpen,
   newCardPin,
   setNewCardPin,
+  onViewStats,
 }) => {
   const { t } = useTranslation();
   const managerRfidRef = useRef<HTMLInputElement>(null);
@@ -317,6 +319,9 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                               </>
                             ) : (
                               <>
+                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+                                  <BarChart2 className="w-4 h-4" />
+                                </button>
                                 <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
                                   <Pencil className="w-4 h-4" />
                                 </button>

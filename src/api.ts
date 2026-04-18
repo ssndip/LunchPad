@@ -191,8 +191,10 @@ export const fetchCardProfile = async (rfid: string) => {
   return res.json();
 };
 
-export const fetchAnalytics = async (token: string) => {
-  const res = await fetch('/api/analytics', { headers: authHeaders(token) });
+export const fetchAnalytics = async (token: string, filters?: Record<string, string>) => {
+  const params = filters ? new URLSearchParams(filters) : '';
+  const url = `/api/analytics${params ? `?${params}` : ''}`;
+  const res = await fetch(url, { headers: authHeaders(token) });
   if (!res.ok) throw new Error('Failed to fetch analytics');
   return res.json();
 };
