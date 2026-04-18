@@ -46,7 +46,7 @@ export const appPromise = startServer();
 export async function startServer() {
   const app = express();
   // Global IP Identification
-  app.set("trust proxy", true);
+  app.set("trust proxy", 1);
 
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
