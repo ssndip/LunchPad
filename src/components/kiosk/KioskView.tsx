@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle } from 'lucide-react';
+import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle, Info, X } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { Language } from '../../translations';
 import { KioskCategorySidebar } from './KioskCategorySidebar';
@@ -41,6 +41,7 @@ interface KioskViewProps {
   onClearCart: () => void;
   onGoToManager: () => void;
   menuDate?: string;
+  announcement?: string;
 }
 
 export const KioskView: React.FC<KioskViewProps> = ({
@@ -68,6 +69,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   onClearCart,
   onGoToManager,
   menuDate,
+  announcement,
 }) => {
   const { t, lang } = useTranslation();
   const rfidInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +78,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const { kioskModeEnabled } = useStore();
   const { isStandalone, enterFullscreen } = usePWA();
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   
   // Category Navigation
   const categories = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
@@ -200,6 +203,32 @@ export const KioskView: React.FC<KioskViewProps> = ({
         </div>
       </header>
       
+      {/* 1.5 Announcement Banner */}
+      <AnimatePresence>
+        {announcement && !announcementDismissed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-blue-600 text-white shrink-0 relative overflow-hidden"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-bold leading-tight">
+                  {announcement}
+                </p>
+              </div>
+              <button 
+                onClick={() => setAnnouncementDismissed(true)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
       {/* 2. Main Area — 3 Columns (Responsive) */}

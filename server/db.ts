@@ -231,12 +231,13 @@ export const seedInitialData = () => {
     console.log("[DB] Seeded Default Parser Profile");
   }
 
-  // Seed PWA Settings
-  const pwaSettings = [
+  // Seed PWA & System Settings
+  const initialSettings = [
     { key: 'kioskModeEnabled', value: '0' },
-    { key: 'allowPWAInstall', value: '1' }
+    { key: 'allowPWAInstall', value: '1' },
+    { key: 'announcement', value: 'Наско , кога ше пием бира?!' }
   ];
   const insertSetting = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
-  pwaSettings.forEach(s => insertSetting.run(s.key, s.value));
-  console.log("[DB] Ensured PWA settings exist");
+  initialSettings.forEach(s => insertSetting.run(s.key, s.value));
+  console.log("[DB] Ensured settings exist");
 };

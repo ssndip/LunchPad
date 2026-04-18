@@ -186,7 +186,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string) => {
     if (!s.token) return;
     try {
       const update = {
@@ -198,6 +198,7 @@ export default function App() {
         systemLanguage: systemLang,
         bgnEnabled: bgn ?? s.bgnEnabled,
         adminWhitelist: whitelist ?? s.adminWhitelist,
+        announcement: announcement ?? s.announcement,
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -208,6 +209,7 @@ export default function App() {
       if (systemLang) s.setLang(systemLang as Language);
       if (bgn !== undefined) s.setBgnEnabled(bgn);
       if (whitelist !== undefined) s.setAdminWhitelist(whitelist);
+      if (announcement !== undefined) s.setAnnouncement(announcement);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -513,13 +515,14 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist);
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
               bgnEnabled={s.bgnEnabled}
               adminWhitelist={s.adminWhitelist}
+              announcement={s.announcement}
               availableLanguages={s.availableLanguages}
               confirm={setConfirmConfig}
               onImportLanguage={async (code, name, data) => {
@@ -673,6 +676,7 @@ export default function App() {
           kioskAutoTiming={s.kioskAutoTiming}
           kioskCloseTime={s.kioskCloseTime}
           lang={s.lang}
+          announcement={s.announcement}
           onToggleItem={handleToggleItem}
           onAddWithSide={handleAddWithSide}
           onUpdateQuantity={s.updateItemQuantity}

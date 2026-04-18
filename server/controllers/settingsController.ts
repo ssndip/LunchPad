@@ -13,6 +13,7 @@ import {
   setSystemLanguageConfig,
   setBgnEnabledConfig,
   setAdminWhitelistConfig,
+  setAnnouncementConfig,
   hashAndSetAdminPin
 } from "../config";
 import { kioskAccessGuard } from "../middleware/auth";
@@ -29,7 +30,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     allowPWAInstall: settings.allowPWAInstall,
     systemLanguage: settings.systemLanguage,
     bgnEnabled: settings.bgnEnabled,
-    adminWhitelist: settings.adminWhitelist
+    adminWhitelist: settings.adminWhitelist,
+    announcement: settings.announcement
   });
 };
 
@@ -38,7 +40,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
     const { 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
-      systemLanguage, bgnEnabled, adminWhitelist 
+      systemLanguage, bgnEnabled, adminWhitelist, announcement 
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -119,6 +121,13 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setAdminWhitelistConfig(adminWhitelist);
       broadcast({ type: "SETTINGS_UPDATE", settings: { adminWhitelist } as any });
     }
+    
+    if (announcement !== undefined) {
+      if (typeof announcement !== 'string') return res.status(400).json({ error: "Invalid value for announcement" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("announcement", announcement);
+      setAnnouncementConfig(announcement);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { announcement } as any });
+    }
 
     res.json({ 
       success: true, 
@@ -131,7 +140,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       allowPWAInstall: settings.allowPWAInstall,
       systemLanguage: settings.systemLanguage,
       bgnEnabled: settings.bgnEnabled,
-      adminWhitelist: settings.adminWhitelist
+      adminWhitelist: settings.adminWhitelist,
+      announcement: settings.announcement
     });
   } catch (err: any) {
     next(err);

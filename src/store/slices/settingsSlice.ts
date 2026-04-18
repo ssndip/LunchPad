@@ -19,6 +19,7 @@ export interface SettingsSlice {
   availableLanguages: { code: string, name: string }[];
   dynamicTranslations: Record<string, any>;
   publicAccessRequired: boolean;
+  announcement: string;
 
   setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
@@ -36,6 +37,7 @@ export interface SettingsSlice {
   setAvailableLanguages: (languages: { code: string, name: string }[]) => void;
   setDynamicTranslations: (translations: Record<string, any>) => void;
   setPublicAccessRequired: (v: boolean) => void;
+  setAnnouncement: (v: string) => void;
 }
 
 export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> = (set) => ({
@@ -58,6 +60,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   ],
   dynamicTranslations: {},
   publicAccessRequired: false,
+  announcement: '',
 
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (v) => set({ orderButtonEnabled: v }),
@@ -78,4 +81,5 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAvailableLanguages: (availableLanguages) => set({ availableLanguages }),
   setDynamicTranslations: (dynamicTranslations) => set({ dynamicTranslations }),
   setPublicAccessRequired: (v) => set({ publicAccessRequired: v }),
+  setAnnouncement: (v) => set({ announcement: v }),
 });

@@ -18,6 +18,7 @@ export const settings = {
   systemLanguage: "bg",
   menuDate: "",
   bgnEnabled: true,
+  announcement: "",
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
@@ -35,6 +36,7 @@ export const setAllowPWAInstallConfig = (val: boolean) => settings.allowPWAInsta
 export const setSystemLanguageConfig = (val: string) => settings.systemLanguage = val;
 export const setBgnEnabledConfig = (val: boolean) => settings.bgnEnabled = val;
 export const setAdminWhitelistConfig = (val: string) => settings.adminWhitelist = val;
+export const setAnnouncementConfig = (val: string) => settings.announcement = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -159,6 +161,14 @@ export const initSettings = () => {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist", settings.adminWhitelist);
   } else {
     settings.adminWhitelist = whitelistRecord.value;
+  }
+  
+  const announcementRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("announcement") as { value: string } | undefined;
+  if (!announcementRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("announcement", "");
+    settings.announcement = "";
+  } else {
+    settings.announcement = announcementRecord.value;
   }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

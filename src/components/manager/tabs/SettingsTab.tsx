@@ -15,6 +15,7 @@ interface SettingsTabProps {
   allowPWAInstall: boolean;
   bgnEnabled: boolean;
   adminWhitelist: string;
+  announcement: string;
   newPin: string;
   setNewPin: (v: string) => void;
   confirmPin: string;
@@ -32,6 +33,7 @@ interface SettingsTabProps {
     systemLanguage?: string,
     bgnEnabled?: boolean,
     adminWhitelist?: string,
+    announcement?: string,
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -40,7 +42,7 @@ interface SettingsTabProps {
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   adminWhitelistEnabled, orderButtonEnabled, testModeEnabled,
-  kioskModeEnabled, allowPWAInstall, bgnEnabled, adminWhitelist,
+  kioskModeEnabled, allowPWAInstall, bgnEnabled, adminWhitelist, announcement,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
@@ -54,6 +56,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [pendingLanguage, setPendingLanguage] = React.useState(lang);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [importModalData, setImportModalData] = React.useState<any | null>(null);
+  const [localAnnouncement, setLocalAnnouncement] = React.useState(announcement);
+
+  React.useEffect(() => {
+    setLocalAnnouncement(announcement);
+  }, [announcement]);
   
   React.useEffect(() => {
     setLocalWhitelist(adminWhitelist);
@@ -437,6 +444,49 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <AlertCircle className="w-3 h-3" />
               Changes take effect immediately for the next login attempt.
             </p>
+          </div>
+        </div>
+
+        {/* System Announcement */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center"><Info className="w-6 h-6 text-blue-600" /></div>
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900">{t('settings.announcement') || 'System Announcement'}</h3>
+              <p className="text-sm text-neutral-500 italic">Displayed on the Kiosk for all users</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Message Content</label>
+              <textarea
+                value={localAnnouncement}
+                onChange={(e) => setLocalAnnouncement(e.target.value)}
+                placeholder="Type your announcement here..."
+                className="w-full px-4 py-3 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm min-h-[100px] resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              {localAnnouncement && (
+                <button
+                  onClick={() => {
+                    setLocalAnnouncement('');
+                    onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, '');
+                  }}
+                  className="px-6 py-3 bg-white border border-neutral-200 text-neutral-500 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 transition-all"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, localAnnouncement)}
+                disabled={localAnnouncement === announcement}
+                className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
+              >
+                {t('settings.update')}
+              </button>
+            </div>
           </div>
         </div>
 

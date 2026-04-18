@@ -27,6 +27,7 @@ export function useSyncState() {
   const setMenuDate = useStore(s => s.setMenuDate);
   const setBgnEnabled = useStore(s => s.setBgnEnabled);
   const setAdminWhitelist = useStore(s => s.setAdminWhitelist);
+  const setAnnouncement = useStore(s => s.setAnnouncement);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -74,6 +75,7 @@ export function useSyncState() {
         if (data.menuDate) setMenuDate(data.menuDate);
         if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
         if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
+        if (data.announcement !== undefined) setAnnouncement(data.announcement);
         setConnectionError(null);
         fetchLanguages();
       }
@@ -100,6 +102,7 @@ export function useSyncState() {
       if (data.menuDate) setMenuDate(data.menuDate);
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
       if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
+      if (data.announcement !== undefined) setAnnouncement(data.announcement);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       fetchLanguages();
@@ -121,6 +124,7 @@ export function useSyncState() {
       if (data.systemLanguage !== undefined) setLang(data.systemLanguage);
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
       if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
+      if (data.announcement !== undefined) setAnnouncement(data.announcement);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
@@ -171,7 +175,8 @@ export function useSyncState() {
             lang: settings.systemLanguage ? settings.systemLanguage as Language : useStore.getState().lang,
             menuDate: settings.menuDate || useStore.getState().menuDate,
             bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled,
-            adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist
+            adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist,
+            announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement
           });
           
           const allLangs = [...languages.static, ...languages.custom];

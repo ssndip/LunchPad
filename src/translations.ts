@@ -307,6 +307,7 @@ export const translations = {
       connection_err: 'Connection error',
       enable_bgn: 'Enable BGN',
       enable_bgn_desc: 'Show leva prices alongside Euro',
+      announcement: 'Announcements',
     },
     pwa: {
       title: 'PWA Settings',
@@ -723,6 +724,7 @@ export const translations = {
       connection_err: 'Грешка при връзката',
       enable_bgn: 'Активирай BGN',
       enable_bgn_desc: 'Показвай цените в лева заедно с евро',
+      announcement: 'Съобщения',
     },
     pwa: {
       title: 'PWA Настройки',
