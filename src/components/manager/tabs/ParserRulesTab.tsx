@@ -10,7 +10,7 @@ import {
   Package, Layers, Play, Zap, Save, ChevronDown, ChevronUp,
   CheckCircle2, AlertTriangle, FolderOpen, Plus, Trash2,
   Calendar, X, Check, Sparkles, BookOpen, Tag,
-  Download, Upload, History
+  Download, Upload, History, Copy, Loader2
 } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
@@ -22,6 +22,8 @@ import {
   ParserPersistence
 } from '../../../utils/parserLocalSettings';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { suggestParserRules } from '../../../api';
+import { useStore } from '../../../store/useStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +92,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   const [manualRuleFind, setManualRuleFind] = useState('');
   const [manualRuleReplace, setManualRuleReplace] = useState('');
   const [profiles, setProfiles] = useState<ParserProfile[]>([]);
+  
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any>(null);
+
+  const token = useStore(s => s.token);
+  const aiApiKey = useStore(s => s.aiApiKey);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // ── Derived active preset & persistence ──
@@ -151,6 +160,75 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     setTimeout(() => setSavedToast(false), 2000);
   };
 
+  const handleAiSuggest = async () => {
+    if (!token || !aiApiKey) {
+      confirm({
+        title: t('menu.Error'),
+        message: t('parser.ai_no_key'),
+        confirmText: t('menu.OK'),
+        onConfirm: () => {}
+      });
+      return;
+    }
+    
+    setIsAiGenerating(true);
+    try {
+      // Create a simplified config for the AI
+      const currentConfig = {
+        categorySettings: settings.categories,
+        sectionRules: settings.sectionRules,
+        preprocessing: settings.preprocessingSteps,
+        entityPatterns: settings.entityPatterns,
+        enrichment: settings.enrichmentRules
+      };
+      
+      const res = await suggestParserRules(token, aiPrompt, currentConfig);
+      setAiSuggestions(res.suggestedConfig);
+    } catch (err: any) {
+      confirm({
+        title: t('menu.Error'),
+        message: err.message || 'AI generation failed',
+        confirmText: t('menu.OK'),
+        onConfirm: () => {}
+      });
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
+  const applyAiSuggestions = (asNewProfile: boolean) => {
+    if (!aiSuggestions) return;
+
+    const newSettings: ParserPersistence = {
+      ...settings,
+      categories: { ...settings.categories, ...(aiSuggestions.categorySettings || {}) },
+      sectionRules: aiSuggestions.sectionRules || settings.sectionRules,
+      preprocessingSteps: aiSuggestions.preprocessing || settings.preprocessingSteps,
+      entityPatterns: aiSuggestions.entityPatterns || settings.entityPatterns,
+      enrichmentRules: aiSuggestions.enrichment || settings.enrichmentRules
+    };
+
+    if (asNewProfile) {
+      const profileName = `AI Guided - ${new Date().toLocaleDateString()}`;
+      const newProfile: ParserProfile = {
+        id: new Date().toISOString(),
+        name: profileName,
+        settings: newSettings,
+        presets: [],
+        createdAt: new Date().toISOString()
+      };
+      saveProfiles([newProfile, ...profiles]);
+    } else {
+      setSettings(newSettings);
+      saveCategorySettings(newSettings);
+    }
+    
+    setAiSuggestions(null);
+    setAiPrompt('');
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
+  };
+
   const handleActivateProfile = (profile: ParserProfile) => {
     confirm({
       title: t('parser.activate_profile'),
@@ -170,7 +248,23 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   };
 
   const handleExportProfile = (profile: ParserProfile) => {
-    const dataStr = JSON.stringify(profile, null, 2);
+    // Add AI Context for easier model interaction
+    const exportData = {
+      ...profile,
+      _ai_instructions: {
+        purpose: "LunchPad Menu Parser Configuration",
+        schema: {
+          settings: "Category-level behavior (autobox/side-dish)",
+          presets: "Regex-based text normalization rules",
+          preprocessRules: "Array of { find: string, replace: string, isRegex: boolean }",
+          itemCategoryOverrides: "Object mapping item names to categories",
+          itemNameOverrides: "Object mapping item names to cleaner versions"
+        },
+        instruction: "To handle a new menu format, add regex rules to 'preprocessRules' that normalize the text into a standard bulleted list format: '- Item Name 1.23€'. Use itemCategoryOverrides to fix misclassified items."
+      }
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const exportFileDefaultName = `lunchpad_parser_${profile.name.replace(/\s+/g, '_').toLowerCase()}.json`;
@@ -214,6 +308,16 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   const deleteProfile = (id: string) => {
     const updated = profiles.filter(p => p.id !== id);
     saveProfiles(updated);
+  };
+
+  const handleDuplicateProfile = (profile: ParserProfile) => {
+    const newProfile: ParserProfile = {
+      ...JSON.parse(JSON.stringify(profile)),
+      id: new Date().toISOString(),
+      name: `${profile.name} (Copy)`,
+      createdAt: new Date().toISOString()
+    };
+    saveProfiles([newProfile, ...profiles]);
   };
 
   // ── Parse ──
@@ -440,6 +544,94 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
   return (
     <div className="space-y-6 pb-12">
+      
+      {/* ══ SECTION -1: AI Auto-Teacher ══ */}
+      <div className="bg-white rounded-[32px] border border-neutral-100 shadow-sm overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight">{t('parser.ai_teacher')}</h3>
+              <p className="text-[10px] text-neutral-400 font-medium">{t('parser.ai_teacher_desc')}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder={t('parser.ai_prompt_placeholder')}
+                className="w-full min-h-[120px] p-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none transition-all font-mono resize-none"
+              />
+              <button
+                onClick={handleAiSuggest}
+                disabled={isAiGenerating || !aiPrompt.trim()}
+                className="absolute bottom-4 right-4 flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-30 disabled:scale-100 active:scale-95"
+              >
+                {isAiGenerating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    {t('parser.ai_generating')}
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                    {t('parser.ai_generate')}
+                  </>
+                )}
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {aiSuggestions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="pt-4 border-t border-neutral-50"
+                >
+                  <div className="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{t('parser.ai_preview_title')}</h4>
+                      <button onClick={() => setAiSuggestions(null)} className="p-1 text-indigo-400 hover:text-indigo-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      <div className="space-y-3">
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Generated Rules Preview</p>
+                        <div className="bg-white/80 rounded-xl p-4 text-[10px] font-mono max-h-[150px] overflow-y-auto border border-indigo-100/30">
+                          <pre className="whitespace-pre-wrap text-indigo-900">
+                            {JSON.stringify(aiSuggestions, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                      <div className="flex flex-col justify-end gap-3">
+                        <button
+                          onClick={() => applyAiSuggestions(true)}
+                          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
+                        >
+                          {t('parser.ai_apply_new')}
+                        </button>
+                        <button
+                          onClick={() => applyAiSuggestions(false)}
+                          className="w-full py-3 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                        >
+                          {t('parser.ai_apply_current')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
 
       {/* ══ SECTION 0: Profiles & Versioning ══ */}
       <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
@@ -501,6 +693,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   </div>
                   <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                     <button
+                      onClick={() => handleDuplicateProfile(profile)}
+                      className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                      title={t('parser.duplicate_preset')}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => handleExportProfile(profile)}
                       className="p-1.5 text-neutral-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all"
                       title={t('parser.export_json')}
@@ -518,6 +717,18 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{t('parser.text_rules')}</span>
+                    <span className="text-xs font-black text-neutral-700">{(profile.presets || []).reduce((acc, p) => acc + (p.preprocessRules?.length || 0), 0)}</span>
+                  </div>
+                  <div className="w-px h-6 bg-neutral-100" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{t('parser.item_remaps')}</span>
+                    <span className="text-xs font-black text-neutral-700">{(profile.presets || []).reduce((acc, p) => acc + Object.keys(p.itemCategoryOverrides || {}).length, 0)}</span>
                   </div>
                 </div>
                 

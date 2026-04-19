@@ -186,7 +186,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string) => {
     if (!s.token) return;
     try {
       const update = {
@@ -199,6 +199,8 @@ export default function App() {
         bgnEnabled: bgn ?? s.bgnEnabled,
         adminWhitelist: whitelist ?? s.adminWhitelist,
         announcement: announcement ?? s.announcement,
+        aiProvider: aiProvider ?? s.aiProvider,
+        aiApiKey: aiApiKey ?? s.aiApiKey,
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -210,6 +212,8 @@ export default function App() {
       if (bgn !== undefined) s.setBgnEnabled(bgn);
       if (whitelist !== undefined) s.setAdminWhitelist(whitelist);
       if (announcement !== undefined) s.setAnnouncement(announcement);
+      if (aiProvider !== undefined) s.setAiProvider(aiProvider);
+      if (aiApiKey !== undefined) s.setAiApiKey(aiApiKey);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -515,14 +519,16 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann);
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
               bgnEnabled={s.bgnEnabled}
               adminWhitelist={s.adminWhitelist}
               announcement={s.announcement}
+              aiProvider={s.aiProvider}
+              aiApiKey={s.aiApiKey}
               availableLanguages={s.availableLanguages}
               confirm={setConfirmConfig}
               onImportLanguage={async (code, name, data) => {

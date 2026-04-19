@@ -20,6 +20,8 @@ export interface SettingsSlice {
   dynamicTranslations: Record<string, any>;
   publicAccessRequired: boolean;
   announcement: string;
+  aiProvider: string;
+  aiApiKey: string;
 
   setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
@@ -38,6 +40,8 @@ export interface SettingsSlice {
   setDynamicTranslations: (translations: Record<string, any>) => void;
   setPublicAccessRequired: (v: boolean) => void;
   setAnnouncement: (v: string) => void;
+  setAiProvider: (v: string) => void;
+  setAiApiKey: (v: string) => void;
 }
 
 export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> = (set) => ({
@@ -61,6 +65,8 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   dynamicTranslations: {},
   publicAccessRequired: false,
   announcement: '',
+  aiProvider: 'openai',
+  aiApiKey: '',
 
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (v) => set({ orderButtonEnabled: v }),
@@ -82,4 +88,6 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setDynamicTranslations: (dynamicTranslations) => set({ dynamicTranslations }),
   setPublicAccessRequired: (v) => set({ publicAccessRequired: v }),
   setAnnouncement: (v) => set({ announcement: v }),
+  setAiProvider: (v) => set({ aiProvider: v }),
+  setAiApiKey: (v) => set({ aiApiKey: v }),
 });

@@ -14,6 +14,8 @@ import {
   setBgnEnabledConfig,
   setAdminWhitelistConfig,
   setAnnouncementConfig,
+  setAiProviderConfig,
+  setAiApiKeyConfig,
   hashAndSetAdminPin
 } from "../config";
 import { kioskAccessGuard } from "../middleware/auth";
@@ -31,7 +33,9 @@ export const fetchSettings = (req: Request, res: Response) => {
     systemLanguage: settings.systemLanguage,
     bgnEnabled: settings.bgnEnabled,
     adminWhitelist: settings.adminWhitelist,
-    announcement: settings.announcement
+    announcement: settings.announcement,
+    aiProvider: settings.aiProvider,
+    aiApiKey: settings.aiApiKey
   });
 };
 
@@ -40,7 +44,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
     const { 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
-      systemLanguage, bgnEnabled, adminWhitelist, announcement 
+      systemLanguage, bgnEnabled, adminWhitelist, announcement,
+      aiProvider, aiApiKey
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -129,6 +134,18 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       broadcast({ type: "SETTINGS_UPDATE", settings: { announcement } as any });
     }
 
+    if (aiProvider !== undefined) {
+      if (typeof aiProvider !== 'string') return res.status(400).json({ error: "Invalid value for aiProvider" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_provider", aiProvider);
+      setAiProviderConfig(aiProvider);
+    }
+
+    if (aiApiKey !== undefined) {
+      if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
+      setAiApiKeyConfig(aiApiKey);
+    }
+
     res.json({ 
       success: true, 
       adminWhitelistEnabled: settings.adminWhitelistEnabled, 
@@ -141,7 +158,9 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       systemLanguage: settings.systemLanguage,
       bgnEnabled: settings.bgnEnabled,
       adminWhitelist: settings.adminWhitelist,
-      announcement: settings.announcement
+      announcement: settings.announcement,
+      aiProvider: settings.aiProvider,
+      aiApiKey: settings.aiApiKey
     });
   } catch (err: any) {
     next(err);

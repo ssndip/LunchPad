@@ -30,6 +30,7 @@ import settingsRoutes from "./server/routes/settingsRoutes";
 import authRoutes from "./server/routes/authRoutes";
 import parserRoutes from "./server/routes/parserRoutes";
 import languageRoutes from "./server/routes/languageRoutes";
+import aiRoutes from "./server/routes/aiRoutes";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 
@@ -111,6 +112,7 @@ export async function startServer() {
   app.use("/api/auth", authRoutes);
   app.use("/api/parser", parserRoutes);
   app.use("/api/languages", languageRoutes);
+  app.use("/api/ai", aiRoutes);
   
   // Orders & History (special case for backward compatibility of /api/v1/order)
   app.use("/api", orderRoutes); 
@@ -130,7 +132,9 @@ export async function startServer() {
       bgnEnabled: settings.bgnEnabled,
       adminWhitelist: settings.adminWhitelist,
       menuDate: settings.menuDate,
-      announcement: settings.announcement
+      announcement: settings.announcement,
+      aiProvider: settings.aiProvider,
+      aiApiKey: settings.aiApiKey
     });
   });
 

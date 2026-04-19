@@ -19,6 +19,8 @@ export const settings = {
   menuDate: "",
   bgnEnabled: true,
   announcement: "",
+  aiProvider: "openai",
+  aiApiKey: "",
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
@@ -37,6 +39,8 @@ export const setSystemLanguageConfig = (val: string) => settings.systemLanguage 
 export const setBgnEnabledConfig = (val: boolean) => settings.bgnEnabled = val;
 export const setAdminWhitelistConfig = (val: string) => settings.adminWhitelist = val;
 export const setAnnouncementConfig = (val: string) => settings.announcement = val;
+export const setAiProviderConfig = (val: string) => settings.aiProvider = val;
+export const setAiApiKeyConfig = (val: string) => settings.aiApiKey = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -169,6 +173,22 @@ export const initSettings = () => {
     settings.announcement = "";
   } else {
     settings.announcement = announcementRecord.value;
+  }
+  
+  const aiProviderRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("ai_provider") as { value: string } | undefined;
+  if (!aiProviderRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("ai_provider", "openai");
+    settings.aiProvider = "openai";
+  } else {
+    settings.aiProvider = aiProviderRecord.value;
+  }
+
+  const aiApiKeyRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("ai_api_key") as { value: string } | undefined;
+  if (!aiApiKeyRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("ai_api_key", "");
+    settings.aiApiKey = "";
+  } else {
+    settings.aiApiKey = aiApiKeyRecord.value;
   }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

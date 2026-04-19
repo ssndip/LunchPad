@@ -11,10 +11,29 @@ export interface FormatPreset {
   createdAt: string;
 }
 
+export interface ParserProfile {
+  id: string;
+  name: string;
+  settings: any; // ParserPersistence
+  presets: FormatPreset[];
+  createdAt: string;
+}
+
 const PRESETS_KEY = 'lunchpad_format_presets';
+const PROFILES_KEY = 'lunchpad_parser_profiles';
 
 export function getAllPresets(): FormatPreset[] {
   const raw = localStorage.getItem(PRESETS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function getAllProfiles(): ParserProfile[] {
+  const raw = localStorage.getItem(PROFILES_KEY);
   if (!raw) return [];
   try {
     return JSON.parse(raw);

@@ -28,6 +28,8 @@ export function useSyncState() {
   const setBgnEnabled = useStore(s => s.setBgnEnabled);
   const setAdminWhitelist = useStore(s => s.setAdminWhitelist);
   const setAnnouncement = useStore(s => s.setAnnouncement);
+  const setAiProvider = useStore(s => s.setAiProvider);
+  const setAiApiKey = useStore(s => s.setAiApiKey);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -76,6 +78,8 @@ export function useSyncState() {
         if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
         if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
         if (data.announcement !== undefined) setAnnouncement(data.announcement);
+        if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
+        if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
         setConnectionError(null);
         fetchLanguages();
       }
@@ -103,6 +107,8 @@ export function useSyncState() {
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
       if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
+      if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
+      if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       fetchLanguages();
@@ -125,6 +131,8 @@ export function useSyncState() {
       if (data.bgnEnabled !== undefined) setBgnEnabled(data.bgnEnabled);
       if (data.adminWhitelist !== undefined) setAdminWhitelist(data.adminWhitelist);
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
+      if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
+      if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
@@ -176,7 +184,9 @@ export function useSyncState() {
             menuDate: settings.menuDate || useStore.getState().menuDate,
             bgnEnabled: settings.bgnEnabled !== undefined ? settings.bgnEnabled : useStore.getState().bgnEnabled,
             adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist,
-            announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement
+            announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement,
+            aiProvider: settings.aiProvider || useStore.getState().aiProvider,
+            aiApiKey: settings.aiApiKey || useStore.getState().aiApiKey
           });
           
           const allLangs = [...languages.static, ...languages.custom];

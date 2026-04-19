@@ -281,6 +281,19 @@ export const getParserLogs = async (token: string) => {
   return res.json();
 };
 
+export const suggestParserRules = async (token: string, menuText: string, currentConfig: any) => {
+  const res = await fetch('/api/ai/suggest-rules', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ menuText, currentConfig }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'AI request failed');
+  }
+  return res.json();
+};
+
 // ─── Language API ────────────────────────────────────────────────────────────
 export const fetchLanguages = async () => {
   const res = await fetch('/api/languages');

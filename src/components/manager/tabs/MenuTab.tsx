@@ -8,7 +8,7 @@ import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
 import * as api from '../../../api';
-import { getActivePreset, getAllPresets, FormatPreset, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
+import { getActivePreset, getAllPresets, getAllProfiles, FormatPreset, ParserProfile, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 
@@ -38,11 +38,15 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const { token } = useStore();
 
   const [presets, setPresets] = React.useState<FormatPreset[]>([]);
+  const [profiles, setProfiles] = React.useState<ParserProfile[]>([]);
   const [selectedPresetId, setSelectedPresetId] = React.useState<string>('none');
+  const [selectedProfileId, setSelectedProfileId] = React.useState<string>('none');
 
   React.useEffect(() => {
     const loaded = getAllPresets();
     setPresets(loaded);
+    const loadedProfiles = getAllProfiles();
+    setProfiles(loadedProfiles);
     const active = getActivePreset();
     if (active) setSelectedPresetId(active.id);
   }, []);
@@ -143,16 +147,26 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
   const handleParse = () => {
     if (!pasteText.trim()) return;
-    const selectedPreset = presets.find(p => p.id === selectedPresetId) || null;
-    const normalizedText = normalizeMenuText(pasteText, selectedPreset);
     
-    // Visually update the text area so the user can see what the normalizer did
+    // 1. Identify context (Selected Profile or Active System settings)
+    const selectedProfile = profiles.find(p => p.id === selectedProfileId) || null;
+    const profileSettings = selectedProfile ? selectedProfile.settings : null;
+    
+    // 2. Identify preset (Selected from global list or Profile-specific list)
+    let activePreset = presets.find(p => p.id === selectedPresetId) || null;
+    if (!activePreset && selectedProfile) {
+      activePreset = selectedProfile.presets?.[0] || null;
+    }
+
+    // 3. Normalize & Parse
+    const normalizedText = normalizeMenuText(pasteText, activePreset);
     if (normalizedText !== pasteText) {
       setPasteText(normalizedText);
     }
 
-    const result = parsePastedMenu(normalizedText);
-    const finalItems = applyItemOverrides(result.items, selectedPreset);
+    const result = parsePastedMenu(normalizedText, profileSettings);
+    const finalItems = applyItemOverrides(result.items, activePreset);
+    
     setParsed({
       items: finalItems,
       date: result.detectedDate || null,
@@ -423,19 +437,38 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       />
                       <FileText className="absolute top-4 right-4 w-4 h-4 text-neutral-300" />
                     </div>
-                    {presets.length > 0 && (
-                      <div className="mt-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-neutral-100 shadow-sm">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('parser.format_preset')}</span>
-                        <select
-                          value={selectedPresetId}
-                          onChange={e => setSelectedPresetId(e.target.value)}
-                          className="flex-1 bg-neutral-50 border border-neutral-200 text-sm font-bold text-neutral-800 rounded-lg py-1.5 px-3 focus:outline-none focus:border-indigo-400 hover:border-neutral-300 transition-colors"
-                        >
-                          <option value="none">{t('parser.no_preset')}</option>
-                          {presets.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
+                    {(presets.length > 0 || profiles.length > 0) && (
+                      <div className="mt-4 flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-neutral-100 shadow-sm">
+                        {profiles.length > 0 && (
+                          <div className="flex-1 flex items-center gap-2 px-3 py-1 bg-neutral-50 rounded-xl border border-neutral-100">
+                             <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Profile</span>
+                             <select
+                               value={selectedProfileId}
+                               onChange={e => setSelectedProfileId(e.target.value)}
+                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                             >
+                               <option value="none">{t('parser.active_profile') || 'Active Profile'}</option>
+                               {profiles.map(p => (
+                                 <option key={p.id} value={p.id}>{p.name}</option>
+                               ))}
+                             </select>
+                          </div>
+                        )}
+                        {presets.length > 0 && (
+                          <div className="flex-1 flex items-center gap-2 px-3 py-1 bg-neutral-50 rounded-xl border border-neutral-100">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Preset</span>
+                            <select
+                              value={selectedPresetId}
+                              onChange={e => setSelectedPresetId(e.target.value)}
+                              className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                            >
+                              <option value="none">{t('parser.no_preset')}</option>
+                              {presets.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex justify-end gap-3 mt-4">

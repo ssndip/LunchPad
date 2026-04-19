@@ -79,8 +79,8 @@ function enrichItems(items: MenuItem[], config: MenuConfig, settings: ParserPers
  * Parse pasted menu text using the category settings from localStorage.
  * Category settings control autobox and side dish trigger per category.
  */
-export function parsePastedMenu(text: string): ParseResult {
-  const settings = loadCategorySettings();
+export function parsePastedMenu(text: string, settingsOverride?: ParserPersistence): ParseResult {
+  const settings = settingsOverride || loadCategorySettings();
   const parsedAdvanced = parseMenuText(text);
   const tempItems: MenuItem[] = [];
   let currentId = Date.now();

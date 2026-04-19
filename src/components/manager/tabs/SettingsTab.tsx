@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard, ChevronDown, X, Check, Globe } from 'lucide-react';
+import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard, ChevronDown, X, Check, Globe, Sparkles } from 'lucide-react';
 import { Language } from '../../../translations';
 import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
@@ -16,6 +16,8 @@ interface SettingsTabProps {
   bgnEnabled: boolean;
   adminWhitelist: string;
   announcement: string;
+  aiProvider: string;
+  aiApiKey: string;
   newPin: string;
   setNewPin: (v: string) => void;
   confirmPin: string;
@@ -34,6 +36,8 @@ interface SettingsTabProps {
     bgnEnabled?: boolean,
     adminWhitelist?: string,
     announcement?: string,
+    aiProvider?: string,
+    aiApiKey?: string
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -43,6 +47,7 @@ interface SettingsTabProps {
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   adminWhitelistEnabled, orderButtonEnabled, testModeEnabled,
   kioskModeEnabled, allowPWAInstall, bgnEnabled, adminWhitelist, announcement,
+  aiProvider, aiApiKey,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
@@ -57,10 +62,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [importModalData, setImportModalData] = React.useState<any | null>(null);
   const [localAnnouncement, setLocalAnnouncement] = React.useState(announcement);
+  const [localAiApiKey, setLocalAiApiKey] = React.useState(aiApiKey);
+  const [showAiKey, setShowAiKey] = React.useState(false);
 
   React.useEffect(() => {
     setLocalAnnouncement(announcement);
-  }, [announcement]);
+    setLocalAiApiKey(aiApiKey);
+  }, [announcement, aiApiKey]);
   
   React.useEffect(() => {
     setLocalWhitelist(adminWhitelist);
@@ -486,6 +494,67 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               >
                 {t('settings.update')}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Integration */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center"><Sparkles className="w-6 h-6 text-indigo-600" /></div>
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900">{t('settings.ai_integration')}</h3>
+              <p className="text-sm text-neutral-500 italic">Power the Parser Auto-Teacher with external models</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex-1">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_provider')}</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['openai', 'anthropic', 'gemini'].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, p, aiApiKey)}
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${aiProvider === p ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-neutral-100 text-neutral-400 hover:border-indigo-200 hover:text-indigo-600'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-neutral-50">
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_api_key')}</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showAiKey ? 'text' : 'password'}
+                    value={localAiApiKey}
+                    onChange={(e) => setLocalAiApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
+                  />
+                  <button 
+                    onClick={() => setShowAiKey(!showAiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey)}
+                  disabled={localAiApiKey === aiApiKey}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                >
+                  {t('settings.update')}
+                </button>
+              </div>
+              <p className="mt-2 text-[10px] text-neutral-400 italic leading-relaxed">
+                {t('settings.ai_api_key_desc')}
+              </p>
             </div>
           </div>
         </div>
