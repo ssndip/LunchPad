@@ -76,3 +76,21 @@ export interface UserProfile {
 }
 
 export type AppState = 'kiosk' | 'manager';
+
+export interface Settings {
+  adminWhitelistEnabled: boolean;
+  orderButtonEnabled: boolean;
+  testModeEnabled: boolean;
+  packagingFee: number;
+  deliveryFee: number;
+  kioskModeEnabled: boolean;
+  allowPWAInstall: boolean;
+  systemLanguage: string;
+  bgnEnabled: boolean;
+  adminWhitelist: string;
+  announcement: string;
+  aiProvider: string;
+  aiApiKey: string;
+  preIdentificationEnabled: boolean;
+  adminPin: string;
+}

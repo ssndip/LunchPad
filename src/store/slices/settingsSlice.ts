@@ -22,6 +22,7 @@ export interface SettingsSlice {
   announcement: string;
   aiProvider: string;
   aiApiKey: string;
+  preIdentificationEnabled: boolean;
 
   setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
@@ -42,6 +43,7 @@ export interface SettingsSlice {
   setAnnouncement: (v: string) => void;
   setAiProvider: (v: string) => void;
   setAiApiKey: (v: string) => void;
+  setPreIdentificationEnabled: (v: boolean) => void;
 }
 
 export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> = (set) => ({
@@ -67,6 +69,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   announcement: '',
   aiProvider: 'openai',
   aiApiKey: '',
+  preIdentificationEnabled: false,
 
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (v) => set({ orderButtonEnabled: v }),
@@ -90,4 +93,5 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAnnouncement: (v) => set({ announcement: v }),
   setAiProvider: (v) => set({ aiProvider: v }),
   setAiApiKey: (v) => set({ aiApiKey: v }),
+  setPreIdentificationEnabled: (v) => set({ preIdentificationEnabled: v }),
 });

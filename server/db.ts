@@ -243,7 +243,8 @@ export const seedInitialData = () => {
   const initialSettings = [
     { key: 'kioskModeEnabled', value: '0' },
     { key: 'allowPWAInstall', value: '1' },
-    { key: 'announcement', value: 'Наско , кога ше пием бира?!' }
+    { key: 'announcement', value: 'Наско , кога ше пием бира?!' },
+    { key: 'pre_identification_enabled', value: '0' }
   ];
   const insertSetting = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
   initialSettings.forEach(s => insertSetting.run(s.key, s.value));

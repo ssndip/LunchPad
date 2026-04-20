@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle, Info, X } from 'lucide-react';
+import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle, Info, X, CreditCard } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
 import { Language } from '../../translations';
 import { KioskCategorySidebar } from './KioskCategorySidebar';
@@ -42,6 +42,8 @@ interface KioskViewProps {
   onGoToManager: () => void;
   menuDate?: string;
   announcement?: string;
+  preIdentificationEnabled?: boolean;
+  onIdentify?: (rfid: string) => void;
 }
 
 export const KioskView: React.FC<KioskViewProps> = ({
@@ -70,6 +72,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
   onGoToManager,
   menuDate,
   announcement,
+  preIdentificationEnabled,
+  onIdentify,
 }) => {
   const { t, lang } = useTranslation();
   const rfidInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +83,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const { kioskModeEnabled } = useStore();
   const { isStandalone, enterFullscreen } = usePWA();
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const [isIdentifying, setIsIdentifying] = useState(false);
+  const [pendingItem, setPendingItem] = useState<MenuItem | null>(null);
   
   // Feature: Multi-Day Navigation
   const availableDates = useMemo(() => {
@@ -171,10 +177,28 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const activeItems = useMemo(() => filteredGroupedMenu[activeCategory] || [], [filteredGroupedMenu, activeCategory]);
 
   useRfidScanner({
-    active: selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled && !isReadOnly,
-    onScan: (rfid) => {
-      setRfid(rfid);
-      onOrder(rfid);
+    active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
+    onScan: (scannedRfid) => {
+      if (preIdentificationEnabled) {
+        // If scanning a DIFFERENT card than the current session
+        if (scannedRfid !== rfid) {
+          if (onIdentify) onIdentify(scannedRfid);
+          setIsIdentifying(false);
+          triggerHaptic('success');
+          
+          // If we were waiting for identification to add an item
+          if (pendingItem) {
+            onToggleItem(pendingItem);
+            setPendingItem(null);
+          }
+        } else {
+          // If scanning the SAME card, proceed to order
+          onOrder(scannedRfid);
+        }
+      } else {
+        setRfid(scannedRfid);
+        onOrder(scannedRfid);
+      }
     },
   });
 
@@ -276,7 +300,9 @@ export const KioskView: React.FC<KioskViewProps> = ({
           {isReadOnly && (
              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-xl shadow-xl ml-4">
                 <Info className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Preview Mode</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {isMenuOutdated ? t('kiosk.historical_view') : t('kiosk.preview_mode')}
+                </span>
              </div>
           )}
         </div>
@@ -291,6 +317,18 @@ export const KioskView: React.FC<KioskViewProps> = ({
               aria-label="Fullscreen"
             >
               <Maximize className="w-5 h-5" />
+            </button>
+          )}
+          {preIdentificationEnabled && rfid && (
+            <button 
+              onClick={() => { triggerHaptic('medium'); onClearCart(); if (onIdentify) onIdentify(''); }} 
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95 border border-red-100 group" 
+              title={t('kiosk.logout')} 
+              aria-label={t('kiosk.logout')}
+            >
+              <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{t('kiosk.logout')}</span>
+              <span className="text-[8px] font-mono opacity-50 ml-1 hidden lg:inline">({rfid})</span>
             </button>
           )}
           <button 
@@ -362,8 +400,22 @@ export const KioskView: React.FC<KioskViewProps> = ({
             sideItems={sideItems}
             selectedItems={selectedItems}
             selectedItemIds={selectedItemIds}
-            onToggle={onToggleItem}
-            onAddWithSide={onAddWithSide}
+            onToggle={(item) => {
+              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+                setPendingItem(item);
+                setIsIdentifying(true);
+                return;
+              }
+              onToggleItem(item);
+            }}
+            onAddWithSide={(item, side) => {
+              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+                setPendingItem(item);
+                setIsIdentifying(true);
+                return;
+              }
+              onAddWithSide(item, side);
+            }}
             onUpdateQuantity={onUpdateQuantity}
             orderButtonEnabled={orderButtonEnabled && !isReadOnly}
             isMenuOutdated={isMenuOutdated}
@@ -418,7 +470,86 @@ export const KioskView: React.FC<KioskViewProps> = ({
         }}
         t={t}
       />
+
+      <AnimatePresence>
+        {(isIdentifying || (preIdentificationEnabled && !rfid && selectedItems.length > 0 && !pendingItem)) && !userHistoryOpen && !pinModalOpen && computedKioskOpen && !isReadOnly && (
+          <IdentificationOverlay 
+            t={t} 
+            onIdentify={(scanned) => {
+              if (onIdentify) onIdentify(scanned);
+              setIsIdentifying(false);
+              triggerHaptic('success');
+              if (pendingItem) {
+                onToggleItem(pendingItem);
+                setPendingItem(null);
+              }
+            }} 
+            onClose={() => {
+              setIsIdentifying(false);
+              setPendingItem(null);
+              // If we have items but no user, and they click X, clear items to allow closing
+              if (!rfid && selectedItems.length > 0) {
+                onClearCart();
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+};
+
+const IdentificationOverlay: React.FC<{ t: any; onIdentify: (rfid: string) => void, onClose: () => void }> = ({ t, onIdentify, onClose }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-neutral-900/60 backdrop-blur-xl"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="max-w-md w-full bg-white rounded-[48px] p-12 text-center shadow-2xl border border-white/20 relative overflow-hidden"
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-6 right-6 w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all active:scale-90"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="absolute top-0 left-0 w-full h-2 bg-neutral-900" />
+        
+        <div className="relative mb-10">
+          <div className="w-24 h-24 bg-neutral-50 rounded-[32px] flex items-center justify-center mx-auto mb-4 relative z-10">
+            <CreditCard className="w-10 h-10 text-neutral-900" />
+          </div>
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-neutral-200 rounded-full blur-3xl z-0"
+          />
+        </div>
+
+        <h2 className="text-3xl font-black text-neutral-900 mb-4 uppercase tracking-tighter">
+          {t('kiosk.pre_identification_title')}
+        </h2>
+        <p className="text-neutral-500 font-bold text-sm mb-8 px-6 leading-relaxed">
+          {t('kiosk.pre_identification_desc')}
+        </p>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-center gap-3 py-4 px-6 bg-neutral-50 rounded-2xl border border-neutral-100">
+            <div className="w-2 h-2 rounded-full bg-neutral-900 animate-ping" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-900">
+              {t('kiosk.waiting_for_scan')}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -16,6 +16,7 @@ import {
   setAnnouncementConfig,
   setAiProviderConfig,
   setAiApiKeyConfig,
+  setPreIdentificationEnabledConfig,
   hashAndSetAdminPin
 } from "../config";
 import { kioskAccessGuard } from "../middleware/auth";
@@ -35,7 +36,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     adminWhitelist: settings.adminWhitelist,
     announcement: settings.announcement,
     aiProvider: settings.aiProvider,
-    aiApiKey: settings.aiApiKey
+    aiApiKey: settings.aiApiKey,
+    preIdentificationEnabled: settings.preIdentificationEnabled
   });
 };
 
@@ -45,7 +47,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
-      aiProvider, aiApiKey
+      aiProvider, aiApiKey, preIdentificationEnabled
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -58,6 +60,13 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
           adminWhitelistEnabled: adminWhitelistEnabled,
         } 
       });
+    }
+
+    if (preIdentificationEnabled !== undefined) {
+      if (typeof preIdentificationEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for preIdentificationEnabled" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("pre_identification_enabled", preIdentificationEnabled ? "1" : "0");
+      setPreIdentificationEnabledConfig(preIdentificationEnabled);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { preIdentificationEnabled } as any });
     }
 
 
@@ -160,7 +169,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelist: settings.adminWhitelist,
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey
+      aiApiKey: settings.aiApiKey,
+      preIdentificationEnabled: settings.preIdentificationEnabled
     });
   } catch (err: any) {
     next(err);

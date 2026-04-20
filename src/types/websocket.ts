@@ -36,6 +36,7 @@ export interface InitialStateMessage extends BaseWsMessage {
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
   systemLanguage?: string;
+  preIdentificationEnabled?: boolean;
 }
 
 export interface PingMessage extends BaseWsMessage {
@@ -75,6 +76,7 @@ export interface SettingsUpdateMessage extends BaseWsMessage {
     adminWhitelistEnabled?: boolean;
     orderButtonEnabled?: boolean;
     testModeEnabled?: boolean;
+    preIdentificationEnabled?: boolean;
     currency?: string;
   };
 }

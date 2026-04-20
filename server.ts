@@ -135,7 +135,8 @@ export async function startServer() {
       menuDate: settings.menuDate,
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey
+      aiApiKey: settings.aiApiKey,
+      preIdentificationEnabled: settings.preIdentificationEnabled
     });
   });
 
@@ -200,7 +201,8 @@ export async function startServer() {
       bgnEnabled: settings.bgnEnabled,
       adminWhitelist: settings.adminWhitelist,
       menuDate: settings.menuDate,
-      announcement: settings.announcement
+      announcement: settings.announcement,
+      preIdentificationEnabled: settings.preIdentificationEnabled
     } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {

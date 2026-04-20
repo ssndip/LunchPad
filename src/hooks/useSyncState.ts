@@ -30,6 +30,7 @@ export function useSyncState() {
   const setAnnouncement = useStore(s => s.setAnnouncement);
   const setAiProvider = useStore(s => s.setAiProvider);
   const setAiApiKey = useStore(s => s.setAiApiKey);
+  const setPreIdentificationEnabled = useStore(s => s.setPreIdentificationEnabled);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -80,6 +81,7 @@ export function useSyncState() {
         if (data.announcement !== undefined) setAnnouncement(data.announcement);
         if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
         if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+        if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
         setConnectionError(null);
         fetchLanguages();
       }
@@ -109,6 +111,7 @@ export function useSyncState() {
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
       if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
       if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+      if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       fetchLanguages();
@@ -133,6 +136,7 @@ export function useSyncState() {
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
       if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
       if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+      if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
@@ -186,7 +190,8 @@ export function useSyncState() {
             adminWhitelist: settings.adminWhitelist || useStore.getState().adminWhitelist,
             announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement,
             aiProvider: settings.aiProvider || useStore.getState().aiProvider,
-            aiApiKey: settings.aiApiKey || useStore.getState().aiApiKey
+            aiApiKey: settings.aiApiKey || useStore.getState().aiApiKey,
+            preIdentificationEnabled: settings.preIdentificationEnabled !== undefined ? settings.preIdentificationEnabled : useStore.getState().preIdentificationEnabled
           });
           
           const allLangs = [...languages.static, ...languages.custom];

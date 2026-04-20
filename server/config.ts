@@ -21,6 +21,7 @@ export const settings = {
   announcement: "",
   aiProvider: "openai",
   aiApiKey: "",
+  preIdentificationEnabled: false,
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
@@ -41,6 +42,7 @@ export const setAdminWhitelistConfig = (val: string) => settings.adminWhitelist 
 export const setAnnouncementConfig = (val: string) => settings.announcement = val;
 export const setAiProviderConfig = (val: string) => settings.aiProvider = val;
 export const setAiApiKeyConfig = (val: string) => settings.aiApiKey = val;
+export const setPreIdentificationEnabledConfig = (val: boolean) => settings.preIdentificationEnabled = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -189,6 +191,14 @@ export const initSettings = () => {
     settings.aiApiKey = "";
   } else {
     settings.aiApiKey = aiApiKeyRecord.value;
+  }
+
+  const preIdentRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("pre_identification_enabled") as { value: string } | undefined;
+  if (!preIdentRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("pre_identification_enabled", "0");
+    settings.preIdentificationEnabled = false;
+  } else {
+    settings.preIdentificationEnabled = preIdentRecord.value === "1";
   }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;

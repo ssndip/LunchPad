@@ -146,6 +146,7 @@ export default function App() {
       } else {
         s.setShowSuccess(true);
         s.resetCart();
+        s.setRfid('');
         setTimeout(() => s.setShowSuccess(false), 3000);
       }
     } catch (err) {
@@ -186,7 +187,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean) => {
     if (!s.token) return;
     try {
       const update = {
@@ -201,6 +202,7 @@ export default function App() {
         announcement: announcement ?? s.announcement,
         aiProvider: aiProvider ?? s.aiProvider,
         aiApiKey: aiApiKey ?? s.aiApiKey,
+        preIdentificationEnabled: preIdent ?? s.preIdentificationEnabled
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -214,6 +216,7 @@ export default function App() {
       if (announcement !== undefined) s.setAnnouncement(announcement);
       if (aiProvider !== undefined) s.setAiProvider(aiProvider);
       if (aiApiKey !== undefined) s.setAiApiKey(aiApiKey);
+      if (preIdent !== undefined) s.setPreIdentificationEnabled(preIdent);
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -519,8 +522,9 @@ export default function App() {
               confirmPin={s.confirmPin}
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK);
+              preIdentificationEnabled={s.preIdentificationEnabled}
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
@@ -689,6 +693,11 @@ export default function App() {
           onOrder={handleOrder}
           onClearCart={s.resetCart}
           menuDate={s.menuDate}
+          preIdentificationEnabled={s.preIdentificationEnabled}
+          onIdentify={(rfid) => {
+            s.setRfid(rfid);
+            s.resetCart();
+          }}
           onGoToManager={() => { 
             const url = new URL(window.location.href);
             url.searchParams.set('view', 'manager');

@@ -37,7 +37,8 @@ interface SettingsTabProps {
     adminWhitelist?: string,
     announcement?: string,
     aiProvider?: string,
-    aiApiKey?: string
+    aiApiKey?: string,
+    preIdentificationEnabled?: boolean
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -46,7 +47,7 @@ interface SettingsTabProps {
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   adminWhitelistEnabled, orderButtonEnabled, testModeEnabled,
-  kioskModeEnabled, allowPWAInstall, bgnEnabled, adminWhitelist, announcement,
+  kioskModeEnabled, allowPWAInstall, bgnEnabled, preIdentificationEnabled, adminWhitelist, announcement,
   aiProvider, aiApiKey,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
@@ -353,6 +354,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
 
+
+        {/* Pre-identification Toggle */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><CreditCard className="w-6 h-6 text-neutral-900" /></div>
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900">{t('settings.pre_identification')}</h3>
+                <p className="text-sm text-neutral-500 italic">{t('settings.pre_identification_desc')}</p>
+              </div>
+            </div>
+            <Toggle 
+              checked={preIdentificationEnabled} 
+              onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, aiApiKey, !preIdentificationEnabled)} 
+              label="Toggle Pre-identification" 
+              color="bg-neutral-900" 
+            />
+          </div>
+        </div>
 
         {/* Ordering toggle */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">

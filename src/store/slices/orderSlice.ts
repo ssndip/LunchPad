@@ -57,7 +57,7 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
   setConnectionError: (connectionError) => set({ connectionError }),
   setHistoryFilters: (historyFilters) => set({ historyFilters }),
   
-  resetCart: () => set({ selectedItems: [], rfid: '' }),
+  resetCart: () => set({ selectedItems: [] }),
   
   updateItemQuantity: (id, delta) => set((state) => {
     const updated = state.selectedItems.map((item) => {
