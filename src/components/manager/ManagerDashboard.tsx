@@ -128,7 +128,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         })}
       </div>
       <div className="ml-auto flex items-center pl-4 border-l border-neutral-100">
-        <button onClick={onLogout} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
+        <button
+          onClick={onLogout}
+          className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          aria-label={t('navigation.logout')}
+          title={t('navigation.logout')}
+        >
           <LogOut className="w-5 h-5" />
         </button>
       </div>
