@@ -7,3 +7,8 @@
 **Vulnerability:** Global rate limiter was defined but bypassed since it was mapped after route-level and json middleware blocks. This rendered rate limiting ineffective on core API endpoints.
 **Learning:** Placement within the Express middleware stack matters. The order is procedural, so any `app.use()` calls for routes positioned *before* the limiter definition would bypass its protection against DoS/brute-force attacks.
 **Prevention:** Ensure that global security middleware, like `rateLimit`, are positioned *before* API routes, body parsers, and other downstream processors.
+
+## 2026-04-19 - Type Confusion DoS in Express Request Handlers
+**Vulnerability:** API endpoints extracted fields like `pin` or `rfid` from `req.body` and `req.query` and directly invoked string methods like `.trim()` or `.replace()` on them without type validation. An attacker could intentionally submit a JSON array or object (e.g., `{"rfid": [1, 2, 3]}`) to trigger an unhandled `TypeError` (e.g., `rfid.trim is not a function`), crashing the Express server and causing a Denial of Service (DoS).
+**Learning:** Express body parsers (like `express.json()`) parse JSON transparently. They do not enforce primitive types on payload fields unless explicitly validated. By trusting that `req.body` properties are strings, the server becomes vulnerable to type confusion.
+**Prevention:** Always explicitly validate the data type of input parameters (e.g., `if (typeof rfid !== 'string') return res.status(400)`) or safely cast them (e.g., `String(rfid)`) before calling string-specific operations.
