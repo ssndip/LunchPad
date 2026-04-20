@@ -80,53 +80,122 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const { isStandalone, enterFullscreen } = usePWA();
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   
+  // Feature: Multi-Day Navigation
+  const availableDates = useMemo(() => {
+    const dates = Array.from(new Set(menu.map(i => i.date).filter(Boolean)));
+    return dates.sort();
+  }, [menu]);
+
+  const parseDate = (dateStr: string) => {
+    if (!dateStr) return new Date(0);
+    // Handle YYYY-MM-DD
+    if (dateStr.includes('-')) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Handle DD.MM.YYYY or DD/MM/YYYY
+    const parts = dateStr.split(/[./]/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parts[2].length === 2 ? 2000 + parseInt(parts[2], 10) : parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    return new Date(dateStr);
+  };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTime = today.getTime();
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Find the "Ordering Date" (The active schedule)
+  // Per user request: Closest date on or before today if available, otherwise first future
+  const orderingDate = useMemo(() => {
+    if (availableDates.length === 0) return '';
+    
+    const parsedDates = availableDates.map(d => ({ str: d, time: parseDate(d).getTime() }));
+    
+    // 1. Try to find today exactly
+    const todayEntry = parsedDates.find(d => d.time === todayTime);
+    if (todayEntry) return todayEntry.str;
+    
+    // 2. Find closest BEFORE today
+    const pastEntries = parsedDates.filter(d => d.time < todayTime).sort((a, b) => b.time - a.time);
+    if (pastEntries.length > 0) return pastEntries[0].str;
+    
+    // 3. Fallback to first future
+    return availableDates[0];
+  }, [availableDates, todayTime]);
+
+  const [selectedDate, setSelectedDate] = useState<string>(orderingDate);
+
+  // Sync selectedDate if orderingDate changes (e.g. menu loads)
+  React.useEffect(() => {
+    if (orderingDate && !selectedDate) {
+      setSelectedDate(orderingDate);
+    }
+  }, [orderingDate, selectedDate]);
+
+  const isReadOnly = useMemo(() => {
+    if (!selectedDate || !orderingDate) return false;
+    return selectedDate !== orderingDate;
+  }, [selectedDate, orderingDate]);
+
+  // Filter and Group Menu by selected date
+  const filteredMenu = useMemo(() => {
+    if (availableDates.length === 0) return menu;
+    return menu.filter(i => i.date === selectedDate);
+  }, [menu, selectedDate, availableDates]);
+
+  const filteredGroupedMenu = useMemo(() => {
+    return filteredMenu.reduce((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {} as Record<string, MenuItem[]>);
+  }, [filteredMenu]);
+
   // Category Navigation
-  const categories = useMemo(() => Object.keys(groupedMenu), [groupedMenu]);
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0] || '');
+  const categories = useMemo(() => Object.keys(filteredGroupedMenu), [filteredGroupedMenu]);
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const { isPhone, isTablet } = useResponsive();
 
   // Ensure activeCategory stays valid
   React.useEffect(() => {
-    if (!activeCategory && categories.length > 0) {
-      setActiveCategory(categories[0]);
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory(categories[0] || '');
     }
   }, [categories, activeCategory]);
 
-  const activeItems = useMemo(() => groupedMenu[activeCategory] || [], [groupedMenu, activeCategory]);
+  const activeItems = useMemo(() => filteredGroupedMenu[activeCategory] || [], [filteredGroupedMenu, activeCategory]);
 
   useRfidScanner({
-    active: selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled,
+    active: selectedItems.length > 0 && !userHistoryOpen && orderButtonEnabled && !isReadOnly,
     onScan: (rfid) => {
       setRfid(rfid);
       onOrder(rfid);
     },
   });
 
-  const displayDate = (() => {
-    const now = new Date();
-    const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-    const target = new Date(now);
-    if (kioskAutoTiming && currentHHmm >= kioskCloseTime) target.setDate(now.getDate() + 1);
-    return target.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: 'numeric', month: 'short' });
-  })();
+  const formatDateLabel = (dateStr: string) => {
+    const d = parseDate(dateStr);
+    if (isNaN(d.getTime()) || d.getTime() === 0) return { dayName: '???', fullDate: dateStr };
+    
+    const dayName = d.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' });
+    const fullDate = d.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return { dayName, fullDate };
+  };
 
   const isMenuOutdated = useMemo(() => {
-    if (!menuDate) return false;
+    if (!selectedDate) return false;
+    const menuD = parseDate(selectedDate);
+    if (isNaN(menuD.getTime())) return false;
     
-    // Try to parse DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
-    const parts = menuDate.split(/[.\-/]/);
-    if (parts.length !== 3) return false;
-    
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // 0-indexed
-    const year = parts[2].length === 2 ? 2000 + parseInt(parts[2], 10) : parseInt(parts[2], 10);
-    
-    const menuD = new Date(year, month, day);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     return menuD < today;
-  }, [menuDate]);
+  }, [selectedDate]);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
@@ -154,7 +223,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       {/* 1. Header — Compact 48px with Glassmorphism */}
-      <header className="h-14 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50">
+      <header className="h-16 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50">
         {/* Left Section — Matches Sidebar Width */}
         <div className="hidden md:flex shrink-0 md:w-[20%] xl:w-40 px-4 items-center gap-3">
           <motion.h1 
@@ -166,25 +235,50 @@ export const KioskView: React.FC<KioskViewProps> = ({
           </motion.h1>
         </div>
 
-        {/* Center Section — Matches Item List (flex-1) — Date Centered Here */}
-        <div className="flex-1 flex items-center justify-center px-4 relative">
-          <div className="flex md:hidden items-center absolute left-4">
-             <h1 className="text-[10px] font-black text-neutral-900 uppercase tracking-tight">{t('kiosk.daily_menu')}</h1>
-          </div>
+        {/* Center Section — Date Picker Tabs */}
+        <div className="flex-1 flex items-center justify-center px-4 overflow-x-auto no-scrollbar gap-2">
+          {availableDates.length > 0 ? (
+            availableDates.map(date => {
+              const { dayName, fullDate } = formatDateLabel(date);
+              const isActive = selectedDate === date;
+              const isOrdering = date === orderingDate;
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm md:text-lg font-black text-neutral-900 uppercase tracking-tight">
-              {menuDate || displayDate}
-            </span>
-            {isMenuOutdated && (
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 rounded-full border border-orange-100 shadow-sm animate-pulse">
-                <AlertTriangle className="w-3 h-3 text-orange-600" />
-                <span className="text-[10px] font-black text-orange-600 uppercase tracking-tighter">
-                  {t('kiosk.menu_outdated')}
-                </span>
-              </div>
-            )}
-          </div>
+              return (
+                <button
+                  key={date}
+                  onClick={() => { triggerHaptic('light'); setSelectedDate(date); }}
+                  className={`flex flex-col items-center justify-center min-w-[120px] h-12 rounded-2xl transition-all relative ${
+                    isActive 
+                      ? 'bg-neutral-900 text-white shadow-lg scale-105' 
+                      : 'bg-white/50 text-neutral-500 hover:bg-white border border-neutral-100'
+                  }`}
+                >
+                  <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-white/60' : 'text-neutral-400'}`}>
+                    {dayName}
+                  </span>
+                  <span className="text-xs font-black leading-none mt-0.5">
+                    {fullDate}
+                  </span>
+                  {isOrdering && (
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+                  )}
+                </button>
+              );
+            })
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm md:text-lg font-black text-neutral-900 uppercase tracking-tight">
+                {menuDate || todayStr}
+              </span>
+            </div>
+          )}
+          
+          {isReadOnly && (
+             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white rounded-xl shadow-xl ml-4">
+                <Info className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Preview Mode</span>
+             </div>
+          )}
         </div>
 
         {/* Right Section — Matches Order Panel Width */}
@@ -271,9 +365,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
             onToggle={onToggleItem}
             onAddWithSide={onAddWithSide}
             onUpdateQuantity={onUpdateQuantity}
-            orderButtonEnabled={orderButtonEnabled}
+            orderButtonEnabled={orderButtonEnabled && !isReadOnly}
             isMenuOutdated={isMenuOutdated}
             connectionError={connectionError}
+            isReadOnly={isReadOnly}
             t={t}
           />
         </div>
@@ -288,7 +383,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             isScanning={isScanning}
             computedKioskOpen={computedKioskOpen}
             testModeEnabled={testModeEnabled}
-            orderButtonEnabled={orderButtonEnabled && !isMenuOutdated}
+            orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
             onOrder={() => onOrder(rfid || undefined)}
             onPinOrder={() => setPinModalOpen(true)}
             onClearCart={onClearCart}

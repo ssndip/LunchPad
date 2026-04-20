@@ -21,6 +21,14 @@ export const translations = {
       logout: 'Logout',
       parser_rules: 'Parser Rules',
     },
+    ocr: {
+      upload_image: 'Upload Photo',
+      paste_image: 'Paste Image (Ctrl+V)',
+      drag_drop: 'Drag & Drop image here',
+      reading: 'Reading Menu...',
+      error: 'OCR Error',
+      unsupported: 'Vision not supported',
+    },
     parser: {
       category_settings: 'Category Settings',
       category_settings_desc: 'Toggle autobox and side-dish detection per category',
@@ -136,6 +144,7 @@ export const translations = {
       ai_apply_current: 'Apply to Current Profile',
       ai_preview_title: 'AI Suggested Improvements',
       ai_no_key: 'Please configure an AI API Key in Settings first.',
+      ai_enter_profile_name: 'Enter a name for this new parser profile:',
     },
     analytics: {
       analytics_desc: 'Comprehensive statistics and spending insights.',
@@ -347,6 +356,7 @@ export const translations = {
     modals: {
       confirm: 'Confirm',
       cancel: 'Cancel',
+      save: 'Save',
       open: 'Open',
       close: 'Close',
       edit: 'Edit',
@@ -448,6 +458,14 @@ export const translations = {
       network_error: 'Мрежова грешка',
       logout: 'Изход',
       parser_rules: 'Правила на парсера',
+    },
+    ocr: {
+      upload_image: 'Качи снимка',
+      paste_image: 'Постави снимка (Ctrl+V)',
+      drag_drop: 'Плъзнете и пуснете снимка тук',
+      reading: 'Разчитане на менюто...',
+      error: 'Грешка при разчитането',
+      unsupported: 'AI Vision не се поддържа',
     },
     parser: {
       category_settings: 'Настройки на категориите',
@@ -564,6 +582,7 @@ export const translations = {
       ai_apply_current: 'Приложи към текущия профил',
       ai_preview_title: 'Предложени подобрения от AI',
       ai_no_key: 'Моля, първо конфигурирайте AI API ключ в Настройки.',
+      ai_enter_profile_name: 'Въведете име за този нов профил на парсера:',
     },
     analytics: {
       analytics_desc: 'Изчерпателна статистика и прозрения за разходите.',
@@ -776,6 +795,7 @@ export const translations = {
     modals: {
       confirm: 'Потвърди',
       cancel: 'Отказ',
+      save: 'Запази',
       open: 'Отвори',
       close: 'Затвори',
       edit: 'Редактирай',

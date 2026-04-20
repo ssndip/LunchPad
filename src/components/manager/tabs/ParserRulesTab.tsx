@@ -179,7 +179,9 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
         sectionRules: settings.sectionRules,
         preprocessing: settings.preprocessingSteps,
         entityPatterns: settings.entityPatterns,
-        enrichment: settings.enrichmentRules
+        enrichment: settings.enrichmentRules,
+        // Include system category labels so AI can match them
+        systemCategories: Object.values(MENU_CONFIG.categoryLabels)
       };
       
       const res = await suggestParserRules(token, aiPrompt, currentConfig);
@@ -209,20 +211,33 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     };
 
     if (asNewProfile) {
-      const profileName = `AI Guided - ${new Date().toLocaleDateString()}`;
-      const newProfile: ParserProfile = {
-        id: new Date().toISOString(),
-        name: profileName,
-        settings: newSettings,
-        presets: [],
-        createdAt: new Date().toISOString()
-      };
-      saveProfiles([newProfile, ...profiles]);
+      confirm({
+        title: t('parser.ai_apply_new'),
+        message: t('parser.ai_enter_profile_name') || 'Enter a name for this new parser profile:',
+        isPrompt: true,
+        initialValue: `AI Guided - ${new Date().toLocaleDateString()}`,
+        confirmText: t('modals.save') || 'Save',
+        onConfirm: (name) => {
+          if (!name) return;
+          const newProfile: ParserProfile = {
+            id: new Date().toISOString(),
+            name: name,
+            settings: newSettings,
+            presets: [],
+            createdAt: new Date().toISOString()
+          };
+          saveProfiles([newProfile, ...profiles]);
+          finalizeApply();
+        }
+      });
     } else {
       setSettings(newSettings);
       saveCategorySettings(newSettings);
+      finalizeApply();
     }
-    
+  };
+
+  const finalizeApply = () => {
     setAiSuggestions(null);
     setAiPrompt('');
     setSavedToast(true);

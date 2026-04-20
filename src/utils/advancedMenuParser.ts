@@ -3,6 +3,7 @@ export interface ParsedItem {
   price: number;
   weight: string | null;
   boxFee: number;
+  date: string | null; // Individual item date
 }
 
 export interface ParsedCategory {
@@ -18,26 +19,20 @@ export interface ParsedMenu {
 
 // --- Regex Matchers & Configuration ---
 
+const BULGARIAN_DAYS = ['ПОНЕДЕЛНИК', 'ВТОРНИК', 'СРЯДА', 'ЧЕТВЪРТЪК', 'ПЕТЪК', 'СЪБОТА', 'НЕДЕЛЯ'];
+const ENGLISH_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
 const RegexConfig = {
   DATE: /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/,
-  // Matches "200гр", "100 гр", "50g", etc.
+  DATE_RANGE: /(\d{1,2})\s*[-–—]\s*(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/, // Matches 03 - 07.11.2025
   WEIGHT: /(\d+\s*(?:гр|g|gr|мл|ml))/i,
-  // Matches Euro only as official price source
-  PRICE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$)/i,
-  // Matches packaging box fee with currency
-  BOX_FEE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$)?\s*кутийка/i,
-  // Informative BGN strings to be stripped (noise)
+  PRICE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|лева)/i, // Support BGN too for extraction
+  BOX_FEE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв)?\s*кутийка/i,
   BGN_NOISE: /[\d]+[,.][\d]+\s*(?:лв|лева|лв\.)/gi,
-  // Box keyword fallback
   BOX_KEYWORD: /кутийка/i,
-  // Item line indicator
   ITEM_PREFIX: /^[-•*]\s*/
 };
 
-/**
- * Safely parses a number from a string, supporting comma decimals.
- * Returns null if parsing fails or result is NaN.
- */
 function safeFloat(value: any, fallback: number | null = null): number | null {
   if (value === null || value === undefined) return fallback;
   const str = String(value).replace(',', '.');
@@ -45,43 +40,85 @@ function safeFloat(value: any, fallback: number | null = null): number | null {
   return isNaN(num) ? fallback : num;
 }
 
-/**
- * Strips noise and trailing punctuation/artifacts from item names.
- */
 function cleanItemName(name: string): string {
   return name
-    .replace(RegexConfig.BGN_NOISE, '') // Remove лв. info
-    .replace(/\(\s*\)/g, '')            // Remove empty parentheses
-    .replace(/[()+\-.:, /]+$/, '')       // Remove trailing punctuation/slashes
-    .replace(/\(\s+/g, '(')             // Fix internal spacing
-    .replace(/\s+\)/g, ')')
-    .replace(/\s+/g, ' ')               // Normalize whitespace
+    .replace(RegexConfig.BGN_NOISE, '')
+    .replace(/\(\s*\)/g, '')
+    .replace(/[()+\-.:, /]+$/, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 /**
- * Parses raw text into a cleanly typed JSON object.
+ * Calculates a specific date for a given day name relative to a reference date.
  */
+function getDateForDay(dayName: string, refDate: Date): string {
+  const cleanDay = dayName.toUpperCase();
+  let dayIndex = BULGARIAN_DAYS.indexOf(cleanDay);
+  if (dayIndex === -1) dayIndex = ENGLISH_DAYS.indexOf(cleanDay);
+  if (dayIndex === -1) return refDate.toISOString().split('T')[0];
+
+  const result = new Date(refDate);
+  // Find the first Monday on or before the reference date
+  const currentDay = refDate.getDay(); // 0 is Sunday, 1 is Monday
+  const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+  result.setDate(refDate.getDate() + diffToMonday + dayIndex);
+  
+  return result.toISOString().split('T')[0];
+}
+
 export function parseMenuText(rawText: string): ParsedMenu {
   const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
   const parsedOutput: ParsedMenu = { date: null, categories: [], unmatchedLines: [] };
+  
+  let menuStartDate: Date = new Date();
+  menuStartDate.setHours(0, 0, 0, 0);
+
+  let currentDateContext: string | null = null;
   let currentCategory: ParsedCategory | null = null;
   
-  // Contextual State values
   let currentCategoryDefaultPrice: number | null = null;
   let currentCategoryDefaultWeight: string | null = null;
   let currentCategoryDefaultBoxFee: number = 0;
 
   for (const line of lines) {
-    // 1. Check for Date
-    const dateMatch = line.match(RegexConfig.DATE);
-    if (!parsedOutput.date && dateMatch) {
-      parsedOutput.date = dateMatch[1];
+    // 1. Check for Date Range (e.g. 03 - 07.11.2025)
+    const rangeMatch = line.match(RegexConfig.DATE_RANGE);
+    if (rangeMatch) {
+      const day = parseInt(rangeMatch[1]);
+      const month = parseInt(rangeMatch[3]) - 1;
+      const year = rangeMatch[4].length === 2 ? 2000 + parseInt(rangeMatch[4]) : parseInt(rangeMatch[4]);
+      menuStartDate = new Date(year, month, day);
+      if (!parsedOutput.date) parsedOutput.date = `${rangeMatch[1]}.${rangeMatch[3]}.${rangeMatch[4]}`;
       continue;
     }
 
-    // 2. Check for Item (lines starting with hyphen/bullet)
+    // 2. Check for Single Date
+    const dateMatch = line.match(RegexConfig.DATE);
+    if (dateMatch) {
+      if (!parsedOutput.date) parsedOutput.date = dateMatch[1];
+      const parts = dateMatch[1].split(/[.\-/]/);
+      if (parts.length === 3) {
+        const d = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+        const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
+        menuStartDate = new Date(y, m, d);
+      }
+      continue;
+    }
+
+    // 3. Check for Day Name
+    const upperLine = line.toUpperCase();
+    const isDayHeader = BULGARIAN_DAYS.some(d => upperLine.includes(d)) || ENGLISH_DAYS.some(d => upperLine.includes(d));
+    if (isDayHeader) {
+      const dayName = BULGARIAN_DAYS.find(d => upperLine.includes(d)) || ENGLISH_DAYS.find(d => upperLine.includes(d));
+      if (dayName) {
+        currentDateContext = getDateForDay(dayName, menuStartDate);
+        continue;
+      }
+    }
+
+    // 4. Check for Item
     if (RegexConfig.ITEM_PREFIX.test(line)) {
       if (!currentCategory) {
         currentCategory = { categoryName: 'Други', items: [] };
@@ -94,7 +131,6 @@ export function parseMenuText(rawText: string): ParsedMenu {
       let itemWeight: string | null = null;
       let itemBoxFee: number = 0;
 
-      // Extract specific item attributes
       const weightMatch = itemLine.match(RegexConfig.WEIGHT);
       if (weightMatch) {
         itemWeight = weightMatch[1];
@@ -116,7 +152,6 @@ export function parseMenuText(rawText: string): ParsedMenu {
         itemName = itemName.replace(priceMatch[0], '').trim();
       }
 
-      // Final cleanup of the item name
       const finalName = cleanItemName(itemName);
       const finalPrice = itemPrice !== null ? itemPrice : (currentCategoryDefaultPrice || 0);
       const finalWeight = itemWeight !== null ? itemWeight : currentCategoryDefaultWeight;
@@ -126,50 +161,37 @@ export function parseMenuText(rawText: string): ParsedMenu {
         name: finalName,
         price: finalPrice,
         weight: finalWeight,
-        boxFee: finalBoxFee
+        boxFee: finalBoxFee,
+        date: currentDateContext
       });
-      
       continue;
     }
 
-    // 3. Check for Category headers or Contextual definition lines.
-    const isDedicatedContext = /^\d+/.test(line) || (!/[a-zA-Zа-яА-Я]/.test(line.replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '').replace(RegexConfig.BOX_FEE, '').trim()));
+    // 5. Category headers
+    const isContext = /^\d+/.test(line) || (!/[a-zA-Zа-яА-Я]/.test(line.replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '').replace(RegexConfig.BOX_FEE, '').trim()));
 
-    if (!isDedicatedContext) {
-      // It's likely a category header
-      const nameCand = line.replace(RegexConfig.BOX_FEE, '')
-                           .replace(RegexConfig.WEIGHT, '')
-                           .replace(RegexConfig.PRICE, '')
-                           .replace(/[+():]/g, '')
-                           .trim();
-      
+    if (!isContext) {
+      const nameCand = line.replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '').replace(/[+():]/g, '').trim();
       if (nameCand.length > 2) {
         currentCategory = { categoryName: nameCand, items: [] };
         parsedOutput.categories.push(currentCategory);
-        
-        // Reset defaults for the new category
         currentCategoryDefaultPrice = null;
         currentCategoryDefaultWeight = null;
         currentCategoryDefaultBoxFee = 0;
       }
     }
 
-    // Always check for context updates if we have a current category
     if (currentCategory) {
-      const lineWeightMatch = line.match(RegexConfig.WEIGHT);
-      if (lineWeightMatch) currentCategoryDefaultWeight = lineWeightMatch[1];
-      
-      const lineBoxMatch = line.match(RegexConfig.BOX_FEE);
-      if (lineBoxMatch) currentCategoryDefaultBoxFee = safeFloat(lineBoxMatch[1], 0) || 0;
-
-      const linePriceMatch = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
-      if (linePriceMatch) currentCategoryDefaultPrice = safeFloat(linePriceMatch[1]);
+      const lw = line.match(RegexConfig.WEIGHT);
+      if (lw) currentCategoryDefaultWeight = lw[1];
+      const lb = line.match(RegexConfig.BOX_FEE);
+      if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1], 0) || 0;
+      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
+      if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
     }
 
-    // 4. If nothing matched and line has no known pattern → unmatched
-    const hasKnownPattern = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line) || RegexConfig.BOX_FEE.test(line) || RegexConfig.DATE.test(line);
-    if (!isDedicatedContext && !hasKnownPattern && !currentCategory) {
-      // Context lines before any category are truly unmatched
+    const hasKnown = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line) || RegexConfig.BOX_FEE.test(line) || RegexConfig.DATE.test(line);
+    if (!isContext && !hasKnown && !currentCategory) {
       parsedOutput.unmatchedLines.push(line);
     }
   }

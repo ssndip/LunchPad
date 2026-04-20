@@ -23,6 +23,7 @@ export interface MenuItem {
     ruleId?: string;
     ruleType?: 'section' | 'extraction' | 'enrichment';
   };
+  date?: string; // Feature: specific date for this item (YYYY-MM-DD)
 }
 
 // Feature 5: Cart item extends MenuItem with an optional chosen side dish

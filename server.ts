@@ -100,7 +100,8 @@ export async function startServer() {
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/unlock", authLimiter);
 
-  app.use(express.json({ limit: '500kb' }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // --- API Routes ---
   app.get("/ping", (req, res) => res.send("pong"));

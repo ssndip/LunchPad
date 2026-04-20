@@ -552,6 +552,39 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   {t('settings.update')}
                 </button>
               </div>
+              
+              <div className="mt-4 flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-indigo-600" />
+                  <span className="text-xs font-bold text-neutral-900">Verify Connection</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!aiApiKey) {
+                      alert("Please update and save your API key first.");
+                      return;
+                    }
+                    try {
+                      const res = await fetch('/api/ai/test', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert(data.message);
+                      } else {
+                        alert("Connection Failed: " + data.error);
+                      }
+                    } catch (err: any) {
+                      alert("Network Error: " + err.message);
+                    }
+                  }}
+                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
+                >
+                  Test Connection
+                </button>
+              </div>
+
               <p className="mt-2 text-[10px] text-neutral-400 italic leading-relaxed">
                 {t('settings.ai_api_key_desc')}
               </p>

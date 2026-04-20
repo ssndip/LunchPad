@@ -41,6 +41,7 @@ export const initDb = () => {
     { name: "hasIncludedSide", sql: "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0" },
     { name: "tags", sql: "ALTER TABLE menu ADD COLUMN tags TEXT" },
     { name: "packagingFee", sql: "ALTER TABLE menu ADD COLUMN packagingFee REAL" },
+    { name: "date", sql: "ALTER TABLE menu ADD COLUMN date TEXT" },
     { name: "feeDistributed", sql: "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0" },
     { name: "distributedAmount", sql: "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0" }
   ];
@@ -63,7 +64,8 @@ export const initDb = () => {
       description TEXT,
       price REAL,
       available INTEGER,
-      category TEXT
+      category TEXT,
+      date TEXT
     );
 
     CREATE TABLE IF NOT EXISTS orders (

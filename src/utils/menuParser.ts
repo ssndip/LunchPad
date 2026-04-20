@@ -99,7 +99,8 @@ export function parsePastedMenu(text: string, settingsOverride?: ParserPersisten
         available: true,
         category: categoryDisplayLabel,
         tags: [],
-        extraFees: []
+        extraFees: [],
+        date: parsedItem.date || undefined
       };
 
       if (parsedItem.boxFee > 0) {

@@ -16,6 +16,7 @@ interface KioskItemListProps {
   orderButtonEnabled: boolean;
   isMenuOutdated?: boolean;
   connectionError: string | null;
+  isReadOnly?: boolean;
   t: (key: string) => string;
 }
 
@@ -30,14 +31,15 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   orderButtonEnabled,
   isMenuOutdated,
   connectionError,
+  isReadOnly,
   t,
 }) => {
   const [expandedItemId, setExpandedItemId] = React.useState<number | null>(null);
   const isPackagingFeeItem = (item: MenuItem) => isItemAutoBox(item);
 
   if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('restricted_message')} />;
-  if (isMenuOutdated) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.menu_outdated')} message={t('kiosk.check_back_tomorrow')} />;
-  if (!orderButtonEnabled) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
+  if (isMenuOutdated && !isReadOnly) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.menu_outdated')} message={t('kiosk.check_back_tomorrow')} />;
+  if (!orderButtonEnabled && !isReadOnly) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
   return (
@@ -49,10 +51,11 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
           const needsSide = !!(item.requiresSideChoice || item.hasIncludedSide);
 
           return (
-            <div key={item.id} className={`flex flex-col transition-all overflow-hidden rounded-[20px] md:rounded-[24px] border border-transparent ${isSelected ? 'bg-neutral-900/[0.04] !border-neutral-900/10' : 'bg-white shadow-sm hover:border-neutral-200'} no-tap-highlight`}>
+            <div key={item.id} className={`flex flex-col transition-all overflow-hidden rounded-[20px] md:rounded-[24px] border border-transparent ${isSelected ? 'bg-neutral-900/[0.04] !border-neutral-900/10' : 'bg-white shadow-sm hover:border-neutral-200'} ${isReadOnly ? 'opacity-80' : ''} no-tap-highlight`}>
               <motion.div
-                whileTap={{ scale: 0.98 }}
+                whileTap={isReadOnly ? {} : { scale: 0.98 }}
                 onClick={() => {
+                  if (isReadOnly) return;
                   triggerHaptic('light');
                   if (needsSide) {
                     setExpandedItemId(expandedItemId === item.id ? null : item.id);
@@ -60,14 +63,21 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                     onToggle(item);
                   }
                 }}
-                className="flex items-center justify-between px-5 py-3.5 md:px-8 md:py-5 cursor-pointer"
+                className={`flex items-center justify-between px-5 py-2 md:px-8 md:py-3 ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-4">
                   <div className="flex-1 min-w-0">
                     <h3 className={`text-[var(--fluid-base)] font-bold leading-snug tracking-tight line-clamp-2 ${isSelected ? 'text-neutral-900' : 'text-neutral-700'}`}>
                       {item.name}
                     </h3>
-                    {needsSide && (
+                    {isReadOnly && (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-1.5 py-0.5 bg-neutral-100 text-neutral-500 rounded text-[9px] font-black uppercase tracking-widest">
+                          {t('kiosk.preview_only') || 'Preview Only'}
+                        </span>
+                      </div>
+                    )}
+                    {needsSide && !isReadOnly && (
                       <div className="mt-1">
                         {!isSelected ? (
                           <span className="inline-flex items-center px-2 py-0.5 bg-violet-50 text-violet-600 rounded text-[9px] font-black uppercase tracking-widest animate-pulse">
@@ -84,15 +94,17 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                 </div>
 
                 <div className="flex items-center gap-4 md:gap-6 shrink-0">
-                  <div className="w-[40px] md:w-[48px] flex items-center justify-center relative">
-                    <QuantityControl 
-                      isSelected={isSelected}
-                      quantity={cartItem?.quantity || 1}
-                      onIncrement={() => onUpdateQuantity(item.id, 1)}
-                      onDecrement={() => onUpdateQuantity(item.id, -1)}
-                      onToggle={() => !isSelected && onToggle(item)}
-                    />
-                  </div>
+                  {!isReadOnly && (
+                    <div className="w-[40px] md:w-[48px] flex items-center justify-center relative">
+                      <QuantityControl 
+                        isSelected={isSelected}
+                        quantity={cartItem?.quantity || 1}
+                        onIncrement={() => onUpdateQuantity(item.id, 1)}
+                        onDecrement={() => onUpdateQuantity(item.id, -1)}
+                        onToggle={() => !isSelected && onToggle(item)}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex flex-col items-end gap-0.5 min-w-[60px] md:min-w-[80px]">
                     <span className="text-[var(--fluid-lg)] font-black font-mono text-neutral-900">
@@ -172,7 +184,7 @@ const QuantityControl: React.FC<{
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={(e) => { triggerHaptic('light'); onToggle(); }}
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors touch-target-expansion touch-manipulation"
+            className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors touch-target-expansion touch-manipulation"
           />
         ) : (
           <motion.div
@@ -181,22 +193,22 @@ const QuantityControl: React.FC<{
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex items-center bg-neutral-900 rounded-full p-1 gap-1.5 md:gap-3 overflow-hidden shadow-sm absolute right-0"
+            className="flex items-center bg-neutral-900 rounded-full p-0.5 gap-1 md:gap-2 overflow-hidden shadow-sm absolute right-0"
           >
             <button
               onClick={() => { triggerHaptic('light'); onDecrement(); }}
-              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="text-xs md:text-sm font-black font-mono text-white min-w-[14px] text-center">
+            <span className="text-[10px] md:text-xs font-black font-mono text-white min-w-[12px] text-center">
               {quantity}
             </span>
             <button
               onClick={() => { triggerHaptic('light'); onIncrement(); }}
-              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </motion.div>
         )}

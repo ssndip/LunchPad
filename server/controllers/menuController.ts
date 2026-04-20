@@ -13,6 +13,7 @@ export const getMenu = (database = db) => {
     sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
     tags: i.tags ? JSON.parse(i.tags) : [],
     packagingFee: i.packagingFee,
+    date: i.date,
     menuVersion: settings.menuVersion,
     menuDate: settings.menuDate
   }));
@@ -35,6 +36,7 @@ export const getMenuItemById = (database = db, id: number) => {
     sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
     tags: i.tags ? JSON.parse(i.tags) : [],
     packagingFee: i.packagingFee,
+    date: i.date,
     menuVersion: settings.menuVersion,
     menuDate: settings.menuDate
   };
@@ -54,7 +56,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
     }
 
     db.transaction(() => {
-      // Save menuDate if provided
+      // Save menuDate if provided (Global fallback/header)
       if (date !== undefined) {
         settings.menuDate = date || "";
         db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
@@ -66,8 +68,8 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         INSERT INTO menu (
           id, name, description, price, available, category, 
           requiresSideChoice, sideChoices, selectedSide, hasIncludedSide,
-          tags, packagingFee
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          tags, packagingFee, date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       finalItems.forEach((i: any) => insert.run(
         i.id, 
@@ -81,7 +83,8 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         i.selectedSide || null,
         i.hasIncludedSide ? 1 : 0,
         i.tags ? JSON.stringify(i.tags) : JSON.stringify([]),
-        i.packagingFee || null
+        i.packagingFee || null,
+        i.date || settings.menuDate || null
       ));
     })();
     const newVersion = incrementMenuVersion();

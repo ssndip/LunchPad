@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
@@ -218,6 +218,74 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     setParsed({ ...parsed, items: newItems });
   };
 
+  const [isOcrLoading, setIsOcrLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleOcr = async (base64Image: string) => {
+    if (!token) return;
+    setIsOcrLoading(true);
+    try {
+      const response = await fetch('/api/ai/ocr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ imageData: base64Image })
+      });
+      
+      const data = await response.json();
+      if (data.text) {
+        setPasteText(prev => prev ? prev + '\n' + data.text : data.text);
+      } else {
+        alert(data.error || t('ocr.error'));
+      }
+    } catch (err) {
+      console.error('OCR failed', err);
+      alert(t('ocr.error'));
+    } finally {
+      setIsOcrLoading(false);
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      handleOcr(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) processFile(file);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFile(files[0]);
+    }
+  };
+
   const handleClose = () => {
     setIsPasteOpen(false);
     setPasteText('');
@@ -419,23 +487,79 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               exit={{ scale: 0.92, y: 20, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
               className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden"
             >
-              <div className="p-8 border-b border-neutral-100">
-                <h2 className="text-2xl font-bold mb-1">{t('menu.paste_title')}</h2>
-                <p className="text-neutral-500 text-sm">{t('menu.paste_instructions')}</p>
+              <div className="p-8 border-b border-neutral-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">{t('menu.paste_title')}</h2>
+                  <p className="text-neutral-500 text-sm">{t('menu.paste_instructions')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                   <button
+                     onClick={() => document.getElementById('ocr-upload')?.click()}
+                     className="p-3 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 rounded-xl transition-all border border-neutral-200 shadow-sm flex items-center gap-2 text-xs font-bold"
+                     title={t('ocr.upload_image')}
+                   >
+                     <Upload className="w-4 h-4" />
+                     <span className="hidden sm:inline">{t('ocr.upload_image')}</span>
+                   </button>
+                   <input 
+                     id="ocr-upload"
+                     type="file" 
+                     accept="image/*" 
+                     className="hidden" 
+                     onChange={(e) => e.target.files && processFile(e.target.files[0])}
+                   />
+                </div>
               </div>
 
               <div className="p-8 space-y-6">
                 {!parsed ? (
                   /* ── Phase 1: Paste ── */
                   <>
-                    <div className="relative">
+                    <div 
+                      className={`relative group transition-all rounded-2xl border-2 border-dashed ${isDragging ? 'border-indigo-500 bg-indigo-50/50' : 'border-neutral-200 bg-neutral-50'}`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
                       <textarea
                         value={pasteText}
                         onChange={(e) => setPasteText(e.target.value)}
+                        onPaste={handlePaste}
                         placeholder={t('menu.paste_placeholder')}
-                        className="w-full h-56 p-5 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200 focus:border-neutral-400 focus:outline-none transition-all font-mono text-sm resize-none"
+                        className="w-full h-56 p-5 bg-transparent focus:outline-none transition-all font-mono text-sm resize-none"
                       />
-                      <FileText className="absolute top-4 right-4 w-4 h-4 text-neutral-300" />
+                      
+                      <AnimatePresence>
+                        {isOcrLoading ? (
+                          <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-2xl z-10"
+                          >
+                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-3" />
+                            <p className="text-sm font-black text-neutral-900 uppercase tracking-widest animate-pulse">{t('ocr.reading')}</p>
+                          </motion.div>
+                        ) : isDragging ? (
+                          <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                          >
+                            <ImageIcon className="w-10 h-10 text-indigo-500 mb-2" />
+                            <p className="text-sm font-bold text-indigo-600">{t('ocr.drag_drop')}</p>
+                          </motion.div>
+                        ) : !pasteText && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-20">
+                            <FileText className="w-12 h-12 text-neutral-400 mb-2" />
+                            <p className="text-xs font-mono uppercase tracking-widest">{t('ocr.paste_image')}</p>
+                          </div>
+                        )}
+                      </AnimatePresence>
+
+                      <div className="absolute top-4 right-4 pointer-events-none">
+                         <div className="flex items-center gap-1.5 px-2 py-1 bg-white/50 backdrop-blur-sm rounded-lg border border-neutral-200/50 shadow-sm">
+                            <ImageIcon className="w-3.5 h-3.5 text-neutral-400" />
+                            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-tighter">AI OCR</span>
+                         </div>
+                      </div>
                     </div>
                     {(presets.length > 0 || profiles.length > 0) && (
                       <div className="mt-4 flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-neutral-100 shadow-sm">
