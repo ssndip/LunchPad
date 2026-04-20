@@ -14,6 +14,7 @@ interface KioskItemListProps {
   onAddWithSide: (item: MenuItem, side?: string) => void;
   onUpdateQuantity: (id: number, delta: number) => void;
   orderButtonEnabled: boolean;
+  isMenuOutdated?: boolean;
   connectionError: string | null;
   t: (key: string) => string;
 }
@@ -27,6 +28,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   onAddWithSide,
   onUpdateQuantity,
   orderButtonEnabled,
+  isMenuOutdated,
   connectionError,
   t,
 }) => {
@@ -34,6 +36,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
   const isPackagingFeeItem = (item: MenuItem) => isItemAutoBox(item);
 
   if (connectionError === 'Global Access Disabled') return <Placeholder t={t} icon={<AlertCircle />} title={t('kiosk.connection_restricted')} message={t('restricted_message')} />;
+  if (isMenuOutdated) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.menu_outdated')} message={t('kiosk.check_back_tomorrow')} />;
   if (!orderButtonEnabled) return <Placeholder t={t} icon={<Utensils />} title={t('kiosk.testing_mode')} message={t('kiosk.ordering_disabled')} />;
   if (items.length === 0) return <Placeholder t={t} icon={<Clock />} title={t('kiosk.no_items_available')} message={t('kiosk.check_later')} />;
 
@@ -81,7 +84,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = ({
                 </div>
 
                 <div className="flex items-center gap-4 md:gap-6 shrink-0">
-                  <div className="w-[32px] md:w-[40px] flex items-center justify-center relative">
+                  <div className="w-[40px] md:w-[48px] flex items-center justify-center relative">
                     <QuantityControl 
                       isSelected={isSelected}
                       quantity={cartItem?.quantity || 1}
@@ -169,7 +172,7 @@ const QuantityControl: React.FC<{
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={(e) => { triggerHaptic('light'); onToggle(); }}
-            className="w-8 h-8 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors"
+            className="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors touch-target-expansion touch-manipulation"
           />
         ) : (
           <motion.div
@@ -178,20 +181,20 @@ const QuantityControl: React.FC<{
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex items-center bg-neutral-900 rounded-full p-1 gap-2 md:gap-4 overflow-hidden shadow-sm absolute right-0"
+            className="flex items-center bg-neutral-900 rounded-full p-1 gap-1.5 md:gap-3 overflow-hidden shadow-sm absolute right-0"
           >
             <button
               onClick={() => { triggerHaptic('light'); onDecrement(); }}
-              className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
             >
               <Minus className="w-4 h-4" />
             </button>
-            <span className="text-xs md:text-sm font-black font-mono text-white min-w-[12px] text-center">
+            <span className="text-xs md:text-sm font-black font-mono text-white min-w-[14px] text-center">
               {quantity}
             </span>
             <button
               onClick={() => { triggerHaptic('light'); onIncrement(); }}
-              className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
             >
               <Plus className="w-4 h-4" />
             </button>

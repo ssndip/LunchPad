@@ -154,53 +154,66 @@ export const KioskView: React.FC<KioskViewProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       {/* 1. Header — Compact 48px with Glassmorphism */}
-      <header className="h-12 shrink-0 glass-morphism px-4 flex items-center justify-between z-20 shadow-sm border-b-neutral-200/50">
-        <div className="flex items-center gap-3">
+      <header className="h-14 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50">
+        {/* Left Section — Matches Sidebar Width */}
+        <div className="hidden md:flex shrink-0 md:w-[20%] xl:w-40 px-4 items-center gap-3">
           <motion.h1 
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-base font-black text-neutral-900 tracking-tight uppercase"
+            className="text-[10px] lg:text-xs font-black text-neutral-900 tracking-tight uppercase"
           >
             {t('kiosk.daily_menu')}
           </motion.h1>
-          <div className="h-4 w-[1px] bg-neutral-200" />
-          <span className="text-xs font-bold text-neutral-400 uppercase">
-            {menuDate || displayDate}
-          </span>
-          {isMenuOutdated && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 rounded-full border border-orange-100 shadow-sm animate-pulse">
-              <AlertTriangle className="w-3 h-3 text-orange-600" />
-              <span className="text-[10px] font-black text-orange-600 uppercase tracking-tighter">
-                {t('kiosk.menu_outdated')}
-              </span>
-            </div>
-          )}
-          {kioskModeEnabled && isStandalone && (
-            <div className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-violet-50 rounded-full border border-violet-100">
-              <Smartphone className="w-3 h-3 text-violet-600" />
-              <span className="text-[10px] font-black text-violet-600 uppercase tracking-tighter">
-                {t('pwa.kiosk_active')}
-              </span>
-            </div>
-          )}
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Center Section — Matches Item List (flex-1) — Date Centered Here */}
+        <div className="flex-1 flex items-center justify-center px-4 relative">
+          <div className="flex md:hidden items-center absolute left-4">
+             <h1 className="text-[10px] font-black text-neutral-900 uppercase tracking-tight">{t('kiosk.daily_menu')}</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm md:text-lg font-black text-neutral-900 uppercase tracking-tight">
+              {menuDate || displayDate}
+            </span>
+            {isMenuOutdated && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 rounded-full border border-orange-100 shadow-sm animate-pulse">
+                <AlertTriangle className="w-3 h-3 text-orange-600" />
+                <span className="text-[10px] font-black text-orange-600 uppercase tracking-tighter">
+                  {t('kiosk.menu_outdated')}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Section — Matches Order Panel Width */}
+        <div className="flex shrink-0 md:w-[35%] lg:w-80 px-4 items-center justify-end gap-2">
           {kioskModeEnabled && isStandalone && !document.fullscreenElement && (
             <button 
               onClick={enterFullscreen}
-              className="p-1.5 rounded-lg bg-violet-600 text-white shadow-sm hover:bg-violet-700 transition-colors"
+              className="p-2 rounded-xl bg-violet-600 text-white shadow-md hover:bg-violet-700 transition-all active:scale-95"
               title="Fullscreen"
               aria-label="Fullscreen"
             >
-              <Maximize className="w-4 h-4" />
+              <Maximize className="w-5 h-5" />
             </button>
           )}
-          <button onClick={() => setUserHistoryOpen(true)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors" title={t('kiosk.user_history_title')} aria-label={t('kiosk.user_history_title')}>
-            <Users className="w-4 h-4" />
+          <button 
+            onClick={() => setUserHistoryOpen(true)} 
+            className="p-2.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
+            title={t('kiosk.user_history_title')} 
+            aria-label={t('kiosk.user_history_title')}
+          >
+            <Users className="w-5 h-5" />
           </button>
-          <button onClick={onGoToManager} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors" title={t('navigation.admin_login')} aria-label={t('navigation.admin_login')}>
-            <Settings className="w-4 h-4" />
+          <button 
+            onClick={onGoToManager} 
+            className="p-2.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
+            title={t('navigation.admin_login')} 
+            aria-label={t('navigation.admin_login')}
+          >
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
@@ -259,6 +272,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             onAddWithSide={onAddWithSide}
             onUpdateQuantity={onUpdateQuantity}
             orderButtonEnabled={orderButtonEnabled}
+            isMenuOutdated={isMenuOutdated}
             connectionError={connectionError}
             t={t}
           />
@@ -274,7 +288,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             isScanning={isScanning}
             computedKioskOpen={computedKioskOpen}
             testModeEnabled={testModeEnabled}
-            orderButtonEnabled={orderButtonEnabled}
+            orderButtonEnabled={orderButtonEnabled && !isMenuOutdated}
             onOrder={() => onOrder(rfid || undefined)}
             onPinOrder={() => setPinModalOpen(true)}
             onClearCart={onClearCart}

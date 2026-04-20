@@ -413,7 +413,7 @@ export const translations = {
       enter_pin: 'Enter PIN',
       invalid_pin: 'Invalid PIN',
       pin_order: 'PIN Order',
-      menu_outdated: 'Outdated menu warning',
+      menu_outdated: 'Outdated Menu',
     },
     categories: {
       mains: 'Main Dishes',
@@ -842,7 +842,7 @@ export const translations = {
       enter_pin: 'Въведете ПИН',
       invalid_pin: 'Невалиден ПИН',
       pin_order: 'Поръчка с ПИН',
-      menu_outdated: 'Менюто е остаряло',
+      menu_outdated: 'Менюто е от минал ден',
     },
     categories: {
       mains: 'ОСНОВНИ ЯСТИЯ',

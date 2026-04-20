@@ -144,9 +144,9 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 bg-neutral-100/50 p-1.5 rounded-xl">
-                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30" aria-label={`-1 ${item.name}`} title={`-1 ${item.name}`}>-</button>
+                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30 touch-target-expansion touch-manipulation" aria-label={`-1 ${item.name}`} title={`-1 ${item.name}`}>-</button>
                           <span className="text-xs font-black w-6 text-center" aria-label={`${t('orders.quantity')}: ${item.quantity}`}>{item.quantity}</span>
-                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30" aria-label={`+1 ${item.name}`} title={`+1 ${item.name}`}>+</button>
+                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-neutral-900 font-bold active:scale-90 transition-transform disabled:opacity-30 touch-target-expansion touch-manipulation" aria-label={`+1 ${item.name}`} title={`+1 ${item.name}`}>+</button>
                         </div>
                         
                         <div className="flex flex-col items-end gap-1">
@@ -266,11 +266,11 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = ({
         {selectedItems.length > 0 && (
           <button 
             onClick={onClearCart}
-            className="p-1.5 hover:bg-red-50 text-neutral-300 hover:text-red-500 rounded-lg transition-all active:scale-90"
+            className="p-2.5 bg-white border border-neutral-100 hover:bg-red-50 text-neutral-400 hover:text-red-500 rounded-xl transition-all active:scale-90 shadow-sm"
             aria-label={t('modals.remove')}
             title={t('modals.remove')}
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         )}
       </div>
