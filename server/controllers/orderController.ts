@@ -59,7 +59,7 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       card = db.prepare("SELECT * FROM cards WHERE pin = ?").get(pin) as any;
       if (!card) return res.status(401).json({ error: "Incorrect or unknown PIN" });
     } else if (rfid) {
-      const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
       card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
       
       if (!card && cleanRfid === 'test-admin' && settings.enableTestBypass) {
@@ -173,12 +173,12 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
   if (rfid) { 
     sql += " AND (rfid = ? OR ownerName LIKE ? ESCAPE '\\')"; 
     params.push(rfid);
-    const escapedSearch = (rfid as string).replace(/[\\%_]/g, '\\$&');
+    const escapedSearch = String(rfid).replace(/[\\%_]/g, '\\$&');
     params.push(`%${escapedSearch}%`);
   }
   if (ownerName) {
     sql += " AND ownerName LIKE ? ESCAPE '\\'";
-    const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
+    const escapedOwnerName = String(ownerName).replace(/[\\%_]/g, '\\$&');
     params.push(`%${escapedOwnerName}%`);
   }
 
@@ -211,7 +211,7 @@ export const fetchAnalytics = (req: Request, res: Response) => {
     if (rfid) { whereClause += " AND rfid = ?"; params.push(rfid); }
     if (ownerName) {
       whereClause += " AND ownerName LIKE ? ESCAPE '\\'";
-      const escapedOwnerName = (ownerName as string).replace(/[\\%_]/g, '\\$&');
+      const escapedOwnerName = String(ownerName).replace(/[\\%_]/g, '\\$&');
       params.push(`%${escapedOwnerName}%`);
     }
 

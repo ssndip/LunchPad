@@ -24,7 +24,7 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ error: "Invalid ownerName length" });
     }
     const now = new Date().toISOString();
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
 
     // PIN Uniqueness Check
     if (pin) {
@@ -72,7 +72,7 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
         INSERT OR IGNORE INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
-      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
+      cards.forEach((c: any) => insert.run(String(c.rfid).trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -84,7 +84,7 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
 export const deleteCard = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
     db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -111,7 +111,7 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
       db.prepare("DELETE FROM cards").run();
       const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin) VALUES (?, ?, ?, ?, ?, ?)");
       const now = new Date().toISOString();
-      cards.forEach((c: any) => insert.run(c.rfid.trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
+      cards.forEach((c: any) => insert.run(String(c.rfid).trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -133,7 +133,7 @@ export const resetAllBalances = (req: Request, res: Response, next: NextFunction
 export const resetSingleBalance = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
     db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -146,7 +146,7 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
   try {
     const { rfid } = req.params;
     const { ownerName, balance, isAdmin, pin } = req.body;
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
 
     // PIN Uniqueness Check (if PIN is provided and changing)
     if (pin) {
@@ -172,7 +172,7 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
 export const getCardProfile = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = rfid.trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
     
     const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
     if (!card) return res.status(404).json({ error: "Card not found" });
