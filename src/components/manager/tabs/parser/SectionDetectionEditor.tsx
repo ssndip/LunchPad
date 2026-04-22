@@ -89,6 +89,8 @@ export const SectionDetectionEditor: React.FC<SectionDetectionEditorProps> = ({ 
              <button 
                onClick={() => removeSection(section.id)}
                className="absolute top-4 right-4 p-2 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+               aria-label={t('parser.type_remove')}
+               title={t('parser.type_remove')}
              >
                <Trash2 className="w-4 h-4" />
              </button>

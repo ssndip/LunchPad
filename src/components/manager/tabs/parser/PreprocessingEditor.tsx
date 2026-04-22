@@ -97,6 +97,8 @@ export const PreprocessingEditor: React.FC<PreprocessingEditorProps> = ({ rules,
             <button 
                onClick={() => removeRule(rule.id)}
                className="p-2 text-neutral-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+               aria-label={t('parser.type_remove')}
+               title={t('parser.type_remove')}
             >
                <Trash2 className="w-4 h-4" />
             </button>

@@ -729,6 +729,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                         onConfirm: () => deleteProfile(profile.id) 
                       })}
                       className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      title={t('menu.remove')}
+                      aria-label={t('menu.remove')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1246,6 +1248,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   <button
                     onClick={() => confirm({ title: t('parser.delete_preset'), message: `${t('modals.delete_warning')} "${preset.name}"?`, isDestructive: true, onConfirm: () => deletePreset(preset.id) })}
                     className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    title={t('menu.remove')}
+                    aria-label={t('menu.remove')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

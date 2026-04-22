@@ -454,6 +454,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       onClick={() => onRemoveItem(item.id)}
                       className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
                       aria-label={`Remove ${item.name}`}
+                      title={t('menu.remove')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
