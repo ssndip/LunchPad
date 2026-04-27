@@ -6,7 +6,7 @@
 **Vulnerability:** Calling string methods (`.replace()`, `.trim()`) on request parameters (like `req.query.rfid` or `req.params.rfid`) without type validation.
 **Learning:** `express.urlencoded({ extended: true })` and `express.json()` allow attackers to send objects or arrays instead of primitive string values. Calling string methods on these directly causes an unhandled `TypeError: .replace is not a function`, leading to crashes or 500 errors.
 **Prevention:** Always cast user input to strings using `String(value)` or validate `typeof value === 'string'` before applying string manipulation functions in Express controllers.
-## 2026-04-25 - Prevent IP Whitelist Bypass via Host Header Spoofing
-**Vulnerability:** The `adminWhitelistGuard` implicitly trusted `req.hostname` and allowed bypassing the IP-based whitelist if the client matched an entry (or "localhost") by name. Because the application uses `app.set("trust proxy", 1)`, an attacker could inject `Host` or `X-Forwarded-Host` HTTP headers to spoof `req.hostname`, granting unauthorized access to protected admin routes (e.g., `/api/auth/login`).
-**Learning:** Checking hostnames directly against `req.hostname` in a reverse-proxied Express app is fundamentally insecure for IP whitelisting because the value is easily controlled by the client. It also creates a "Hostname trust bypass".
-**Prevention:** IP whitelist implementations must strictly validate against `req.ip` and should not support hostname matching unless backed by secure reverse DNS lookups, which are generally impractical.
+## 2026-04-24 - AI API Key Public Exposure Leak
+**Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
+**Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
+**Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.

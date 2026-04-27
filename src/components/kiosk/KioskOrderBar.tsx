@@ -126,8 +126,8 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
               <button
                 onClick={onClearCart}
                 className="p-2 text-neutral-400 hover:text-red-500 transition-colors shrink-0"
-                title="Clear order"
-                aria-label="Clear order"
+                title={t('kiosk.clear_order')}
+                aria-label={t('kiosk.clear_order')}
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -163,7 +163,8 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                     tabIndex={-1}
                     onClick={() => setRfid('')}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
-                    aria-label="Clear RFID"
+                    aria-label={t('modals.remove')}
+                    title={t('modals.remove')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

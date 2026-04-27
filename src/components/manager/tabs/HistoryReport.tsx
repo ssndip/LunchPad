@@ -55,6 +55,8 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
             <button
               onClick={onClose}
               className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+              aria-label={t('modals.close')}
+              title={t('modals.close')}
             >
               <X className="w-5 h-5" />
             </button>
