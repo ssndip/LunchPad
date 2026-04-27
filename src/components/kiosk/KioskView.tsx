@@ -200,6 +200,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   const activeItems = useMemo(() => filteredGroupedMenu[activeCategory] || [], [filteredGroupedMenu, activeCategory]);
 
+
+  // Memoized callbacks to prevent unnecessary re-renders of React.memo() child components
+  const handleToggle = useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleAddWithSideCb = useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleOrderCb = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
+  const handlePinOrderCb = useCallback(() => setPinModalOpen(true), []);
+  const handleUpdateSideCb = useCallback(() => {}, []);
+
   useRfidScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
     onScan: (scannedRfid) => {
