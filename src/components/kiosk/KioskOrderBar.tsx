@@ -126,8 +126,8 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
               <button
                 onClick={onClearCart}
                 className="p-2 text-neutral-400 hover:text-red-500 transition-colors shrink-0"
-                title={t('modals.remove')}
-                aria-label={t('modals.remove')}
+                title={t('kiosk.clear_order')}
+                aria-label={t('kiosk.clear_order')}
               >
                 <Trash2 className="w-5 h-5" />
               </button>
