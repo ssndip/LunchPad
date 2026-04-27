@@ -185,6 +185,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    title={t('settings.language')}
                     className="flex items-center justify-between w-[200px] px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
                   >
                     <div className="flex items-center gap-2">
@@ -263,6 +264,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, pendingLanguage, bgnEnabled)}
                     className="px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
+                    title="Apply Language Change"
                   >
                     Apply
                   </motion.button>
@@ -290,6 +292,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
+              title={t('cards.import_file')}
             >
               <Plus className="w-4 h-4" /> {t('cards.import_file')}
             </button>
@@ -345,6 +348,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     <button
                       onClick={onInstallApp}
                       className="w-full py-3 bg-white border border-violet-200 text-violet-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-50 transition-all flex items-center justify-center gap-2"
+                      title={t('pwa.how_to_install')}
                     >
                       <Info className="w-4 h-4" />
                       {t('pwa.how_to_install')}
@@ -582,6 +586,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey)}
                   disabled={localAiApiKey === aiApiKey}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                  title={t('settings.update')}
                 >
                   {t('settings.update')}
                 </button>
@@ -614,6 +619,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     }
                   }}
                   className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
+                  title="Verify AI Connection"
                 >
                   Test Connection
                 </button>
