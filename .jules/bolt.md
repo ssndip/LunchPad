@@ -7,3 +7,6 @@
 ## 2026-04-22 - Prevent Ineffective Memoization in React
 **Learning:** Wrapping child components in `React.memo()` without simultaneously wrapping the callback functions passed as props from their parent in `React.useCallback()` completely breaks the memoization. The parent component will recreate the functions on every render, causing the shallow comparison in the child to fail, rendering the optimization completely ineffective and leaving the app vulnerable to "stale UI" bugs.
 **Action:** Always ensure that any callback function passed down to a memoized child component is wrapped in `React.useCallback()` with an accurate dependency array.
+## 2026-04-27 - Prevent Useless useCallback Micro-optimizations
+**Learning:** Wrapping functions in `React.useCallback` when they depend on highly volatile state (like a frequently updating shopping cart or timer) provides zero performance benefit. The function reference will change every time the state changes, causing any downstream `React.memo` to fail and re-render anyway.
+**Action:** Do not use `useCallback` on functions that depend on fast-changing state. Only use it for stable callbacks (e.g. ones that depend on stable `useState` setters or rarely changing values) to avoid cluttering the code with useless micro-optimizations.
