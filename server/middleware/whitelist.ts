@@ -53,7 +53,7 @@ export function isWhitelisted(clientIp: string, clientHostname: string, whitelis
   // but we also check the explicit whitelist string.
   const normalizedIp = clientIp.replace(/^::ffff:/, ""); // Handle IPv4-mapped IPv6
   
-  if (normalizedIp === "127.0.0.1" || normalizedIp === "::1" || clientHostname === "localhost") {
+  if (normalizedIp === "127.0.0.1" || normalizedIp === "::1") {
     return true;
   }
 
