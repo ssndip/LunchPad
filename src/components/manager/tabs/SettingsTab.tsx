@@ -301,7 +301,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               title={t('cards.import_file')}
               aria-label={t('cards.import_file')}
             />
-            <button title="Import File"
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
               title={t('cards.import_file')}
@@ -357,7 +357,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       <h4 className="font-bold text-sm tracking-tight">{isIOS ? t('pwa.ios_install_title') : t('pwa.android_install_title')}</h4>
                     </div>
                     <p className="text-xs text-neutral-500 leading-relaxed italic mb-4">{isIOS ? t('pwa.ios_install_desc') : t('pwa.android_install_desc')}</p>
-                    <button title="How to Install"
+                    <button
                       onClick={onInstallApp}
                       className="w-full py-3 bg-white border border-violet-200 text-violet-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-50 transition-all flex items-center justify-center gap-2"
                       title={t('pwa.how_to_install')}
@@ -367,7 +367,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <button title="Install App"
+                  <button
                     title={t('pwa.install_button')}
                     onClick={onInstallApp || installApp}
                     disabled={!canInstall && !onInstallApp}
@@ -586,7 +586,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     placeholder="sk-..."
                     className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
                   />
-                  <button title="Toggle API Key" 
+                  <button 
                     onClick={() => setShowAiKey(!showAiKey)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
                     title={showAiKey ? "Hide API Key" : "Show API Key"}
@@ -595,7 +595,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     <Info className="w-4 h-4" />
                   </button>
                 </div>
-                <button title="Update API Key"
+                <button
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey)}
                   disabled={localAiApiKey === aiApiKey}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
@@ -610,7 +610,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <Zap className="w-4 h-4 text-indigo-600" />
                   <span className="text-xs font-bold text-neutral-900">Verify Connection</span>
                 </div>
-                <button title="Verify Connection"
+                <button
                   onClick={async () => {
                     if (!aiApiKey) {
                       alert("Please update and save your API key first.");
