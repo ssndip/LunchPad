@@ -348,3 +348,20 @@ export const importParserBundle = async (token: string, bundle: any) => {
   if (!res.ok) throw new Error('Failed to import parser bundle');
   return res.json();
 };
+
+// ─── Full System Backup & Restore ───────────────────────────────────────────
+export const exportSystemBackup = async (token: string) => {
+  const res = await fetch('/api/system/backup', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to export system backup');
+  return res.json();
+};
+
+export const importSystemBackup = async (token: string, bundle: any) => {
+  const res = await fetch('/api/system/restore', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(bundle),
+  });
+  if (!res.ok) throw new Error('Failed to restore system');
+  return res.json();
+};
