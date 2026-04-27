@@ -121,7 +121,8 @@ export function parseMenuText(rawText: string): ParsedMenu {
     }
 
     // 4. Check for Item
-    if (RegexConfig.ITEM_PREFIX.test(line)) {
+    const isItem = RegexConfig.ITEM_PREFIX.test(line) || RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line);
+    if (isItem) {
       if (!currentCategory) {
         currentCategory = { categoryName: 'Други', items: [] };
         parsedOutput.categories.push(currentCategory);
