@@ -23,7 +23,7 @@ const BULGARIAN_DAYS = ['ПОНЕДЕЛНИК', 'ВТОРНИК', 'СРЯДА', 
 const ENGLISH_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
 const RegexConfig = {
-  DATE: /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/,
+  DATE: /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})|(?:\b(?:меню|дата|от|за)\s+)(\d{1,2}[.\-/]\d{1,2})\b/i,
   DATE_RANGE: /(\d{1,2})\s*[-–—]\s*(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/, // Matches 03 - 07.11.2025
   WEIGHT: /((?:\d+[.,])?\d+\s*(?:гр|g|gr|мл|ml))/i,
   PRICE: /(?:[-–—\s]+)?([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е|е\.|евро)?\s*[:.]?\s*$/i,

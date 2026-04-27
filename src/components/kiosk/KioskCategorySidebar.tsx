@@ -19,7 +19,19 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
     return (
       <div className="flex-1 flex md:flex-col overflow-hidden">
         <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-y-auto custom-scrollbar p-1 md:p-2 gap-1 md:space-y-1">
-          {categories.map((cat) => {
+          {[...categories]
+            .sort((a, b) => {
+              const isOtherA =
+                a.toLowerCase().includes("other") ||
+                a.toLowerCase().includes("други");
+              const isOtherB =
+                b.toLowerCase().includes("other") ||
+                b.toLowerCase().includes("други");
+              if (isOtherA && !isOtherB) return 1;
+              if (!isOtherA && isOtherB) return -1;
+              return 0;
+            })
+            .map((cat) => {
             const isActive = activeCategory === cat;
             return (
               <button
