@@ -687,98 +687,121 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
 
-        {/* Backup & Sync (Database Agnostic) */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-              <Share className="w-6 h-6 text-white" />
+        {/* System Backup & Restore (Full Data Portability) */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden relative">
+          {/* Background Accent */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full blur-3xl -mr-32 -mt-32" />
+          
+          <div className="flex items-center gap-4 mb-8 relative">
+            <div className="w-14 h-14 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-100">
+              <Share className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-neutral-900">Backup & Sync</h3>
-              <p className="text-sm text-neutral-500 italic">Export trained parser rules to sync between environments</p>
+              <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">System Backup & Restore</h3>
+              <p className="text-sm text-neutral-500 font-medium">Protect and migrate your entire database</p>
             </div>
           </div>
 
-          <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 mb-6">
-            <div className="flex items-start gap-3 mb-4">
-              <Sparkles className="w-5 h-5 text-indigo-600 mt-0.5" />
+          <div className="bg-neutral-50 p-7 rounded-[32px] border border-neutral-100 mb-6 relative">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-neutral-100">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
               <div>
                 <p className="text-xs text-neutral-700 font-bold leading-relaxed">
-                  The Parser Bundle contains all your custom Regex rules, category mappings, and AI Teacher configurations. 
+                  Full Snapshot includes:
                 </p>
-                <p className="text-[10px] text-neutral-400 mt-1">
-                  Use this to move your "trained" logic from Development to Production without touching the database.
-                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                  <span className="text-[10px] text-neutral-500 flex items-center gap-1">
+                    <CreditCard className="w-3 h-3 text-indigo-400" /> Cards & Balances
+                  </span>
+                  <span className="text-[10px] text-neutral-500 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-indigo-400" /> Order History
+                  </span>
+                  <span className="text-[10px] text-neutral-500 flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-indigo-400" /> AI Parser Rules
+                  </span>
+                  <span className="text-[10px] text-neutral-500 flex items-center gap-1">
+                    <Settings className="w-3 h-3 text-indigo-400" /> App Config
+                  </span>
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button title="Export Bundle"
+              <button title="Export System Backup"
                 onClick={async () => {
                   try {
                     const token = sessionStorage.getItem('token') || '';
-                    const { exportParserBundle } = await import('../../../api');
-                    const bundle = await exportParserBundle(token);
+                    const { exportSystemBackup } = await import('../../../api');
+                    const bundle = await exportSystemBackup(token);
                     const dataStr = JSON.stringify(bundle, null, 2);
                     const blob = new Blob([dataStr], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = url;
-                    link.download = `lunchpad_parser_bundle_${new Date().toISOString().split('T')[0]}.json`;
+                    link.download = `lunchpad_system_backup_${new Date().toISOString().split('T')[0]}.json`;
                     link.click();
                     URL.revokeObjectURL(url);
                   } catch (err: any) {
                     alert("Export failed: " + err.message);
                   }
                 }}
-                className="flex items-center justify-center gap-2 py-4 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm"
+                className="flex items-center justify-center gap-3 py-4 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
               >
-                <Download className="w-4 h-4" /> Export Bundle
+                <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Export Backup
               </button>
 
-              <button title="Import Bundle"
+              <button title="Import System Backup"
                 onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.json';
-                  input.onchange = async (e: any) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = async (evt) => {
-                      try {
-                        const content = evt.target?.result as string;
-                        const bundle = JSON.parse(content);
-                        const token = sessionStorage.getItem('token') || '';
-                        const { importParserBundle } = await import('../../../api');
-                        const res = await importParserBundle(token, bundle);
-                        if (res.success) {
-                          if (confirm) {
-                            confirm({
-                              title: "Success",
-                              message: `Imported ${res.count} profiles successfully!`,
-                              confirmText: "Great",
-                              onConfirm: () => window.location.reload()
-                            });
-                          } else {
-                            alert(`Imported ${res.count} profiles!`);
-                            window.location.reload();
-                          }
-                        }
-                      } catch (err: any) {
-                        alert("Import failed: " + err.message);
+                  if (confirm) {
+                    confirm({
+                      title: "Warning: Data Wipe",
+                      message: "Restoring a backup will DELETE all current cards, orders, and settings. This cannot be undone. Are you sure?",
+                      confirmText: "Yes, Restore Everything",
+                      onConfirm: () => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.json';
+                        input.onchange = async (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = async (evt) => {
+                            try {
+                              const content = evt.target?.result as string;
+                              const bundle = JSON.parse(content);
+                              const token = sessionStorage.getItem('token') || '';
+                              const { importSystemBackup } = await import('../../../api');
+                              const res = await importSystemBackup(token, bundle);
+                              if (res.success) {
+                                confirm({
+                                  title: "Success",
+                                  message: `System restored successfully! The application will now reload.`,
+                                  confirmText: "Reload Now",
+                                  onConfirm: () => window.location.reload()
+                                });
+                              }
+                            } catch (err: any) {
+                              alert("Restore failed: " + err.message);
+                            }
+                          };
+                          reader.readAsText(file);
+                        };
+                        input.click();
                       }
-                    };
-                    reader.readAsText(file);
-                  };
-                  input.click();
+                    });
+                  }
                 }}
-                className="flex items-center justify-center gap-2 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                className="flex items-center justify-center gap-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
               >
-                <Plus className="w-4 h-4" /> Import Bundle
+                <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> Restore Backup
               </button>
             </div>
           </div>
+          <p className="text-center text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
+            Recommended before every major system update
+          </p>
         </div>
       </div>
 
