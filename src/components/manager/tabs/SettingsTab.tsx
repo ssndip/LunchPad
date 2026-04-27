@@ -125,11 +125,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     checked, onChange, color = 'bg-neutral-900', label,
   }: { checked: boolean; onChange: () => void; color?: string; label: string }) => (
     <button
+      title={label}
       onClick={onChange}
       role="switch"
-      aria-checked={checked ? "true" : "false"}
+      aria-checked={!!checked}
       aria-label={label}
-      title={label}
       className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`}
     >
       <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
@@ -137,7 +137,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   );
 
   return (
-    <>
+    <div title={t('navigation.system_settings')}>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">{t('navigation.system_settings')}</h1>
@@ -159,13 +159,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
             </div>
               <button
+                title={t('settings.enable_bgn')}
                 onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-              role="switch" 
-              aria-checked={bgnEnabled ? "true" : "false"}
-              aria-label={t('settings.enable_bgn')}
-              title={t('settings.enable_bgn')}
-              className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
-            >
+                role="switch" 
+                aria-checked={!!bgnEnabled}
+                aria-label={t('settings.enable_bgn')}
+                className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
+              >
               <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
                 {bgnEnabled && <div className="w-1 h-1 bg-neutral-900 rounded-full" />}
               </div>
@@ -790,7 +790,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           />
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 };
 
