@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle, Info, X, CreditCard } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
@@ -175,6 +175,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
   }, [categories, activeCategory]);
 
   const activeItems = useMemo(() => filteredGroupedMenu[activeCategory] || [], [filteredGroupedMenu, activeCategory]);
+
+
+  // Memoized callbacks to prevent unnecessary re-renders of React.memo() child components
+  const handleToggle = useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleAddWithSideCb = useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleOrderCb = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
+  const handlePinOrderCb = useCallback(() => setPinModalOpen(true), []);
+  const handleUpdateSideCb = useCallback(() => {}, []);
 
   useRfidScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
@@ -400,22 +424,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
             sideItems={sideItems}
             selectedItems={selectedItems}
             selectedItemIds={selectedItemIds}
-            onToggle={(item) => {
-              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-                setPendingItem(item);
-                setIsIdentifying(true);
-                return;
-              }
-              onToggleItem(item);
-            }}
-            onAddWithSide={(item, side) => {
-              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-                setPendingItem(item);
-                setIsIdentifying(true);
-                return;
-              }
-              onAddWithSide(item, side);
-            }}
+            onToggle={handleToggle}
+            onAddWithSide={handleAddWithSideCb}
             onUpdateQuantity={onUpdateQuantity}
             orderButtonEnabled={orderButtonEnabled && !isReadOnly}
             isMenuOutdated={isMenuOutdated}
@@ -436,10 +446,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
             computedKioskOpen={computedKioskOpen}
             testModeEnabled={testModeEnabled}
             orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
-            onOrder={() => onOrder(rfid || undefined)}
-            onPinOrder={() => setPinModalOpen(true)}
+            onOrder={handleOrderCb}
+            onPinOrder={handlePinOrderCb}
             onClearCart={onClearCart}
-            onUpdateSide={() => {}}
+            onUpdateSide={handleUpdateSideCb}
             onUpdateQuantity={onUpdateQuantity}
             t={t}
           />
