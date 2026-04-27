@@ -127,8 +127,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     <button
       onClick={onChange}
       role="switch"
-      aria-checked={checked}
+      aria-checked={checked ? "true" : "false"}
       aria-label={label}
+      title={label}
       className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`}
     >
       <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
@@ -159,7 +160,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
               <button
                 onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-              role="switch" aria-checked={bgnEnabled}
+              role="switch" 
+              aria-checked={bgnEnabled ? "true" : "false"}
+              aria-label={t('settings.enable_bgn')}
+              title={t('settings.enable_bgn')}
               className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
             >
               <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
@@ -274,7 +278,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             >
               <Download className="w-4 h-4" /> {t('cards.export_data')} (JSON)
             </button>
-            <input type="file" ref={fileInputRef} onChange={handleFileImport} accept=".json" className="hidden" />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileImport} 
+              accept=".json" 
+              className="hidden" 
+              title={t('cards.import_file')}
+              aria-label={t('cards.import_file')}
+            />
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
@@ -560,6 +572,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <button 
                     onClick={() => setShowAiKey(!showAiKey)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                    title={showAiKey ? "Hide API Key" : "Show API Key"}
+                    aria-label={showAiKey ? "Hide API Key" : "Show API Key"}
                   >
                     <Info className="w-4 h-4" />
                   </button>
