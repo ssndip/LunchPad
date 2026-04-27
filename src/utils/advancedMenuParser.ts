@@ -97,8 +97,9 @@ export function parseMenuText(rawText: string): ParsedMenu {
     // 2. Check for Single Date
     const dateMatch = line.match(RegexConfig.DATE);
     if (dateMatch) {
-      if (!parsedOutput.date) parsedOutput.date = dateMatch[1];
-      const parts = dateMatch[1].split(/[.\-/]/);
+      const rawDate = dateMatch[1] || dateMatch[2];
+      if (!parsedOutput.date) parsedOutput.date = rawDate;
+      const parts = rawDate.split(/[.\-/]/);
       if (parts.length >= 2) {
         const d = parseInt(parts[0]);
         const m = parseInt(parts[1]) - 1;
