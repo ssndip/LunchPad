@@ -26,12 +26,14 @@ const RegexConfig = {
   DATE: /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})|(?:\b(?:меню|дата|от|за)\s+)(\d{1,2}[.\-/]\d{1,2})\b/i,
   DATE_RANGE: /(\d{1,2})\s*[-–—]\s*(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/, // Matches 03 - 07.11.2025
   WEIGHT: /((?:\d+[.,])?\d+\s*(?:гр|g|gr|мл|ml))/i,
-  PRICE: /(?:[-–—\s]+)?([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е|е\.|евро)?\s*[:.]?\s*$/i,
+  // PRICE: matches number+currency OR dash+number at end-of-string.
+  // Group 1 = number with currency. Group 2 = dash-price (no currency, must be at end).
+  PRICE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)|([-–—]\s*([\d]+[,.][\d]+|[\d]+))\s*$/i,
   BOX_FEE: /(?:кутийка\s*[:\-–—\s]*([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?|([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?\s*кутийка)/i,
   BGN_NOISE: /(?:\/|\|)?\s*[\d]+[,.][\d]+\s*(?:лв|лева|лв\.)/gi,
   BOX_KEYWORD: /кутийка/i,
-  ITEM_PREFIX: /^(?:[-•*]|(?:[0-9]\uFE0F?\u20E3)+(?:\.\s*(?:[0-9]\uFE0F?\u20E3)+)*\s*|\d+(?:\.\d+)*[.)]?\s*)/,
-  PRICE_EXPLICIT: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е|е\.|евро)/i
+  ITEM_PREFIX: /^(?:[-•*]|(?:[0-9]️?⃣)+(?:\.\s*(?:[0-9]️?⃣)+)*\s*|\d+(?:\.\d+)*[.)]\s*|(?=\d)(?!\d+[,.]?\d*\s*(?:гр|g|gr|мл|ml))\d+\.?\s+)/,
+  PRICE_EXPLICIT: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)/i
 };
 
 function safeFloat(value: any, fallback: number | null = null): number | null {
@@ -82,8 +84,48 @@ export function parseMenuText(rawText: string): ParsedMenu {
   let currentCategoryDefaultWeight: string | null = null;
   let currentCategoryDefaultBoxFee: number = 0;
 
+  // Helper: extract weight/price/boxFee defaults from any line
+  function extractDefaults(line: string) {
+    const lw = line.match(RegexConfig.WEIGHT);
+    if (lw) currentCategoryDefaultWeight = lw[1];
+    const lb = line.match(RegexConfig.BOX_FEE);
+    if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
+    const lineNoBox = line.replace(RegexConfig.BOX_FEE, '');
+    const lp = lineNoBox.match(RegexConfig.PRICE_EXPLICIT) || lineNoBox.match(RegexConfig.PRICE);
+    if (lp) currentCategoryDefaultPrice = safeFloat(lp[1] || lp[3]);
+  }
+
+  // Helper: true if the line has meaningful Bulgarian/Latin text OUTSIDE of parentheses
+  // after stripping all data fields (weight, price, box-fee).
+  // A line is a category header if:
+  //   - it has text AND a colon (e.g. 'Супи:' or 'Салати: 0.100гр 0.67е.')
+  //   - OR it has text with NO currency-priced value (e.g. 'SIDE DISHES', 'Основно ястие')
+  // It is NOT a category if it has both text AND an inline price without a colon separator.
+  function hasCategoryText(line: string): boolean {
+    // Presence of a colon strongly indicates a category header
+    const hasColon = /[а-яА-Яa-zA-Z].*:/.test(line);
+    if (hasColon) {
+      // Confirm there's meaningful text left after stripping data
+      const withoutParens = line.replace(/\([^)]*\)/g, '');
+      const stripped = withoutParens
+        .replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '')
+        .replace(/[+():,\-–—.:\/\s\d€$]/g, '').trim();
+      return /[а-яА-Яa-zA-Z]{2,}/.test(stripped);
+    }
+    // No colon: only treat as category if there's NO explicit price (currency symbol)
+    // Rationale: 'Зелева салата 1.50€' is an item; 'SIDE DISHES' is a category
+    const hasPricedValue = RegexConfig.PRICE_EXPLICIT.test(line);
+    if (hasPricedValue) return false;
+    // Must have at least 2 Bulgarian/Latin chars remaining after stripping all numeric noise
+    const withoutParens = line.replace(/\([^)]*\)/g, '');
+    const stripped = withoutParens
+      .replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '')
+      .replace(/[+():,\-–—.:\/\s\d€$]/g, '').trim();
+    return /[а-яА-Яa-zA-Z]{2,}/.test(stripped);
+  }
+
   for (const line of lines) {
-    // 1. Check for Date Range (e.g. 03 - 07.11.2025)
+    // ── STEP 1: Date Range (e.g. "03 - 07.11.2025") ─────────────────────────
     const rangeMatch = line.match(RegexConfig.DATE_RANGE);
     if (rangeMatch) {
       const day = parseInt(rangeMatch[1]);
@@ -94,7 +136,7 @@ export function parseMenuText(rawText: string): ParsedMenu {
       continue;
     }
 
-    // 2. Check for Single Date
+    // ── STEP 2: Single Date ──────────────────────────────────────────────────
     const dateMatch = line.match(RegexConfig.DATE);
     if (dateMatch) {
       const rawDate = dateMatch[1] || dateMatch[2];
@@ -109,7 +151,7 @@ export function parseMenuText(rawText: string): ParsedMenu {
       continue;
     }
 
-    // 3. Check for Day Name
+    // ── STEP 3: Day Name ────────────────────────────────────────────────────
     const upperLine = line.toUpperCase();
     const isDayHeader = BULGARIAN_DAYS.some(d => upperLine.includes(d)) || ENGLISH_DAYS.some(d => upperLine.includes(d));
     if (isDayHeader) {
@@ -120,62 +162,13 @@ export function parseMenuText(rawText: string): ParsedMenu {
       }
     }
 
-    // 4. Category header detection FIRST (before item extraction)
-    // Strip weight, price, colon and punctuation to extract potential category name
-    const categoryCandidate = line
-      .replace(RegexConfig.BOX_FEE, '')
-      .replace(RegexConfig.WEIGHT, '')
-      .replace(RegexConfig.PRICE, '')
-      .replace(/[+():,\-–—.]/g, '')
-      .trim();
-
-    const isContext = /^\d+/.test(line) || (!/[a-zA-Zа-яА-Я]/.test(categoryCandidate));
-
-    if (!isContext && categoryCandidate.length > 2) {
-      // Check if this looks like a known category header by checking what remains
-      // after stripping item prefix — if it has no bullet and has text, likely a header
-      const hasBullet = RegexConfig.ITEM_PREFIX.test(line);
-      if (!hasBullet) {
-        // This is a category header line (may also carry weight/price defaults)
-        currentCategory = { categoryName: categoryCandidate, items: [] };
-        parsedOutput.categories.push(currentCategory);
-        currentCategoryDefaultPrice = null;
-        currentCategoryDefaultWeight = null;
-        currentCategoryDefaultBoxFee = 0;
-
-        // Extract defaults from the header line itself
-        const lw = line.match(RegexConfig.WEIGHT);
-        if (lw) currentCategoryDefaultWeight = lw[1];
-        const lb = line.match(RegexConfig.BOX_FEE);
-        if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
-        const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT)
-                || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
-        if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
-        continue;
-      }
-    }
-
-    // 5. Item extraction (bullet OR price/weight signal with meaningful residual text)
-    const hasBullet = RegexConfig.ITEM_PREFIX.test(line);
-    const hasSignal = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line);
-    let isItem = hasBullet;
-    if (!isItem && hasSignal) {
-      const residual = line
-        .replace(RegexConfig.ITEM_PREFIX, '')
-        .replace(RegexConfig.WEIGHT, '')
-        .replace(RegexConfig.BOX_FEE, '')
-        .replace(RegexConfig.PRICE, '')
-        .replace(/[(),.:+\-–—/]/g, '')
-        .trim();
-      isItem = residual.length >= 2;
-    }
-
-    if (isItem) {
+    // ── STEP 4: Bulleted / Prefixed Item (highest-priority item signal) ──────
+    // Lines starting with -, *, •, or a number are always items.
+    if (RegexConfig.ITEM_PREFIX.test(line)) {
       if (!currentCategory) {
         currentCategory = { categoryName: 'Други', items: [] };
         parsedOutput.categories.push(currentCategory);
       }
-
       const itemLine = line.replace(RegexConfig.ITEM_PREFIX, '').trim();
       let itemName = itemLine;
       let itemPrice: number | null = null;
@@ -183,10 +176,7 @@ export function parseMenuText(rawText: string): ParsedMenu {
       let itemBoxFee: number = 0;
 
       const weightMatch = itemLine.match(RegexConfig.WEIGHT);
-      if (weightMatch) {
-        itemWeight = weightMatch[1];
-        itemName = itemName.replace(weightMatch[0], '').trim();
-      }
+      if (weightMatch) { itemWeight = weightMatch[1]; itemName = itemName.replace(weightMatch[0], '').trim(); }
 
       const boxFeeMatch = itemLine.match(RegexConfig.BOX_FEE);
       if (boxFeeMatch) {
@@ -200,54 +190,101 @@ export function parseMenuText(rawText: string): ParsedMenu {
       itemName = itemName.replace(RegexConfig.BGN_NOISE, '').trim();
 
       const priceMatch = itemName.match(RegexConfig.PRICE);
-      if (priceMatch) {
-        itemPrice = safeFloat(priceMatch[1]);
-        itemName = itemName.replace(priceMatch[0], '').trim();
-      }
+      if (priceMatch) { itemPrice = safeFloat(priceMatch[1] || priceMatch[3]); itemName = itemName.replace(priceMatch[0], '').trim(); }
 
       const finalName = cleanItemName(itemName);
-      const finalPrice = itemPrice !== null ? itemPrice : (currentCategoryDefaultPrice || 0);
-      const finalWeight = itemWeight !== null ? itemWeight : null; // weight is metadata, not part of name
-      const finalBoxFee = itemBoxFee > 0 ? itemBoxFee : currentCategoryDefaultBoxFee;
-
-      currentCategory.items.push({
-        name: finalName,
-        price: finalPrice,
-        weight: finalWeight,
-        boxFee: finalBoxFee,
-        date: currentDateContext
-      });
+      if (finalName) {
+        currentCategory.items.push({
+          name: finalName,
+          price: itemPrice !== null ? itemPrice : (currentCategoryDefaultPrice || 0),
+          weight: itemWeight,
+          boxFee: itemBoxFee > 0 ? itemBoxFee : currentCategoryDefaultBoxFee,
+          date: currentDateContext
+        });
+      }
       continue;
     }
 
-    // 6. Plain text inside an active category → item inheriting defaults
-    if (currentCategory && !isContext) {
-      const name = cleanItemName(line);
-      if (name.length > 1) {
-        currentCategory.items.push({
-          name,
-          price: currentCategoryDefaultPrice || 0,
-          weight: null,
-          boxFee: currentCategoryDefaultBoxFee,
-          date: currentDateContext
-        });
+    // ── STEP 5: Category Header ──────────────────────────────────────────────
+    // A line is a category header if it has Bulgarian text OUTSIDE parentheses
+    // after stripping all data fields. Examples:
+    //   "Супи:"               → category "Супи"
+    //   "Салати: 0.100гр 0.67е." → category "Салати" + sets defaults
+    //   "Гарнитури :"         → category "Гарнитури"
+    // NOT a category:
+    //   "200гр 1.50€ + 0.10€ кутийка"     → pure context
+    //   "100гр 0.75€ (ако е отделно)"     → pure context
+    if (hasCategoryText(line)) {
+      // Extract the name: strip data and cleanup
+      const categoryName = line
+        .replace(RegexConfig.BOX_FEE, '')
+        .replace(RegexConfig.WEIGHT, '')
+        .replace(RegexConfig.PRICE, '')
+        .replace(/\([^)]*\)/g, '')  // remove parenthetical notes
+        .replace(/[+():,\-–—.:]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (categoryName.length > 1) {
+        currentCategory = { categoryName, items: [] };
+        parsedOutput.categories.push(currentCategory);
+        currentCategoryDefaultPrice = null;
+        currentCategoryDefaultWeight = null;
+        currentCategoryDefaultBoxFee = 0;
+        // The header line itself may carry defaults (e.g. "Салати: 0.100гр 0.67е.")
+        extractDefaults(line);
         continue;
       }
     }
 
-    // 7. Context-only lines (prices/weights with no text — update defaults)
+    // ── STEP 6 + 7: Smart item-or-context detection inside a category ────────
+    // If inside a category, decide: is this a named item or a pure context/defaults setter?
+    // Named item: meaningful text remains after stripping all data fields (e.g. "Зелева салата 1.50€")
+    // Context:    no text remains after stripping data (e.g. "200гр 1.50€ + 0.10€ кутийка")
+    const hasData = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line) || RegexConfig.BOX_FEE.test(line);
+
     if (currentCategory) {
-      const lw = line.match(RegexConfig.WEIGHT);
-      if (lw) currentCategoryDefaultWeight = lw[1];
-      const lb = line.match(RegexConfig.BOX_FEE);
-      if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
-      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT)
-              || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
-      if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
+      // Extract candidate item name by stripping all numeric/currency content
+      let candidateName = line
+        .replace(RegexConfig.BOX_FEE, '')
+        .replace(RegexConfig.WEIGHT, '')
+        .replace(RegexConfig.PRICE, '')
+        .replace(/\([^)]*\)/g, '')
+        .replace(/[+\-–—():,.\/]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      candidateName = cleanItemName(candidateName);
+
+      if (candidateName.length > 1 && /[а-яА-Яa-zA-Z]/.test(candidateName)) {
+        // Named item: use this line's price/weight if present, otherwise use category defaults
+        let itemPrice: number | null = null;
+        let itemWeight: string | null = null;
+        let itemBoxFee: number = currentCategoryDefaultBoxFee;
+
+        const wm = line.match(RegexConfig.WEIGHT);
+        if (wm) itemWeight = wm[1];
+        const bm = line.match(RegexConfig.BOX_FEE);
+        if (bm) itemBoxFee = safeFloat(bm[1] || bm[2], 0) || 0;
+        const lineNoBox = line.replace(RegexConfig.BOX_FEE, '');
+        const pm = lineNoBox.match(RegexConfig.PRICE_EXPLICIT) || lineNoBox.match(RegexConfig.PRICE);
+        if (pm) itemPrice = safeFloat(pm[1] || pm[3]);
+
+        currentCategory.items.push({
+          name: candidateName,
+          price: itemPrice !== null ? itemPrice : (currentCategoryDefaultPrice || 0),
+          weight: itemWeight,
+          boxFee: itemBoxFee,
+          date: currentDateContext
+        });
+      } else if (hasData) {
+        // Pure context/defaults line: update the category-level defaults
+        extractDefaults(line);
+      }
+      continue;
     }
 
-    const hasKnown = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line) || RegexConfig.BOX_FEE.test(line) || RegexConfig.DATE.test(line);
-    if (!isContext && !hasKnown && !currentCategory) {
+    // ── Unmatched ────────────────────────────────────────────────────────────
+    if (!hasData) {
       parsedOutput.unmatchedLines.push(line);
     }
   }
