@@ -49,12 +49,42 @@ export function getActivePreset(): FormatPreset | null {
   return presets.find(p => p.id === settings.activePresetId) || null;
 }
 
+// ⚡ Bolt: Cache regex compilations to avoid CPU overhead in parsing loops.
+// Using Bounded FIFO cache mechanism to prevent memory leaks from unbounded Maps
+// where dynamic strings might be added continuously.
+class RegexCache {
+  private cache = new Map<string, RegExp>();
+  private readonly maxSize = 100;
+
+  getPattern(find: string, isRegex: boolean): RegExp {
+    const cacheKey = isRegex ? `regex:${find}` : `string:${find}`;
+    let pattern = this.cache.get(cacheKey);
+
+    if (!pattern) {
+      if (this.cache.size >= this.maxSize) {
+        // Remove oldest entry
+        const firstKey = this.cache.keys().next().value;
+        if (firstKey) this.cache.delete(firstKey);
+      }
+
+      pattern = isRegex
+        ? new RegExp(find, 'gm')
+        : new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gm');
+      this.cache.set(cacheKey, pattern);
+    }
+    return pattern;
+  }
+}
+
+const regexCache = new RegexCache();
+
 export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string {
   if (preset && preset.type === 'json' && preset.rules && preset.rules.length > 0) {
     const rule = preset.rules[0];
     if (rule && rule.replace) {
       try {
-        return originalText.replace(new RegExp(rule.find, 'gm'), rule.replace);
+        // Preset JSON rules are treated as regexes
+        return originalText.replace(regexCache.getPattern(rule.find, true), rule.replace);
       } catch {
         return originalText;
       }
@@ -72,10 +102,7 @@ export function normalizeMenuText(originalText: string, preset?: FormatPreset | 
   if (preset) {
     for (const rule of preset.preprocessRules) {
       try {
-        const pattern = rule.isRegex 
-          ? new RegExp(rule.find, 'gm') 
-          : new RegExp(rule.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gm');
-        text = text.replace(pattern, rule.replace);
+        text = text.replace(regexCache.getPattern(rule.find, rule.isRegex), rule.replace);
       } catch { 
         /* invalid regex, skip */ 
       }

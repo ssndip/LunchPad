@@ -384,6 +384,7 @@ export const translations = {
     },
     kiosk: {
       view_cart: 'View Cart',
+      clear_order: 'Clear order',
       daily_menu: 'Daily Menu',
       place_order: 'Place Order',
       total_price: 'Total Price',
@@ -831,6 +832,7 @@ export const translations = {
     },
     kiosk: {
       view_cart: 'Виж количката',
+      clear_order: 'Изчисти поръчката',
       daily_menu: 'Дневно меню',
       place_order: 'Направи поръчка',
       total_price: 'Обща цена',

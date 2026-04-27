@@ -248,7 +248,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               <button
                 onClick={onClose}
                 className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-2xl transition-colors"
-                aria-label="Close"
+                aria-label={t('modals.close')}
+                title={t('modals.close')}
               >
                 <X className="w-6 h-6" />
               </button>
