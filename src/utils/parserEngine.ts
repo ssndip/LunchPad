@@ -124,7 +124,7 @@ export class MenuParserEngine {
       }
 
       // 4. Item Extraction
-      const isItemLine = this.itemPrefixRegex.test(line);
+      const isItemLine = this.itemPrefixRegex.test(line) || this.priceRegex.test(line) || this.weightRegex.test(line);
       if (isItemLine) {
         const item = this.extractItem(line, currentCategory?.categoryName || this.config.fallbackCategory, categoryDefaults, currentCategory);
         if (item) {
