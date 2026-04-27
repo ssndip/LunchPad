@@ -92,7 +92,7 @@ export function parsePastedMenu(text: string, settingsOverride?: ParserPersisten
     for (const parsedItem of parsedCategory.items) {
       const item: MenuItem = {
         id: currentId++,
-        name: parsedItem.name + (parsedItem.weight ? ` ${parsedItem.weight}` : ''),
+        name: parsedItem.name,
         description: '',
         basePrice: parsedItem.price,
         price: parsedItem.price,

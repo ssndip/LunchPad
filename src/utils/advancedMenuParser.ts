@@ -120,8 +120,56 @@ export function parseMenuText(rawText: string): ParsedMenu {
       }
     }
 
-    // 4. Check for Item
-    const isItem = RegexConfig.ITEM_PREFIX.test(line) || RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line);
+    // 4. Category header detection FIRST (before item extraction)
+    // Strip weight, price, colon and punctuation to extract potential category name
+    const categoryCandidate = line
+      .replace(RegexConfig.BOX_FEE, '')
+      .replace(RegexConfig.WEIGHT, '')
+      .replace(RegexConfig.PRICE, '')
+      .replace(/[+():,\-–—.]/g, '')
+      .trim();
+
+    const isContext = /^\d+/.test(line) || (!/[a-zA-Zа-яА-Я]/.test(categoryCandidate));
+
+    if (!isContext && categoryCandidate.length > 2) {
+      // Check if this looks like a known category header by checking what remains
+      // after stripping item prefix — if it has no bullet and has text, likely a header
+      const hasBullet = RegexConfig.ITEM_PREFIX.test(line);
+      if (!hasBullet) {
+        // This is a category header line (may also carry weight/price defaults)
+        currentCategory = { categoryName: categoryCandidate, items: [] };
+        parsedOutput.categories.push(currentCategory);
+        currentCategoryDefaultPrice = null;
+        currentCategoryDefaultWeight = null;
+        currentCategoryDefaultBoxFee = 0;
+
+        // Extract defaults from the header line itself
+        const lw = line.match(RegexConfig.WEIGHT);
+        if (lw) currentCategoryDefaultWeight = lw[1];
+        const lb = line.match(RegexConfig.BOX_FEE);
+        if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
+        const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT)
+                || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
+        if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
+        continue;
+      }
+    }
+
+    // 5. Item extraction (bullet OR price/weight signal with meaningful residual text)
+    const hasBullet = RegexConfig.ITEM_PREFIX.test(line);
+    const hasSignal = RegexConfig.PRICE.test(line) || RegexConfig.WEIGHT.test(line);
+    let isItem = hasBullet;
+    if (!isItem && hasSignal) {
+      const residual = line
+        .replace(RegexConfig.ITEM_PREFIX, '')
+        .replace(RegexConfig.WEIGHT, '')
+        .replace(RegexConfig.BOX_FEE, '')
+        .replace(RegexConfig.PRICE, '')
+        .replace(/[(),.:+\-–—/]/g, '')
+        .trim();
+      isItem = residual.length >= 2;
+    }
+
     if (isItem) {
       if (!currentCategory) {
         currentCategory = { categoryName: 'Други', items: [] };
@@ -159,7 +207,7 @@ export function parseMenuText(rawText: string): ParsedMenu {
 
       const finalName = cleanItemName(itemName);
       const finalPrice = itemPrice !== null ? itemPrice : (currentCategoryDefaultPrice || 0);
-      const finalWeight = itemWeight !== null ? itemWeight : currentCategoryDefaultWeight;
+      const finalWeight = itemWeight !== null ? itemWeight : null; // weight is metadata, not part of name
       const finalBoxFee = itemBoxFee > 0 ? itemBoxFee : currentCategoryDefaultBoxFee;
 
       currentCategory.items.push({
@@ -172,26 +220,29 @@ export function parseMenuText(rawText: string): ParsedMenu {
       continue;
     }
 
-    // 5. Category headers
-    const isContext = /^\d+/.test(line) || (!/[a-zA-Zа-яА-Я]/.test(line.replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '').replace(RegexConfig.BOX_FEE, '').trim()));
-
-    if (!isContext) {
-      const nameCand = line.replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '').replace(/[+():]/g, '').trim();
-      if (nameCand.length > 2) {
-        currentCategory = { categoryName: nameCand, items: [] };
-        parsedOutput.categories.push(currentCategory);
-        currentCategoryDefaultPrice = null;
-        currentCategoryDefaultWeight = null;
-        currentCategoryDefaultBoxFee = 0;
+    // 6. Plain text inside an active category → item inheriting defaults
+    if (currentCategory && !isContext) {
+      const name = cleanItemName(line);
+      if (name.length > 1) {
+        currentCategory.items.push({
+          name,
+          price: currentCategoryDefaultPrice || 0,
+          weight: null,
+          boxFee: currentCategoryDefaultBoxFee,
+          date: currentDateContext
+        });
+        continue;
       }
     }
 
+    // 7. Context-only lines (prices/weights with no text — update defaults)
     if (currentCategory) {
       const lw = line.match(RegexConfig.WEIGHT);
       if (lw) currentCategoryDefaultWeight = lw[1];
       const lb = line.match(RegexConfig.BOX_FEE);
       if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
-      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT) || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
+      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT)
+              || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
       if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
     }
 
