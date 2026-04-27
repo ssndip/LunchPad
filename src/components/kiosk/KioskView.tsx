@@ -110,6 +110,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
     return new Date(dateStr);
   };
 
+
+  const handleItemToggle = useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleItemAddWithSide = useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleUpdateSide = useCallback(() => {}, []);
+
+  const handleOrderSubmit = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
+  const handlePinOrderOpen = useCallback(() => setPinModalOpen(true), []);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayTime = today.getTime();
@@ -263,6 +287,34 @@ export const KioskView: React.FC<KioskViewProps> = ({
     }
     setTouchStart(null);
   };
+
+  const handleToggle = React.useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleItemAddWithSide = React.useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleOrderSubmit = React.useCallback(() => {
+    onOrder(rfid || undefined);
+  }, [onOrder, rfid]);
+
+  const handlePinOrder = React.useCallback(() => {
+    setPinModalOpen(true);
+  }, []);
+
+  const handleUpdateSide = React.useCallback(() => {}, []);
 
   return (
     <div 
@@ -425,7 +477,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
             selectedItems={selectedItems}
             selectedItemIds={selectedItemIds}
             onToggle={handleToggle}
-            onAddWithSide={handleAddWithSideCb}
+            onAddWithSide={handleItemAddWithSide}
             onUpdateQuantity={onUpdateQuantity}
             orderButtonEnabled={orderButtonEnabled && !isReadOnly}
             isMenuOutdated={isMenuOutdated}
@@ -446,10 +498,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
             computedKioskOpen={computedKioskOpen}
             testModeEnabled={testModeEnabled}
             orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
-            onOrder={handleOrderCb}
-            onPinOrder={handlePinOrderCb}
+            onOrder={handleOrderSubmit}
+            onPinOrder={handlePinOrder}
             onClearCart={onClearCart}
-            onUpdateSide={handleUpdateSideCb}
+            onUpdateSide={handleUpdateSide}
             onUpdateQuantity={onUpdateQuantity}
             t={t}
           />
