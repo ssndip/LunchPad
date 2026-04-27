@@ -325,3 +325,20 @@ export const deleteLanguage = async (token: string, code: string) => {
   if (!res.ok) throw new Error('Failed to delete language');
   return res.json();
 };
+
+// ─── Bulk Sync (Database Agnostic) ──────────────────────────────────────────
+export const exportParserBundle = async (token: string) => {
+  const res = await fetch('/api/parser/export-all', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to export parser bundle');
+  return res.json();
+};
+
+export const importParserBundle = async (token: string, bundle: any) => {
+  const res = await fetch('/api/parser/import-bundle', {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(bundle),
+  });
+  if (!res.ok) throw new Error('Failed to import parser bundle');
+  return res.json();
+};

@@ -653,6 +653,100 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Backup & Sync (Database Agnostic) */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+              <Share className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900">Backup & Sync</h3>
+              <p className="text-sm text-neutral-500 italic">Export trained parser rules to sync between environments</p>
+            </div>
+          </div>
+
+          <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 mb-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Sparkles className="w-5 h-5 text-indigo-600 mt-0.5" />
+              <div>
+                <p className="text-xs text-neutral-700 font-bold leading-relaxed">
+                  The Parser Bundle contains all your custom Regex rules, category mappings, and AI Teacher configurations. 
+                </p>
+                <p className="text-[10px] text-neutral-400 mt-1">
+                  Use this to move your "trained" logic from Development to Production without touching the database.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={async () => {
+                  try {
+                    const token = sessionStorage.getItem('token') || '';
+                    const { exportParserBundle } = await import('../../../api');
+                    const bundle = await exportParserBundle(token);
+                    const dataStr = JSON.stringify(bundle, null, 2);
+                    const blob = new Blob([dataStr], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `lunchpad_parser_bundle_${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  } catch (err: any) {
+                    alert("Export failed: " + err.message);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 py-4 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm"
+              >
+                <Download className="w-4 h-4" /> Export Bundle
+              </button>
+
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.json';
+                  input.onchange = async (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (evt) => {
+                      try {
+                        const content = evt.target?.result as string;
+                        const bundle = JSON.parse(content);
+                        const token = sessionStorage.getItem('token') || '';
+                        const { importParserBundle } = await import('../../../api');
+                        const res = await importParserBundle(token, bundle);
+                        if (res.success) {
+                          if (confirm) {
+                            confirm({
+                              title: "Success",
+                              message: `Imported ${res.count} profiles successfully!`,
+                              confirmText: "Great",
+                              onConfirm: () => window.location.reload()
+                            });
+                          } else {
+                            alert(`Imported ${res.count} profiles!`);
+                            window.location.reload();
+                          }
+                        }
+                      } catch (err: any) {
+                        alert("Import failed: " + err.message);
+                      }
+                    };
+                    reader.readAsText(file);
+                  };
+                  input.click();
+                }}
+                className="flex items-center justify-center gap-2 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+              >
+                <Plus className="w-4 h-4" /> Import Bundle
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>

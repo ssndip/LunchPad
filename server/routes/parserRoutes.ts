@@ -9,11 +9,17 @@ import {
   saveFixture, 
   getLogs,
   saveLog,
-  duplicateProfile
+  duplicateProfile,
+  exportAllProfiles,
+  importBundle
 } from "../controllers/parserController";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
+
+// Bulk Sync (Database Agnostic)
+router.get("/export-all", requireAuth, exportAllProfiles);
+router.post("/import-bundle", requireAuth, importBundle);
 
 // Profiles
 router.get("/profiles", requireAuth, getProfiles);
