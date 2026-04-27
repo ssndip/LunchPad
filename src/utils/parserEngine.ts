@@ -124,7 +124,23 @@ export class MenuParserEngine {
       }
 
       // 4. Item Extraction
-      const isItemLine = this.itemPrefixRegex.test(line) || this.priceRegex.test(line) || this.weightRegex.test(line);
+      // Use price/weight as fallback signals only when meaningful text
+      // (an actual item name) remains after stripping those values.
+      const hasBulletPrefix = this.itemPrefixRegex.test(line);
+      const hasSignal = this.priceRegex.test(line) || this.weightRegex.test(line);
+      let isItemLine = hasBulletPrefix;
+      if (!isItemLine && hasSignal) {
+        // Strip weight, price and prefix then check if a name is left
+        const residual = line
+          .replace(this.itemPrefixRegex, '')
+          .replace(this.weightRegex, '')
+          .replace(this.boxFeeRegex, '')
+          .replace(this.priceRegex, '')
+          .replace(/[(),.:+\-–—\/]/g, '')
+          .trim();
+        // Only treat as item if there are at least 2 meaningful characters left
+        isItemLine = residual.length >= 2;
+      }
       if (isItemLine) {
         const item = this.extractItem(line, currentCategory?.categoryName || this.config.fallbackCategory, categoryDefaults, currentCategory);
         if (item) {
@@ -139,6 +155,17 @@ export class MenuParserEngine {
       // 5. Check if it's a context update line (e.g. "100гр 1.50€")
       if (this.updateDefaultsFromLine(line, categoryDefaults)) {
         continue;
+      }
+
+      // 6. If we are inside an established category and the line is plain text (no signals),
+      //    treat it as an item that inherits the category default price.
+      if (currentCategory) {
+        const item = this.extractItem(line, currentCategory.categoryName, categoryDefaults, currentCategory);
+        if (item) {
+          this.enrichItem(item);
+          result.items.push(item);
+          continue;
+        }
       }
 
       result.unmatchedLines.push(line);
@@ -179,8 +206,14 @@ export class MenuParserEngine {
   }
 
   private detectCategory(line: string): SectionDetectionRule | null {
-    // Clean line of non-text for discovery
-    const cleanLine = line.replace(/[+():]/g, '').trim();
+    // Strip weight, price, box-fee and punctuation before testing so
+    // header lines like "Салати 0.100гр 1.50€" still match the category pattern.
+    let cleanLine = line
+      .replace(this.boxFeeRegex, '')
+      .replace(this.weightRegex, '')
+      .replace(this.priceRegex, '')
+      .replace(/[+():,]/g, '')
+      .trim();
     for (const rule of this.config.sectionDetection) {
       const regex = this.sectionRegexCache.get(rule.id);
       if (regex && regex.test(cleanLine)) {
