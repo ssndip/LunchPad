@@ -127,17 +127,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const commonProps = {
       title: label,
       onClick: onChange,
-      role: "switch" as const,
       "aria-label": label,
       className: `w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`
     };
 
     return checked ? (
-      <button {...commonProps} aria-checked="true">
+      <button {...commonProps} aria-pressed="true">
         <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-9" />
       </button>
     ) : (
-      <button {...commonProps} aria-checked="false">
+      <button {...commonProps} aria-pressed="false">
         <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-1" />
       </button>
     );
@@ -169,8 +168,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <button
                   title={t('settings.enable_bgn')}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                  role="switch" 
-                  aria-checked="true"
+                  aria-pressed="true"
                   aria-label={t('settings.enable_bgn')}
                   className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-900 shadow-lg shadow-neutral-200"
                 >
@@ -182,8 +180,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <button
                   title={t('settings.enable_bgn')}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                  role="switch" 
-                  aria-checked="false"
+                  aria-pressed="false"
                   aria-label={t('settings.enable_bgn')}
                   className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-200"
                 >
@@ -887,6 +884,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
 
           <div className="flex gap-3 pt-4">
             <button
+              title={t('modals.cancel')}
               type="button"
               onClick={onClose}
               className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
@@ -894,6 +892,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
               {t('modals.cancel')}
             </button>
             <button
+              title="Import Language"
               type="submit"
               disabled={!code || !name || isImporting}
               className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 text-sm disabled:opacity-30 flex items-center justify-center gap-2"
