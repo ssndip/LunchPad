@@ -84,7 +84,7 @@ export default function App() {
 
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
-  const handleToggleItem = (item: MenuItem) => {
+  const handleToggleItem = React.useCallback((item: MenuItem) => {
     const isSelected = selectedItemIds.has(item.id);
     if (isSelected) {
       s.setSelectedItems(s.selectedItems.filter((i) => i.id !== item.id));
@@ -93,9 +93,9 @@ export default function App() {
       const cartItem: CartItem = { ...item, side, quantity: 1 };
       s.setSelectedItems([...s.selectedItems, cartItem]);
     }
-  };
+  }, [selectedItemIds, s.selectedItems, s.setSelectedItems]);
 
-  const handleAddWithSide = (item: MenuItem, side?: string) => {
+  const handleAddWithSide = React.useCallback((item: MenuItem, side?: string) => {
     const isSelected = selectedItemIds.has(item.id);
     if (isSelected) {
       // Update existing
@@ -107,9 +107,9 @@ export default function App() {
       const cartItem: CartItem = { ...item, side, quantity: 1 };
       s.setSelectedItems([...s.selectedItems, cartItem]);
     }
-  };
+  }, [selectedItemIds, s.selectedItems, s.setSelectedItems]);
 
-  const handleOrder = async (rfidOverride?: string, pinOverride?: string) => {
+  const handleOrder = React.useCallback(async (rfidOverride?: string, pinOverride?: string) => {
     // Determine the final identification to use
     // If pinOverride is provided, we send rfid=null to trigger PIN lookup
     const finalRfid = pinOverride ? null : (rfidOverride || s.rfid);
@@ -155,7 +155,19 @@ export default function App() {
     } finally {
       s.setIsScanning(false);
     }
-  };
+  }, [s.rfid, s.testModeEnabled, s.selectedItems, s.menuVersion, s.setError, s.setIsScanning, s.setShowSuccess, s.resetCart, s.setRfid, t]);
+
+  const handleIdentify = React.useCallback((rfid: string) => {
+    s.setRfid(rfid);
+    s.resetCart();
+  }, [s.setRfid, s.resetCart]);
+
+  const handleGoToManager = React.useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', 'manager');
+    window.history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
 
   // ─── Manager Handlers ──────────────────────────────────────────────────────
   const handleApplyMenu = async (items: MenuItem[], date?: string) => {
@@ -694,16 +706,8 @@ export default function App() {
           onClearCart={s.resetCart}
           menuDate={s.menuDate}
           preIdentificationEnabled={s.preIdentificationEnabled}
-          onIdentify={(rfid) => {
-            s.setRfid(rfid);
-            s.resetCart();
-          }}
-          onGoToManager={() => { 
-            const url = new URL(window.location.href);
-            url.searchParams.set('view', 'manager');
-            window.history.pushState({}, '', url);
-            window.dispatchEvent(new PopStateEvent('popstate'));
-          }}
+          onIdentify={handleIdentify}
+          onGoToManager={handleGoToManager}
         />
         <PwaInstallBanner onNeedInstructions={() => setShowPWAInstructions(true)} />
 

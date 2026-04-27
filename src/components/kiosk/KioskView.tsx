@@ -240,6 +240,34 @@ export const KioskView: React.FC<KioskViewProps> = ({
     setTouchStart(null);
   };
 
+  const handleToggle = React.useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleItemAddWithSide = React.useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleOrderSubmit = React.useCallback(() => {
+    onOrder(rfid || undefined);
+  }, [onOrder, rfid]);
+
+  const handlePinOrder = React.useCallback(() => {
+    setPinModalOpen(true);
+  }, []);
+
+  const handleUpdateSide = React.useCallback(() => {}, []);
+
   return (
     <div 
       className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch transition-colors duration-500"
@@ -400,22 +428,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
             sideItems={sideItems}
             selectedItems={selectedItems}
             selectedItemIds={selectedItemIds}
-            onToggle={(item) => {
-              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-                setPendingItem(item);
-                setIsIdentifying(true);
-                return;
-              }
-              onToggleItem(item);
-            }}
-            onAddWithSide={(item, side) => {
-              if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-                setPendingItem(item);
-                setIsIdentifying(true);
-                return;
-              }
-              onAddWithSide(item, side);
-            }}
+            onToggle={handleToggle}
+            onAddWithSide={handleItemAddWithSide}
             onUpdateQuantity={onUpdateQuantity}
             orderButtonEnabled={orderButtonEnabled && !isReadOnly}
             isMenuOutdated={isMenuOutdated}
@@ -436,10 +450,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
             computedKioskOpen={computedKioskOpen}
             testModeEnabled={testModeEnabled}
             orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
-            onOrder={() => onOrder(rfid || undefined)}
-            onPinOrder={() => setPinModalOpen(true)}
+            onOrder={handleOrderSubmit}
+            onPinOrder={handlePinOrder}
             onClearCart={onClearCart}
-            onUpdateSide={() => {}}
+            onUpdateSide={handleUpdateSide}
             onUpdateQuantity={onUpdateQuantity}
             t={t}
           />
