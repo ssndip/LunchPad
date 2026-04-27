@@ -135,7 +135,6 @@ export async function startServer() {
       menuDate: settings.menuDate,
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
       preIdentificationEnabled: settings.preIdentificationEnabled
     });
   });
