@@ -21,11 +21,11 @@ export const DEFAULT_PARSER_CONFIG: ParserConfig = {
     { id: 'bbq', categoryName: 'BBQ', pattern: 'скара', applyBoxFeeByDefault: true }
   ],
   entityExtraction: {
-    datePattern: '(\\d{1,2}[.\\-/]\\d{1,2}[.\\-/]\\d{2,4})',
+    datePattern: '(\\d{1,2}[.\\-/]\\d{1,2}[.\\-/]\\d{2,4})|(?:\\b(?:меню|дата|от|за)\\s+)(\\d{1,2}[.\\-/]\\d{1,2})\\b',
     weightPattern: '((?:\\d+[.,])?\\d+\\s*(?:гр|g|gr|мл|ml))',
     pricePattern: '(?:[-–—\\s]+)?([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|лева|е|е\\.|евро)?\\s*[:.]?\\s*$',
     boxFeePattern: '(?:кутийка\\s*[:\\-–—\\s]*([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|е|е\\.)?|([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|е|е\\.)?\\s*кутийка)',
-    itemPrefixPattern: '^[-•*]\\s*',
+    itemPrefixPattern: '^(?:[-•*]|(?:[0-9]\\uFE0F?\\u20E3)+(?:\\.\\s*(?:[0-9]\\uFE0F?\\u20E3)+)*\\s*|\\d+(?:\\.\\d+)*[.)]?\\s*)',
     boxKeywordPattern: 'кутийка',
     bgnNoisePattern: '[\\d]+[,.][\\d]+\\s*(?:лв|лева|лв\\.)'
   },
