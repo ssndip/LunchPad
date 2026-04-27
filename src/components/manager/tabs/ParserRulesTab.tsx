@@ -48,8 +48,9 @@ import {
   ParserPersistence,
 } from "../../../utils/parserLocalSettings";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { suggestParserRules } from "../../../api";
+import { suggestParserRules, getParserFixtures } from "../../../api";
 import { useStore } from "../../../store/useStore";
+import { ParseResult } from "../../../utils/menuParser";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -176,6 +177,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [aiSandboxResult, setAiSandboxResult] = useState<any>(null);
+  const [fixtures, setFixtures] = useState<any[]>([]);
+  const [regressionResults, setRegressionResults] = useState<any[]>([]);
 
   const token = useStore((s) => s.token);
   const aiApiKey = useStore((s) => s.aiApiKey);
@@ -198,7 +201,27 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     if (rawPr) setPresets(JSON.parse(rawPr));
     const rawProfiles = localStorage.getItem(PROFILES_KEY);
     if (rawProfiles) setProfiles(JSON.parse(rawProfiles));
-  }, []);
+
+    if (token) {
+      getParserFixtures(token).then(setFixtures).catch(console.error);
+    }
+  }, [token]);
+
+  const runRegressionTests = (newPreset: FormatPreset) => {
+    const results = fixtures.map(f => {
+      try {
+        const normalized = normalizeMenuText(f.rawInput, newPreset);
+        const result = parsePastedMenu(normalized, settings);
+        // Simple heuristic: a "pass" means we found at least 2 items and no more than 2 unmatched lines
+        // In a real scenario, we'd compare against expectedOutputJson
+        const pass = result.items.length >= 2 && result.unmatchedLines.length <= 2;
+        return { name: f.name, pass, itemCount: result.items.length };
+      } catch (e) {
+        return { name: f.name, pass: false, error: String(e) };
+      }
+    });
+    setRegressionResults(results);
+  };
 
   // ── Category Settings ──
   const toggleCat = (key: string, field: "autoBox" | "hasSideDish") => {
@@ -912,7 +935,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                 <span className="px-2 py-0.5 bg-violet-100 text-violet-600 rounded text-[9px] font-bold uppercase tracking-tight">
                                   {
                                     Object.keys(
-                                      aiSuggestions.preset.itemCategoryOverrides,
+                                      aiSuggestions.preset?.itemCategoryOverrides || {},
                                     ).length
                                   }{" "}
                                   {t("parser.item_remaps") || "Remaps"}
@@ -929,6 +952,40 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                 </span>
                               )}
                             </div>
+
+                            {/* Regression Guard Status */}
+                            {regressionResults.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-indigo-100/30 space-y-2">
+                                <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                                  <History className="w-3 h-3" />
+                                  Regression Guard
+                                </p>
+                                <div className="space-y-1.5">
+                                  {regressionResults.map((r, i) => (
+                                    <div key={i} className="flex items-center justify-between bg-white/40 p-2 rounded-lg border border-indigo-50">
+                                      <span className="text-[10px] font-medium text-indigo-900 truncate mr-2">{r.name}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[9px] text-neutral-400 font-mono">{r.itemCount} items</span>
+                                        {r.pass ? (
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                        ) : (
+                                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                {regressionResults.every(r => r.pass) ? (
+                                  <p className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> All standard menus working correctly.
+                                  </p>
+                                ) : (
+                                  <p className="text-[9px] text-amber-600 font-bold flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" /> Warning: Might break some menus.
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 

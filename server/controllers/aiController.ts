@@ -490,18 +490,21 @@ ${teachingSection}
 ${currentResultSection}
 
 Standard LunchPad Parsing Logic (NATIVE CAPABILITIES):
-1. Items: The parser natively recognizes lines starting with dashes (-), asterisks (*), bullets (•), emojis (1️⃣), or numbering (1.1.). DO NOT write regex to add dashes if they use these!
-2. Prices: The parser natively extracts Euro prices (e.g., 3.20€) AND numbers at the end of a line (e.g., 1.70). It also automatically strips Bulgarian currency noise (e.g., / 7.80 лв.).
-3. Categories: Lines without prices, weights, or item prefixes are natively treated as categories.
+1. Items: The parser natively recognizes lines starting with dashes (-), asterisks (*), bullets (•), or numbering (1., 2.).
+2. Prices: It extracts Euro (€/e.), BGN (лв./лева), and dash-prices (e.g. "-1.70" at end of line).
+3. Categories: Lines with a colon (:) or text without prices are natively treated as categories.
+4. Inheritance: If a category header has a price (e.g. "Salads: 1.50€"), all items inside will inherit 1.50€ automatically.
+5. Weight: Weight (гр/мл) is extracted as metadata and removed from the item name.
 
 YOUR GOAL:
-Generate \`preprocessRules\` (Regex find/replace) ONLY for structural issues the native parser cannot handle.
+Generate \`preprocessRules\` (Regex find/replace) ONLY for structural issues the native parser cannot handle. 
+DO NOT suggest rules for things mentioned in NATIVE CAPABILITIES unless the user explicitly asks for a change in that behavior.
 
 Common Needs for Preprocess Rules:
 1. Merging multi-line items into a single line.
-2. Removing complex preambles or footers that aren't categories or items.
+2. Removing complex noise, decorative footers, or non-menu text.
 3. Converting extremely weird item prefixes (e.g. "-->") to standard dashes ("- ").
-4. Standardizing bizarre price formats if they completely break the native extraction.
+4. Handling menus where categories are completely missing and need to be injected.
 
 CURRENT CONFIG (JSON):
 ${JSON.stringify(profile, null, 2)}

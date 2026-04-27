@@ -275,6 +275,12 @@ export const saveParserFixture = async (token: string, fixture: any) => {
   return res.json();
 };
 
+export const getParserFixtures = async (token: string) => {
+  const res = await fetch('/api/parser/fixtures', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch parser fixtures');
+  return res.json();
+};
+
 export const getParserLogs = async (token: string) => {
   const res = await fetch('/api/parser/logs', { headers: authHeaders(token) });
   if (!res.ok) throw new Error('Failed to fetch parser logs');
