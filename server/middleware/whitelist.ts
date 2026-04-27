@@ -13,15 +13,15 @@ function ipToLong(ip: string): number | null {
 }
 
 /**
- * Checks if a client IP or hostname matches a whitelist entry.
- * Supports exact IP, IPv4 CIDR, and Hostnames.
+ * Checks if a client IP matches a whitelist entry.
+ * Supports exact IP and IPv4 CIDR.
  */
-function matchesEntry(clientIp: string, clientHostname: string, entry: string): boolean {
+function matchesEntry(clientIp: string, entry: string): boolean {
   entry = entry.trim();
   if (!entry) return false;
 
-  // 1. Check exact matches (IP or Hostname)
-  if (clientIp === entry || clientHostname.toLowerCase() === entry.toLowerCase()) {
+  // 1. Check exact IP match
+  if (clientIp === entry) {
     return true;
   }
 
@@ -48,7 +48,7 @@ function matchesEntry(clientIp: string, clientHostname: string, entry: string): 
 /**
  * Main check function.
  */
-export function isWhitelisted(clientIp: string, clientHostname: string, whitelistString: string): boolean {
+export function isWhitelisted(clientIp: string, whitelistString: string): boolean {
   // Localhost is always allowed by default in this guard logic, 
   // but we also check the explicit whitelist string.
   const normalizedIp = clientIp.replace(/^::ffff:/, ""); // Handle IPv4-mapped IPv6
@@ -58,14 +58,14 @@ export function isWhitelisted(clientIp: string, clientHostname: string, whitelis
   }
 
   const entries = whitelistString.split(",");
-  return entries.some(entry => matchesEntry(normalizedIp, clientHostname, entry));
+  return entries.some(entry => matchesEntry(normalizedIp, entry));
 }
 
 /**
- * Middleware to restrict access to whitelisted IPs/Hostnames.
+ * Middleware to restrict access to whitelisted IPs.
  */
 export const adminWhitelistGuard = (req: Request, res: Response, next: NextFunction) => {
-  // Use req.ip and req.hostname. 
+  // Use req.ip.
   // req.ip can be IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
   // 0. Skip check if whitelisting is disabled
   if (!settings.adminWhitelistEnabled) {
@@ -73,16 +73,15 @@ export const adminWhitelistGuard = (req: Request, res: Response, next: NextFunct
   }
 
   const clientIp = req.ip || "";
-  const clientHostname = req.hostname || "";
 
-  if (isWhitelisted(clientIp, clientHostname, settings.adminWhitelist)) {
-    console.log(`[Whitelist] Access allowed for IP: ${clientIp}, Hostname: ${clientHostname}`);
+  if (isWhitelisted(clientIp, settings.adminWhitelist)) {
+    console.log(`[Whitelist] Access allowed for IP: ${clientIp}`);
     return next();
   }
 
-  console.warn(`[Whitelist] Blocked access from IP: ${clientIp}, Hostname: ${clientHostname}`);
+  console.warn(`[Whitelist] Blocked access from IP: ${clientIp}`);
   res.status(403).json({ 
     error: "Access Denied", 
-    message: "Your IP address or hostname is not in the administration whitelist." 
+    message: "Your IP address is not in the administration whitelist."
   });
 };
