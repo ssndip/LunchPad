@@ -123,18 +123,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const Toggle = ({
     checked, onChange, color = 'bg-neutral-900', label,
-  }: { checked: boolean; onChange: () => void; color?: string; label: string }) => (
-    <button
-      title={label}
-      onClick={onChange}
-      role="switch"
-      aria-checked={!!checked}
-      aria-label={label}
-      className={`w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`}
-    >
-      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
-    </button>
-  );
+  }: { checked: boolean; onChange: () => void; color?: string; label: string }) => {
+    const commonProps = {
+      title: label,
+      onClick: onChange,
+      role: "switch" as const,
+      "aria-label": label,
+      className: `w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`
+    };
+
+    return checked ? (
+      <button {...commonProps} aria-checked="true">
+        <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-9" />
+      </button>
+    ) : (
+      <button {...commonProps} aria-checked="false">
+        <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-1" />
+      </button>
+    );
+  };
 
   return (
     <div title={t('navigation.system_settings')}>
@@ -158,18 +165,31 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p className="text-[10px] text-neutral-400 font-medium">{t('settings.enable_bgn_desc')}</p>
               </div>
             </div>
-              <button
-                title={t('settings.enable_bgn')}
-                onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                role="switch" 
-                aria-checked={!!bgnEnabled}
-                aria-label={t('settings.enable_bgn')}
-                className={`w-14 h-8 rounded-full transition-all relative focus:outline-none ${bgnEnabled ? 'bg-neutral-900 shadow-lg shadow-neutral-200' : 'bg-neutral-200'}`}
-              >
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center ${bgnEnabled ? 'left-[1.65rem]' : 'left-1'}`}>
-                {bgnEnabled && <div className="w-1 h-1 bg-neutral-900 rounded-full" />}
-              </div>
-            </button>
+              {bgnEnabled ? (
+                <button
+                  title={t('settings.enable_bgn')}
+                  onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
+                  role="switch" 
+                  aria-checked="true"
+                  aria-label={t('settings.enable_bgn')}
+                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-900 shadow-lg shadow-neutral-200"
+                >
+                  <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-[1.65rem]">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full" />
+                  </div>
+                </button>
+              ) : (
+                <button
+                  title={t('settings.enable_bgn')}
+                  onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
+                  role="switch" 
+                  aria-checked="false"
+                  aria-label={t('settings.enable_bgn')}
+                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-200"
+                >
+                  <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-1" />
+                </button>
+              )}
           </div>
 
           <div className="flex items-center justify-between mb-8">
