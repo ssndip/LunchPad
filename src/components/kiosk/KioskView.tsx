@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Settings, AlertCircle, LogOut, Users, Maximize, Smartphone, AlertTriangle, Info, X, CreditCard } from 'lucide-react';
 import { MenuItem, CartItem } from '../../types';
@@ -109,6 +109,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
     }
     return new Date(dateStr);
   };
+
+
+  const handleItemToggle = useCallback((item: MenuItem) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onToggleItem(item);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
+
+  const handleItemAddWithSide = useCallback((item: MenuItem, side?: string) => {
+    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
+      setPendingItem(item);
+      setIsIdentifying(true);
+      return;
+    }
+    onAddWithSide(item, side);
+  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
+
+  const handleUpdateSide = useCallback(() => {}, []);
+
+  const handleOrderSubmit = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
+  const handlePinOrderOpen = useCallback(() => setPinModalOpen(true), []);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
