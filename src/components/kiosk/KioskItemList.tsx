@@ -57,15 +57,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = React.memo(
           message={t("restricted_message")}
         />
       );
-    if (isMenuOutdated && !isReadOnly)
-      return (
-        <Placeholder
-          t={t}
-          icon={<Clock />}
-          title={t("kiosk.menu_outdated")}
-          message={t("kiosk.check_back_tomorrow")}
-        />
-      );
+
     if (!orderButtonEnabled && !isReadOnly)
       return (
         <Placeholder
@@ -158,6 +150,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = React.memo(
                             onIncrement={() => onUpdateQuantity(item.id, 1)}
                             onDecrement={() => onUpdateQuantity(item.id, -1)}
                             onToggle={() => !isSelected && onToggle(item)}
+                            t={t}
                           />
                         </div>
                       )}
@@ -240,7 +233,8 @@ const QuantityControl: React.FC<{
   onIncrement: () => void;
   onDecrement: () => void;
   onToggle: () => void;
-}> = ({ isSelected, quantity, onIncrement, onDecrement, onToggle }) => {
+  t: (key: string) => string;
+}> = ({ isSelected, quantity, onIncrement, onDecrement, onToggle, t }) => {
   return (
     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
       <AnimatePresence mode="wait">
@@ -272,6 +266,7 @@ const QuantityControl: React.FC<{
                 onDecrement();
               }}
               className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              title={t("modals.remove") || "Decrease"}
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
@@ -284,6 +279,7 @@ const QuantityControl: React.FC<{
                 onIncrement();
               }}
               className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              title={t("modals.add") || "Increase"}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

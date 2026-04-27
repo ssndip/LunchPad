@@ -206,7 +206,7 @@ export class MenuParserEngine {
     // 2. Extract Box Fee Specific (e.g. "+ 0.10€ кутийка")
     const boxFeeMatch = name.match(this.boxFeeRegex);
     if (boxFeeMatch) {
-      boxFee = safeFloat(boxFeeMatch[1]);
+      boxFee = safeFloat(boxFeeMatch[1] || boxFeeMatch[2]);
       name = name.replace(boxFeeMatch[0], '').trim();
     } else if (this.boxKeywordRegex.test(name)) {
       name = name.replace(this.boxKeywordRegex, '').trim();
@@ -298,7 +298,7 @@ export class MenuParserEngine {
     // Box Fee (check before price to avoid confusion if both match)
     const boxMatch = line.match(this.boxFeeRegex);
     if (boxMatch) {
-      defaults.boxFee = safeFloat(boxMatch[1]);
+      defaults.boxFee = safeFloat(boxMatch[1] || boxMatch[2]);
       updated = true;
     }
 

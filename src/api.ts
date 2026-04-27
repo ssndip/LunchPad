@@ -281,11 +281,11 @@ export const getParserLogs = async (token: string) => {
   return res.json();
 };
 
-export const suggestParserRules = async (token: string, menuText: string, currentConfig: any) => {
+export const suggestParserRules = async (token: string, menuText: string, currentConfig: any, instructions?: string, currentResult?: any) => {
   const res = await fetch('/api/ai/suggest-rules', {
     method: 'POST',
     headers: jsonHeaders(token),
-    body: JSON.stringify({ menuText, currentConfig }),
+    body: JSON.stringify({ menuText, currentConfig, instructions, currentResult }),
   });
   if (!res.ok) {
     const err = await res.json();

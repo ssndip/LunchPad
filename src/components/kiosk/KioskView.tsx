@@ -95,23 +95,25 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const parseDate = (dateStr: string) => {
     if (!dateStr) return new Date(0);
     // Handle YYYY-MM-DD
-    if (dateStr.includes('-')) {
+    if (dateStr.includes('-') && dateStr.split('-').length === 3) {
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) return d;
     }
-    // Handle DD.MM.YYYY or DD/MM/YYYY
-    const parts = dateStr.split(/[./]/);
-    if (parts.length === 3) {
+    // Handle DD.MM.YYYY, DD/MM/YYYY, DD.MM, or DD/MM
+    const parts = dateStr.split(/[./-]/);
+    if (parts.length >= 2) {
       const day = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1;
-      const year = parts[2].length === 2 ? 2000 + parseInt(parts[2], 10) : parseInt(parts[2], 10);
+      const year = parts.length === 3 
+        ? (parts[2].length === 2 ? 2000 + parseInt(parts[2], 10) : parseInt(parts[2], 10))
+        : new Date().getFullYear();
       return new Date(year, month, day);
     }
     return new Date(dateStr);
   };
 
 
-  const handleItemToggle = useCallback((item: MenuItem) => {
+  const handleToggle = useCallback((item: MenuItem) => {
     if (preIdentificationEnabled && !rfid && !testModeEnabled) {
       setPendingItem(item);
       setIsIdentifying(true);
@@ -132,7 +134,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const handleUpdateSide = useCallback(() => {}, []);
 
   const handleOrderSubmit = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
-  const handlePinOrderOpen = useCallback(() => setPinModalOpen(true), []);
+  const handlePinOrder = useCallback(() => setPinModalOpen(true), []);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -167,10 +169,19 @@ export const KioskView: React.FC<KioskViewProps> = ({
     }
   }, [orderingDate, selectedDate]);
 
+  const isMenuOutdated = useMemo(() => {
+    if (!selectedDate) return false;
+    const menuD = parseDate(selectedDate);
+    if (isNaN(menuD.getTime())) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return menuD < today;
+  }, [selectedDate]);
+
   const isReadOnly = useMemo(() => {
-    if (!selectedDate || !orderingDate) return false;
-    return selectedDate !== orderingDate;
-  }, [selectedDate, orderingDate]);
+    return isMenuOutdated;
+  }, [isMenuOutdated]);
 
   // Filter and Group Menu by selected date
   const filteredMenu = useMemo(() => {
@@ -187,7 +198,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
   }, [filteredMenu]);
 
   // Category Navigation
-  const categories = useMemo(() => Object.keys(filteredGroupedMenu), [filteredGroupedMenu]);
+  const categories = useMemo(() => {
+    const cats = Object.keys(filteredGroupedMenu);
+    const normalCats = cats.filter(c => c.toLowerCase() !== 'други' && c.toLowerCase() !== 'other');
+    const otherCats = cats.filter(c => c.toLowerCase() === 'други' || c.toLowerCase() === 'other');
+    return [...normalCats, ...otherCats];
+  }, [filteredGroupedMenu]);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const { isPhone, isTablet } = useResponsive();
 
@@ -201,28 +217,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const activeItems = useMemo(() => filteredGroupedMenu[activeCategory] || [], [filteredGroupedMenu, activeCategory]);
 
 
-  // Memoized callbacks to prevent unnecessary re-renders of React.memo() child components
-  const handleToggle = useCallback((item: MenuItem) => {
-    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-      setPendingItem(item);
-      setIsIdentifying(true);
-      return;
-    }
-    onToggleItem(item);
-  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
-
-  const handleAddWithSideCb = useCallback((item: MenuItem, side?: string) => {
-    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-      setPendingItem(item);
-      setIsIdentifying(true);
-      return;
-    }
-    onAddWithSide(item, side);
-  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
-
-  const handleOrderCb = useCallback(() => onOrder(rfid || undefined), [onOrder, rfid]);
-  const handlePinOrderCb = useCallback(() => setPinModalOpen(true), []);
-  const handleUpdateSideCb = useCallback(() => {}, []);
 
   useRfidScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
@@ -259,15 +253,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
     return { dayName, fullDate };
   };
 
-  const isMenuOutdated = useMemo(() => {
-    if (!selectedDate) return false;
-    const menuD = parseDate(selectedDate);
-    if (isNaN(menuD.getTime())) return false;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return menuD < today;
-  }, [selectedDate]);
+
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
@@ -288,33 +274,6 @@ export const KioskView: React.FC<KioskViewProps> = ({
     setTouchStart(null);
   };
 
-  const handleToggle = React.useCallback((item: MenuItem) => {
-    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-      setPendingItem(item);
-      setIsIdentifying(true);
-      return;
-    }
-    onToggleItem(item);
-  }, [preIdentificationEnabled, rfid, testModeEnabled, onToggleItem]);
-
-  const handleItemAddWithSide = React.useCallback((item: MenuItem, side?: string) => {
-    if (preIdentificationEnabled && !rfid && !testModeEnabled) {
-      setPendingItem(item);
-      setIsIdentifying(true);
-      return;
-    }
-    onAddWithSide(item, side);
-  }, [preIdentificationEnabled, rfid, testModeEnabled, onAddWithSide]);
-
-  const handleOrderSubmit = React.useCallback(() => {
-    onOrder(rfid || undefined);
-  }, [onOrder, rfid]);
-
-  const handlePinOrder = React.useCallback(() => {
-    setPinModalOpen(true);
-  }, []);
-
-  const handleUpdateSide = React.useCallback(() => {}, []);
 
   return (
     <div 
@@ -578,6 +537,7 @@ const IdentificationOverlay: React.FC<{ t: any; onIdentify: (rfid: string) => vo
         <button 
           onClick={onClose}
           className="absolute top-6 right-6 w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all active:scale-90"
+          title={t('modals.close') || 'Close'}
         >
           <X className="w-5 h-5" />
         </button>

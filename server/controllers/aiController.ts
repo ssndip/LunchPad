@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { settings } from '../config';
 
 export const suggestRules = async (req: Request, res: Response) => {
-  const { currentProfile, currentConfig, menuText } = req.body;
+  console.log("[AI] Request Body:", JSON.stringify(req.body, null, 2));
+  const { currentProfile, currentConfig, menuText, instructions, currentResult } = req.body;
   const profile = currentProfile || currentConfig;
   const { aiApiKey, aiProvider } = settings;
 
@@ -11,17 +12,18 @@ export const suggestRules = async (req: Request, res: Response) => {
   }
 
   if (!profile || !menuText) {
+    console.error("[AI] Validation Failed. Profile:", !!profile, "menuText:", !!menuText);
     return res.status(400).json({ error: "Missing currentProfile/currentConfig or menuText." });
   }
 
   try {
     let result;
     if (aiProvider === 'openai') {
-      result = await callOpenAI(aiApiKey, profile, menuText);
+      result = await callOpenAI(aiApiKey, profile, menuText, instructions, currentResult);
     } else if (aiProvider === 'gemini') {
-      result = await callGemini(aiApiKey, profile, menuText);
+      result = await callGemini(aiApiKey, profile, menuText, instructions, currentResult);
     } else if (aiProvider === 'anthropic') {
-      result = await callAnthropic(aiApiKey, profile, menuText);
+      result = await callAnthropic(aiApiKey, profile, menuText, instructions, currentResult);
     } else {
       return res.status(400).json({ error: "Unsupported AI provider." });
     }
@@ -82,8 +84,8 @@ async function getBestOpenAIModel(apiKey: string) {
   }
 }
 
-async function callOpenAI(apiKey: string, profile: any, menuText: string) {
-  const prompt = constructPrompt(profile, menuText);
+async function callOpenAI(apiKey: string, profile: any, menuText: string, instructions?: string, currentResult?: any) {
+  const prompt = constructPrompt(profile, menuText, instructions, currentResult);
   const model = await getBestOpenAIModel(apiKey);
   console.log(`[OpenAI] Using model: ${model}`);
   
@@ -258,8 +260,8 @@ async function getBestGeminiModel(apiKey: string) {
   }
 }
 
-async function callGemini(apiKey: string, profile: any, menuText: string) {
-  const prompt = constructPrompt(profile, menuText);
+async function callGemini(apiKey: string, profile: any, menuText: string, instructions?: string, currentResult?: any) {
+  const prompt = constructPrompt(profile, menuText, instructions, currentResult);
   const modelName = await getBestGeminiModel(apiKey);
   
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
@@ -360,8 +362,8 @@ async function getBestAnthropicModel(apiKey: string) {
   }
 }
 
-async function callAnthropic(apiKey: string, profile: any, menuText: string) {
-  const prompt = constructPrompt(profile, menuText);
+async function callAnthropic(apiKey: string, profile: any, menuText: string, instructions?: string, currentResult?: any) {
+  const prompt = constructPrompt(profile, menuText, instructions, currentResult);
   const model = await getBestAnthropicModel(apiKey);
   console.log(`[Anthropic] Using model: ${model}`);
   
@@ -459,56 +461,82 @@ SOUPS
   return data.content[0].text;
 }
 
-function constructPrompt(profile: any, menuText: string) {
+function constructPrompt(profile: any, menuText: string, instructions?: string, currentResult?: any) {
   const systemCategories = profile?.systemCategories || [];
   const categoriesList = systemCategories.length > 0 ? `SYSTEM CATEGORIES (Prefer these for overrides):\n- ${systemCategories.join('\n- ')}` : '';
 
+  const teachingSection = instructions ? `
+USER TEACHING / INSTRUCTIONS:
+---
+${instructions}
+---
+` : '';
+
+  const currentResultSection = currentResult ? `
+CURRENT PARSE RESULT (What the parser currently sees):
+---
+${JSON.stringify(currentResult, null, 2)}
+---
+` : '';
+
   return `
 You are the AI configuration assistant for the LunchPad Canteen System.
-Your task is to analyze a new menu format and suggest updates to the Parser Profile.
+Your task is to analyze a menu format and suggest updates to the Parser Configuration.
 
 ${categoriesList}
 
-SUPPORT FOR WEEKLY MENUS:
-- If the sample text contains multiple days (e.g., Monday, Tuesday, or dates like 21.04, 22.04), identify them.
-- Suggest rules to ensure each day's items are grouped correctly.
-- If days are headers, they should be treated as categories if appropriate.
+${teachingSection}
 
-Standard LunchPad Parsing Logic:
-1. The parser looks for lines starting with '-' as menu items.
-2. It expects prices in the format '1.23€' or '1,23 €'.
-3. It detects categories from headers (lines without '-' that appear before a group of items).
+${currentResultSection}
 
-CURRENT PROFILE (JSON):
+Standard LunchPad Parsing Logic (NATIVE CAPABILITIES):
+1. Items: The parser natively recognizes lines starting with dashes (-), asterisks (*), bullets (•), emojis (1️⃣), or numbering (1.1.). DO NOT write regex to add dashes if they use these!
+2. Prices: The parser natively extracts Euro prices (e.g., 3.20€) AND numbers at the end of a line (e.g., 1.70). It also automatically strips Bulgarian currency noise (e.g., / 7.80 лв.).
+3. Categories: Lines without prices, weights, or item prefixes are natively treated as categories.
+
+YOUR GOAL:
+Generate \`preprocessRules\` (Regex find/replace) ONLY for structural issues the native parser cannot handle.
+
+Common Needs for Preprocess Rules:
+1. Merging multi-line items into a single line.
+2. Removing complex preambles or footers that aren't categories or items.
+3. Converting extremely weird item prefixes (e.g. "-->") to standard dashes ("- ").
+4. Standardizing bizarre price formats if they completely break the native extraction.
+
+CURRENT CONFIG (JSON):
 ${JSON.stringify(profile, null, 2)}
 
-NEW MENU TEXT SAMPLE:
+MENU TEXT TO PARSE:
 ---
 ${menuText}
 ---
 
-INSTRUCTIONS:
-1. Analyze the sample menu text. Identify if any items or categories are failing to parse correctly.
-2. CATEGORY MATCHING:
-   - Carefully identify section headers in the text that represent food categories.
-   - If a header doesn't match a standard name, suggest an 'itemCategoryOverrides' mapping to one of the SYSTEM CATEGORIES listed above.
-   - Example: If you see "Varia" and it contains soups, suggest mapping those items to "Супи".
-3. If bullets are missing from items, create regex rules in 'preprocessRules' to add them. 
-4. If the menu is weekly, ensure days are identified as categories or headers.
-5. Return a JSON object with the following structure (only include fields that need updates):
+TASK:
+1. Compare the MENU TEXT with the CURRENT PARSE RESULT.
+2. Apply the USER TEACHING instructions.
+3. Write \`preprocessRules\` to fix structural issues (like missing dashes or noise).
+4. Return a JSON object with the following structure:
 {
-  "name": "Suggested Profile Name",
-  "presets": [
-    {
-      "preprocessRules": [
-        { "find": "regex_pattern", "replace": "replacement_string", "isRegex": true }
-      ],
-      "itemCategoryOverrides": { "Item Name": "Category Name" },
-      "itemNameOverrides": { "Ugly Name": "Clean Name" }
-    }
-  ]
+  "profileName": "A descriptive name for this parser snapshot",
+  "categorySettings": {
+    "mains": { "autoBox": true, "hasSideDish": true }
+  },
+  "suggestedConfig": {
+    "sectionRules": [...],
+    "preprocessing": [...],
+    "entityPatterns": [...],
+    "enrichment": [...]
+  },
+  "preset": {
+    "name": "Format Rules",
+    "preprocessRules": [
+       { "find": "regex", "replace": "text", "isRegex": true }
+    ],
+    "itemCategoryOverrides": { "Item Name": "System Category" },
+    "itemNameOverrides": { "Old Name": "New Name" }
+  }
 }
 
-Only suggest necessary rules to make the sample menu parse correctly into items with prices. Support Bulgarian Cyrillic.
+Only suggest necessary rules. Support Bulgarian Cyrillic.
 `;
 }

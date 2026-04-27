@@ -22,9 +22,9 @@ export const DEFAULT_PARSER_CONFIG: ParserConfig = {
   ],
   entityExtraction: {
     datePattern: '(\\d{1,2}[.\\-/]\\d{1,2}[.\\-/]\\d{2,4})',
-    weightPattern: '(\\d+\\s*(?:гр|g|gr|мл|ml))',
-    pricePattern: '([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$)',
-    boxFeePattern: '([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$)?\\s*кутийка',
+    weightPattern: '((?:\\d+[.,])?\\d+\\s*(?:гр|g|gr|мл|ml))',
+    pricePattern: '(?:[-–—\\s]+)?([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|лева|е|е\\.|евро)?\\s*[:.]?\\s*$',
+    boxFeePattern: '(?:кутийка\\s*[:\\-–—\\s]*([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|е|е\\.)?|([\\d]+[,.][\\d]+|[\\d]+)\\s*(?:€|\\$|лв|е|е\\.)?\\s*кутийка)',
     itemPrefixPattern: '^[-•*]\\s*',
     boxKeywordPattern: 'кутийка',
     bgnNoisePattern: '[\\d]+[,.][\\d]+\\s*(?:лв|лева|лв\\.)'

@@ -25,12 +25,13 @@ const ENGLISH_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'S
 const RegexConfig = {
   DATE: /(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/,
   DATE_RANGE: /(\d{1,2})\s*[-–—]\s*(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/, // Matches 03 - 07.11.2025
-  WEIGHT: /(\d+\s*(?:гр|g|gr|мл|ml))/i,
-  PRICE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|лева)/i, // Support BGN too for extraction
-  BOX_FEE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв)?\s*кутийка/i,
-  BGN_NOISE: /[\d]+[,.][\d]+\s*(?:лв|лева|лв\.)/gi,
+  WEIGHT: /((?:\d+[.,])?\d+\s*(?:гр|g|gr|мл|ml))/i,
+  PRICE: /(?:[-–—\s]+)?([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е|е\.|евро)?\s*[:.]?\s*$/i,
+  BOX_FEE: /(?:кутийка\s*[:\-–—\s]*([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?|([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?\s*кутийка)/i,
+  BGN_NOISE: /(?:\/|\|)?\s*[\d]+[,.][\d]+\s*(?:лв|лева|лв\.)/gi,
   BOX_KEYWORD: /кутийка/i,
-  ITEM_PREFIX: /^[-•*]\s*/
+  ITEM_PREFIX: /^(?:[-•*]|(?:[0-9]\uFE0F?\u20E3)+(?:\.\s*(?:[0-9]\uFE0F?\u20E3)+)*\s*|\d+(?:\.\d+)*[.)]?\s*)/,
+  PRICE_EXPLICIT: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е|е\.|евро)/i
 };
 
 function safeFloat(value: any, fallback: number | null = null): number | null {
@@ -98,10 +99,10 @@ export function parseMenuText(rawText: string): ParsedMenu {
     if (dateMatch) {
       if (!parsedOutput.date) parsedOutput.date = dateMatch[1];
       const parts = dateMatch[1].split(/[.\-/]/);
-      if (parts.length === 3) {
+      if (parts.length >= 2) {
         const d = parseInt(parts[0]);
         const m = parseInt(parts[1]) - 1;
-        const y = parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2]);
+        const y = parts.length === 3 ? (parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2])) : new Date().getFullYear();
         menuStartDate = new Date(y, m, d);
       }
       continue;
@@ -139,12 +140,14 @@ export function parseMenuText(rawText: string): ParsedMenu {
 
       const boxFeeMatch = itemLine.match(RegexConfig.BOX_FEE);
       if (boxFeeMatch) {
-        itemBoxFee = safeFloat(boxFeeMatch[1], 0) || 0;
+        itemBoxFee = safeFloat(boxFeeMatch[1] || boxFeeMatch[2], 0) || 0;
         itemName = itemName.replace(boxFeeMatch[0], '').trim();
       } else if (RegexConfig.BOX_KEYWORD.test(itemLine)) {
         itemBoxFee = currentCategoryDefaultBoxFee;
         itemName = itemName.replace(RegexConfig.BOX_KEYWORD, '').trim();
       }
+
+      itemName = itemName.replace(RegexConfig.BGN_NOISE, '').trim();
 
       const priceMatch = itemName.match(RegexConfig.PRICE);
       if (priceMatch) {
@@ -185,8 +188,8 @@ export function parseMenuText(rawText: string): ParsedMenu {
       const lw = line.match(RegexConfig.WEIGHT);
       if (lw) currentCategoryDefaultWeight = lw[1];
       const lb = line.match(RegexConfig.BOX_FEE);
-      if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1], 0) || 0;
-      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
+      if (lb) currentCategoryDefaultBoxFee = safeFloat(lb[1] || lb[2], 0) || 0;
+      const lp = line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE_EXPLICIT) || line.replace(RegexConfig.BOX_FEE, '').match(RegexConfig.PRICE);
       if (lp) currentCategoryDefaultPrice = safeFloat(lp[1]);
     }
 

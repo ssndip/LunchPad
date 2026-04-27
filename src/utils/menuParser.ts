@@ -105,7 +105,7 @@ export function parsePastedMenu(text: string, settingsOverride?: ParserPersisten
 
       if (parsedItem.boxFee > 0) {
         item.tags.push('has_custom_box');
-        item.packagingFee = parsedItem.boxFee;
+        // We no longer assign item.packagingFee here, so it falls back to the global preset packaging fee
       }
 
       tempItems.push(item);

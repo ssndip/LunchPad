@@ -30,6 +30,7 @@ import {
   History,
   Copy,
   Loader2,
+  FileJson,
 } from "lucide-react";
 import { MenuItem } from "../../../types";
 import { parsePastedMenu } from "../../../utils/menuParser";
@@ -174,6 +175,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
+  const [aiSandboxResult, setAiSandboxResult] = useState<any>(null);
 
   const token = useStore((s) => s.token);
   const aiApiKey = useStore((s) => s.aiApiKey);
@@ -254,19 +256,60 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
     setIsAiGenerating(true);
     try {
-      // Create a simplified config for the AI
-      const currentConfig = {
+      // Use the sandbox/suggested config if we're iterating, otherwise current settings
+      const baseConfig = aiSuggestions ? {
+        categorySettings: aiSuggestions.categorySettings,
+        sectionRules: aiSuggestions.suggestedConfig?.sectionRules,
+        preprocessing: aiSuggestions.suggestedConfig?.preprocessing,
+        entityPatterns: aiSuggestions.suggestedConfig?.entityPatterns,
+        enrichment: aiSuggestions.suggestedConfig?.enrichment,
+        preset: aiSuggestions.preset,
+        systemCategories: Object.values(MENU_CONFIG.categoryLabels),
+      } : {
         categorySettings: settings.categories,
         sectionRules: settings.sectionRules,
         preprocessing: settings.preprocessingSteps,
         entityPatterns: settings.entityPatterns,
         enrichment: settings.enrichmentRules,
-        // Include system category labels so AI can match them
         systemCategories: Object.values(MENU_CONFIG.categoryLabels),
       };
 
-      const res = await suggestParserRules(token, aiPrompt, currentConfig);
-      setAiSuggestions(res.suggestedConfig);
+      const textToParse = previewText.trim() || aiPrompt.trim();
+      
+      if (!textToParse) {
+        confirm({
+          title: t("menu.Error"),
+          message: "Please paste a menu text to analyze.",
+          confirmText: t("menu.OK"),
+          onConfirm: () => {},
+        });
+        setIsAiGenerating(false);
+        return;
+      }
+
+      // If they accidentally pasted the menu in the instructions box instead of the preview box
+      const actualInstructions = previewText.trim() ? aiPrompt : "";
+      if (!previewText.trim() && aiPrompt.trim()) {
+        setPreviewText(aiPrompt); // Auto-fill the preview box
+      }
+
+      const res = await suggestParserRules(
+        token,
+        textToParse,
+        baseConfig,
+        actualInstructions,
+        aiSandboxResult || parseResult, // Send either current result or the sandbox result from last turn
+      );
+      
+      setAiSuggestions(res);
+      
+      // Calculate Sandbox Result
+      if (res.preset) {
+        // Mock a mini-parse using the suggested rules
+        const result = parsePastedMenu(normalizeMenuText(previewText, res.preset));
+        const finalItems = applyItemOverrides(result.items, res.preset);
+        setAiSandboxResult({ ...result, items: finalItems });
+      }
     } catch (err: any) {
       confirm({
         title: t("menu.Error"),
@@ -279,45 +322,112 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     }
   };
 
-  const applyAiSuggestions = (asNewProfile: boolean) => {
+  const applyAiSuggestions = (mode: "SNAPSHOT" | "PRESET" | "ACTIVE") => {
     if (!aiSuggestions) return;
 
+    // 1. Prepare updated global settings
     const newSettings: ParserPersistence = {
       ...settings,
       categories: {
         ...settings.categories,
         ...(aiSuggestions.categorySettings || {}),
       },
-      sectionRules: aiSuggestions.sectionRules || settings.sectionRules,
+      sectionRules:
+        aiSuggestions.suggestedConfig?.sectionRules ||
+        aiSuggestions.sectionRules ||
+        settings.sectionRules,
       preprocessingSteps:
-        aiSuggestions.preprocessing || settings.preprocessingSteps,
-      entityPatterns: aiSuggestions.entityPatterns || settings.entityPatterns,
-      enrichmentRules: aiSuggestions.enrichment || settings.enrichmentRules,
+        aiSuggestions.suggestedConfig?.preprocessing ||
+        aiSuggestions.preprocessing ||
+        settings.preprocessingSteps,
+      entityPatterns:
+        aiSuggestions.suggestedConfig?.entityPatterns ||
+        aiSuggestions.entityPatterns ||
+        settings.entityPatterns,
+      enrichmentRules:
+        aiSuggestions.suggestedConfig?.enrichment ||
+        aiSuggestions.enrichment ||
+        settings.enrichmentRules,
     };
 
-    if (asNewProfile) {
+    // 2. Prepare the new preset if suggested
+    const now = new Date().toISOString();
+    const suggestedPreset: FormatPreset | null = aiSuggestions.preset
+      ? {
+          id: now,
+          name: aiSuggestions.preset.name || `AI Preset ${presets.length + 1}`,
+          preprocessRules: aiSuggestions.preset.preprocessRules || [],
+          itemCategoryOverrides:
+            aiSuggestions.preset.itemCategoryOverrides || {},
+          itemNameOverrides: aiSuggestions.preset.itemNameOverrides || {},
+          createdAt: now,
+        }
+      : null;
+
+    if (mode === "SNAPSHOT") {
       confirm({
         title: t("parser.ai_apply_new"),
         message:
           t("parser.ai_enter_profile_name") ||
-          "Enter a name for this new parser profile:",
+          "Enter a name for this new parser snapshot:",
         isPrompt: true,
-        initialValue: `AI Guided - ${new Date().toLocaleDateString()}`,
+        initialValue:
+          aiSuggestions.profileName ||
+          `AI Guided - ${new Date().toLocaleDateString()}`,
         confirmText: t("modals.save") || "Save",
         onConfirm: (name) => {
           if (!name) return;
+          const finalPresets = suggestedPreset
+            ? [...presets, suggestedPreset]
+            : presets;
+          const finalSettings = { ...newSettings };
+          if (suggestedPreset) finalSettings.activePresetId = suggestedPreset.id;
+
           const newProfile: ParserProfile = {
             id: new Date().toISOString(),
             name: name,
-            settings: newSettings,
-            presets: [],
+            settings: finalSettings,
+            presets: finalPresets,
             createdAt: new Date().toISOString(),
           };
           saveProfiles([newProfile, ...profiles]);
           finalizeApply();
         },
       });
+    } else if (mode === "PRESET") {
+      if (!suggestedPreset) return;
+      confirm({
+        title: t("parser.ai_save_preset"),
+        message:
+          t("parser.ai_enter_preset_name") ||
+          "Enter a name for this new format preset:",
+        isPrompt: true,
+        initialValue: suggestedPreset.name,
+        confirmText: t("modals.save") || "Save",
+        onConfirm: (name) => {
+          if (!name) return;
+          const finalPreset = { ...suggestedPreset, name };
+          const newPresetsList = [...presets, finalPreset];
+          setPresets(newPresetsList);
+          localStorage.setItem(PRESETS_KEY, JSON.stringify(newPresetsList));
+
+          const finalSettings = {
+            ...newSettings,
+            activePresetId: finalPreset.id,
+          };
+          setSettings(finalSettings);
+          saveCategorySettings(finalSettings);
+          finalizeApply();
+        },
+      });
     } else {
+      // ACTIVE mode
+      if (suggestedPreset) {
+        const newPresetsList = [...presets, suggestedPreset];
+        setPresets(newPresetsList);
+        localStorage.setItem(PRESETS_KEY, JSON.stringify(newPresetsList));
+        newSettings.activePresetId = suggestedPreset.id;
+      }
       setSettings(newSettings);
       saveCategorySettings(newSettings);
       finalizeApply();
@@ -326,6 +436,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
   const finalizeApply = () => {
     setAiSuggestions(null);
+    setAiSandboxResult(null);
     setAiPrompt("");
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2000);
@@ -730,31 +841,25 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
           </div>
 
           <div className="space-y-4">
-            <div className="relative">
-              <textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder={t("parser.ai_prompt_placeholder")}
-                className="w-full min-h-[120px] p-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none transition-all font-mono resize-none"
-              />
+            {!aiSuggestions && (
               <button
                 onClick={handleAiSuggest}
-                disabled={isAiGenerating || !aiPrompt.trim()}
-                className="absolute bottom-4 right-4 flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-30 disabled:scale-100 active:scale-95"
+                disabled={isAiGenerating || !previewText.trim()}
+                className="w-full py-4 flex items-center justify-center gap-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isAiGenerating ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     {t("parser.ai_generating")}
                   </>
                 ) : (
                   <>
-                    <Zap className="w-3.5 h-3.5 fill-current" />
-                    {t("parser.ai_generate")}
+                    <Sparkles className="w-5 h-5" />
+                    {t("parser.ai_generate") || "Auto-Detect Rules with AI"}
                   </>
                 )}
               </button>
-            </div>
+            )}
 
             <AnimatePresence>
               {aiSuggestions && (
@@ -772,35 +877,134 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                       <button
                         onClick={() => setAiSuggestions(null)}
                         className="p-1 text-indigo-400 hover:text-indigo-600"
+                        title={t("modals.close") || "Close"}
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <div className="space-y-3">
-                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">
-                          Generated Rules Preview
-                        </p>
-                        <div className="bg-white/80 rounded-xl p-4 text-[10px] font-mono max-h-[150px] overflow-y-auto border border-indigo-100/30">
-                          <pre className="whitespace-pre-wrap text-indigo-900">
-                            {JSON.stringify(aiSuggestions, null, 2)}
-                          </pre>
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">
+                            {t("parser.ai_preview_summary") || "Changes Summary"}
+                          </p>
+                          <div className="bg-white/80 rounded-xl p-4 space-y-3 border border-indigo-100/30">
+                            {aiSuggestions.profileName && (
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="w-3 h-3 text-indigo-500" />
+                                <span className="text-[10px] font-bold text-indigo-900">
+                                  {aiSuggestions.profileName}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {aiSuggestions.preset?.preprocessRules?.length >
+                                0 && (
+                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[9px] font-bold uppercase tracking-tight">
+                                  {aiSuggestions.preset.preprocessRules.length}{" "}
+                                  {t("parser.text_rules") || "Text Rules"}
+                                </span>
+                              )}
+                              {Object.keys(
+                                aiSuggestions.preset?.itemCategoryOverrides || {},
+                              ).length > 0 && (
+                                <span className="px-2 py-0.5 bg-violet-100 text-violet-600 rounded text-[9px] font-bold uppercase tracking-tight">
+                                  {
+                                    Object.keys(
+                                      aiSuggestions.preset.itemCategoryOverrides,
+                                    ).length
+                                  }{" "}
+                                  {t("parser.item_remaps") || "Remaps"}
+                                </span>
+                              )}
+                              {Object.keys(aiSuggestions.categorySettings || {})
+                                .length > 0 && (
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded text-[9px] font-bold uppercase tracking-tight">
+                                  {
+                                    Object.keys(aiSuggestions.categorySettings)
+                                      .length
+                                  }{" "}
+                                  {t("parser.category_settings") || "Settings"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
+                        {aiSandboxResult && (
+                          <div className="space-y-2">
+                             <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">
+                              {t("parser.sandbox_preview") || "Sandbox Result"}
+                            </p>
+                            <div className="bg-white/50 rounded-xl p-4 border border-indigo-100/20 max-h-[120px] overflow-y-auto">
+                              {aiSandboxResult.items.length > 0 ? (
+                                <div className="space-y-1">
+                                  {aiSandboxResult.items.slice(0, 5).map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between text-[10px]">
+                                      <span className="text-neutral-600 truncate mr-2">{item.name}</span>
+                                      <span className="font-mono font-bold text-indigo-600">€{item.price.toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                  {aiSandboxResult.items.length > 5 && (
+                                    <p className="text-[9px] text-neutral-400 italic">... +{aiSandboxResult.items.length - 5} more</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-neutral-400 italic">No items detected with these rules</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex flex-col justify-end gap-3">
-                        <button
-                          onClick={() => applyAiSuggestions(true)}
-                          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
-                        >
-                          {t("parser.ai_apply_new")}
-                        </button>
-                        <button
-                          onClick={() => applyAiSuggestions(false)}
-                          className="w-full py-3 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all"
-                        >
-                          {t("parser.ai_apply_current")}
-                        </button>
+
+                      <div className="flex flex-col gap-4">
+                        <div className="space-y-2">
+                          <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">
+                            Refine Rules
+                          </p>
+                          <textarea
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            placeholder="Tell the AI what to fix (e.g. 'You missed the salads category')..."
+                            className="w-full min-h-[80px] p-3 bg-white border border-indigo-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none transition-all font-mono resize-none"
+                          />
+                          <button
+                            onClick={handleAiSuggest}
+                            disabled={isAiGenerating || !aiPrompt.trim()}
+                            className="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {isAiGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                            Refine Rules
+                          </button>
+                        </div>
+
+                        <div className="h-px bg-indigo-100/50 w-full" />
+                        
+                        <div className="grid grid-cols-1 gap-2">
+                          <button
+                            onClick={() => applyAiSuggestions("SNAPSHOT")}
+                            className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Save className="w-3 h-3" />
+                            {t("parser.ai_apply_new")}
+                          </button>
+                          
+                          <button
+                            onClick={() => applyAiSuggestions("PRESET")}
+                            className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                          >
+                            <FileJson className="w-3 h-3" />
+                            {t("parser.ai_save_preset")}
+                          </button>
+
+                          <button
+                            onClick={() => applyAiSuggestions("ACTIVE")}
+                            className="w-full py-2.5 bg-white border border-indigo-100/50 text-indigo-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50/50 transition-all"
+                          >
+                            {t("parser.ai_apply_current")}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -847,6 +1051,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                 onChange={handleImportFile}
                 className="hidden"
                 accept=".json"
+                title={t("parser.import_new") || "Import"}
               />
             </div>
           </div>
@@ -1036,8 +1241,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   }`}
                 >
                   {setting.autoBox
-                    ? `✓ ${t("modals.open")}`
-                    : t("modals.close")}
+                    ? `✓ ${t("modals.enable")}`
+                    : t("modals.disable")}
                 </button>
 
                 {/* Side Dish Toggle */}
@@ -1050,8 +1255,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   }`}
                 >
                   {setting.hasSideDish
-                    ? `✓ ${t("modals.open")}`
-                    : t("modals.close")}
+                    ? `✓ ${t("modals.enable")}`
+                    : t("modals.disable")}
                 </button>
               </div>
             );
@@ -1308,6 +1513,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                       }
                                       className="flex-1 bg-white border border-neutral-200 text-xs font-bold text-neutral-900 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-400"
                                       autoFocus
+                                      title={t("parser.rename_to") || "Rename"}
+                                      placeholder={t("parser.rename_to") || "Rename"}
                                       onKeyDown={(e) => {
                                         if (e.key === "Enter")
                                           addNameOverrideRule(
@@ -1504,6 +1711,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                           <button
                             onClick={() => setClassify(null)}
                             className="shrink-0 p-2 hover:bg-neutral-100 rounded-xl transition-colors text-neutral-400"
+                            title={t("modals.close") || "Close"}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1746,6 +1954,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   <button
                     onClick={() => setManualRulePreset(null)}
                     className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400"
+                    title={t("modals.cancel") || "Cancel"}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

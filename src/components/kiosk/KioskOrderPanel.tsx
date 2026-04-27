@@ -7,6 +7,7 @@ import {
   Loader2,
   ArrowRight,
   Lock,
+  X,
 } from "lucide-react";
 import { CartItem, MenuItem } from "../../types";
 import { useStore } from "../../store/useStore";
@@ -152,12 +153,24 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                         className="bg-white/50 border border-black/5 backdrop-blur-md p-5 rounded-[24px] shadow-sm relative group"
                       >
                         <div className="flex justify-between items-start gap-4 mb-4">
-                          <span className="text-sm font-black text-neutral-900 leading-tight">
+                          <span className="text-sm font-black text-neutral-900 leading-tight flex-1">
                             {item.name}
                           </span>
-                          <span className="text-sm font-black text-neutral-900 shrink-0 font-mono">
-                            €{item.price.toFixed(2)}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-black text-neutral-900 shrink-0 font-mono">
+                              €{item.price.toFixed(2)}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateQuantity(item.id, -item.quantity);
+                              }}
+                              className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 active:scale-90 transition-all shrink-0"
+                              title={t("modals.remove")}
+                            >
+                              <X className="w-5 h-5 stroke-[2.5]" />
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -352,16 +365,25 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                 className="group flex flex-col gap-1 pb-3 border-b border-neutral-50 last:border-0"
               >
                 <div className="flex justify-between items-start gap-2">
-                  <span className="text-xs font-bold text-neutral-900 leading-tight">
+                  <span className="text-xs font-bold text-neutral-900 leading-tight flex-1">
                     {item.name}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-neutral-400">
-                      {item.quantity} ×
-                    </span>
-                    <span className="text-xs font-mono font-black text-neutral-900 shrink-0">
-                      €{item.price.toFixed(2)}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-neutral-400">
+                        {item.quantity} ×
+                      </span>
+                      <span className="text-xs font-mono font-black text-neutral-900 shrink-0">
+                        €{item.price.toFixed(2)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onUpdateQuantity(item.id, -item.quantity)}
+                      className="ml-1 w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"
+                      title={t("modals.remove")}
+                    >
+                      <X className="w-4 h-4 stroke-[2.5]" />
+                    </button>
                   </div>
                 </div>
 
