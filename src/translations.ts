@@ -259,6 +259,9 @@ export const translations = {
       import_success: 'Successfully imported {{count}} cards',
       import_error: 'Failed to parse file.',
       print: 'Print Report',
+      view_statistics: 'View Statistics',
+      toggle_admin: 'Toggle Admin',
+      toggle_admin_new: 'Toggle Admin for new card',
     },
     orders: {
       order_id: 'Order ID',
@@ -714,6 +717,9 @@ export const translations = {
       import_success: 'Успешно импортирани {{count}} карти',
       import_error: 'Грешка при обработката на файла.',
       print: 'Печат на отчет',
+      view_statistics: 'Преглед на статистики',
+      toggle_admin: 'Превключване на админ',
+      toggle_admin_new: 'Превключване на админ за нова карта',
     },
     orders: {
       order_id: 'ID на поръчката',
