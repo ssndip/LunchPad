@@ -95,6 +95,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={config.placeholder}
+                  aria-label={config.placeholder || config.title}
                   onKeyDown={(e) => e.key === 'Enter' && inputValue.trim() && handleConfirm()}
                   className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
                 />

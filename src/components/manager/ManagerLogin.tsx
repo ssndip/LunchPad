@@ -84,6 +84,7 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack }) =
                 autoFocus
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="••••"
+                aria-label={t('navigation.enter_pin_desc') || "Enter PIN"}
                 className="w-full h-20 text-center text-4xl font-black tracking-[0.5em] bg-neutral-50 rounded-3xl border-2 border-neutral-100 focus:border-neutral-900 transition-all focus:outline-none placeholder:tracking-normal placeholder:text-neutral-200"
               />
               <AnimatePresence>

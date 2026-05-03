@@ -267,6 +267,7 @@ const QuantityControl: React.FC<{
               }}
               className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
               title={t("modals.remove") || "Decrease"}
+              aria-label={t("modals.remove") || "Decrease"}
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
@@ -280,6 +281,7 @@ const QuantityControl: React.FC<{
               }}
               className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
               title={t("modals.add") || "Increase"}
+              aria-label={t("modals.add") || "Increase"}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
