@@ -10,3 +10,7 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+## 2026-05-04 - Fix authorization bypass in API
+**Vulnerability:** The `requireAuth` middleware did not verify the role of the JWT token. Any valid token, including `public` tokens issued to unlock the kiosk, could be used to access administrative API endpoints (e.g., `POST /api/menu`, `POST /api/settings`).
+**Learning:** Checking token validity (signature and expiration) is insufficient if the application issues tokens with different privilege levels (roles). A valid token does not imply administrative authorization.
+**Prevention:** Always verify the roles or permissions encoded in the decoded JWT token before granting access to sensitive or administrative endpoints.

@@ -42,6 +42,11 @@ export const requireAuth = (req: express.Request, res: express.Response, next: e
 
   try {
     const decoded = jwt.verify(token, settings.jwtSecret) as { rfid?: string, role: string };
+
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden: Admin privileges required" });
+    }
+
     (req as any).user = decoded;
     return next();
   } catch (err) {
