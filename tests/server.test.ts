@@ -46,6 +46,25 @@ describe('Server API tests', () => {
     });
   });
 
+  describe('Auth Middleware', () => {
+    it('should return 403 Forbidden when using a public token to access protected routes', async () => {
+      // First, unlock to get a public token
+      const authUnlockRes = await request(app).post('/api/auth/unlock').send({ code: '' });
+      const publicToken = authUnlockRes.body.token;
+
+      // Now attempt to use the public token to access a protected route
+      const response = await request(app)
+        .post('/api/menu')
+        .set('Authorization', `Bearer ${publicToken}`)
+        .send([]);
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        error: "Forbidden: Admin privileges required"
+      });
+    });
+  });
+
   describe('Rate Limiter', () => {
     it('should return 429 Too Many Requests when rate limit is exceeded', async () => {
       // Make 100 requests (the limit)
