@@ -57,7 +57,20 @@ export async function startServer() {
   const PORT = process.env.PORT || 3400;
 
   // CORS Middleware
-  app.use(cors());
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Memory rule: fail securely on missing origin
+      if (!origin || origin === 'null') {
+        return callback(null, false); // Block
+      }
+
+      if (isLocalOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    }
+  }));
 
   app.use(helmet({
     contentSecurityPolicy: false, // Allow Vite dev server
