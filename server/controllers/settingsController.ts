@@ -19,7 +19,6 @@ import {
   setPreIdentificationEnabledConfig,
   hashAndSetAdminPin
 } from "../config";
-import { kioskAccessGuard } from "../middleware/auth";
 import { kioskOpen } from "./statusController";
 
 export const fetchSettings = (req: Request, res: Response) => {
@@ -37,7 +36,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     announcement: settings.announcement,
     aiProvider: settings.aiProvider,
     aiApiKey: settings.aiApiKey,
-    preIdentificationEnabled: settings.preIdentificationEnabled
+    preIdentificationEnabled: settings.preIdentificationEnabled,
+    customCategories: settings.customCategories
   });
 };
 
@@ -47,7 +47,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
-      aiProvider, aiApiKey, preIdentificationEnabled
+      aiProvider, aiApiKey, preIdentificationEnabled, customCategories
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -155,6 +155,13 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setAiApiKeyConfig(aiApiKey);
     }
 
+    if (customCategories !== undefined) {
+      if (!Array.isArray(customCategories)) return res.status(400).json({ error: "Invalid value for customCategories" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("custom_categories", JSON.stringify(customCategories));
+      settings.customCategories = customCategories;
+      broadcast({ type: "SETTINGS_UPDATE", settings: { customCategories } as any });
+    }
+
     res.json({ 
       success: true, 
       adminWhitelistEnabled: settings.adminWhitelistEnabled, 
@@ -170,7 +177,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
       aiApiKey: settings.aiApiKey,
-      preIdentificationEnabled: settings.preIdentificationEnabled
+      preIdentificationEnabled: settings.preIdentificationEnabled,
+      customCategories: settings.customCategories
     });
   } catch (err: any) {
     next(err);

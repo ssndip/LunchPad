@@ -20,6 +20,15 @@ export const login = async (pin: string): Promise<{ success: boolean, token?: st
   return res.json();
 };
 
+export const unlock = async (code: string): Promise<{ success: boolean, token?: string, error?: string }> => {
+  const res = await fetch('/api/auth/unlock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return res.json();
+};
+
 
 
 // ─── Init / Menu ─────────────────────────────────────────────────────────────

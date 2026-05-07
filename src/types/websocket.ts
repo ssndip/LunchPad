@@ -10,6 +10,7 @@ export type WsMessageType =
   | 'STATUS_UPDATE'
   | 'SETTINGS_UPDATE'
   | 'PWA_SETTINGS_UPDATE'
+  | 'LANGUAGES_UPDATED'
   | 'CARDS_UPDATE';
 
 export interface BaseWsMessage {
@@ -18,6 +19,10 @@ export interface BaseWsMessage {
 
 export interface CardsUpdateMessage extends BaseWsMessage {
   type: 'CARDS_UPDATE';
+}
+
+export interface LanguagesUpdatedMessage extends BaseWsMessage {
+  type: 'LANGUAGES_UPDATED';
 }
 
 export interface InitialStateMessage extends BaseWsMessage {
@@ -36,7 +41,14 @@ export interface InitialStateMessage extends BaseWsMessage {
   kioskModeEnabled: boolean;
   allowPWAInstall: boolean;
   systemLanguage?: string;
+  bgnEnabled?: boolean;
+  adminWhitelist?: string;
+  announcement?: string;
+  aiProvider?: string;
+  aiApiKey?: string;
   preIdentificationEnabled?: boolean;
+  publicAccessRequired?: boolean;
+  publicAccessCode?: string;
 }
 
 export interface PingMessage extends BaseWsMessage {
@@ -77,7 +89,17 @@ export interface SettingsUpdateMessage extends BaseWsMessage {
     orderButtonEnabled?: boolean;
     testModeEnabled?: boolean;
     preIdentificationEnabled?: boolean;
+    systemLanguage?: string;
+    bgnEnabled?: boolean;
+    adminWhitelist?: string;
+    announcement?: string;
+    aiProvider?: string;
+    aiApiKey?: string;
+    packagingFee?: number;
+    deliveryFee?: number;
     currency?: string;
+    publicAccessRequired?: boolean;
+    publicAccessCode?: string;
   };
 }
 
@@ -97,4 +119,5 @@ export type WsMessage =
   | StatusUpdateMessage 
   | SettingsUpdateMessage
   | PwaSettingsUpdateMessage
+  | LanguagesUpdatedMessage
   | CardsUpdateMessage;

@@ -10,6 +10,7 @@ export type AllCategorySettings = Record<string, CategoryParserSettings>;
 export interface ParserPersistence {
   categories: AllCategorySettings;
   sideDishKeyword: string;
+  sideDishKeywordEnabled: boolean;
   activePresetId: string | null;
 }
 
@@ -34,6 +35,7 @@ export function loadCategorySettings(): ParserPersistence {
       return { 
         categories: { ...DEFAULT_CATEGORY_SETTINGS }, 
         sideDishKeyword: DEFAULT_SIDE_DISH_KEYWORD,
+        sideDishKeywordEnabled: true,
         activePresetId: null
       };
     }
@@ -45,6 +47,7 @@ export function loadCategorySettings(): ParserPersistence {
       return {
         categories: { ...DEFAULT_CATEGORY_SETTINGS, ...parsed.categories },
         sideDishKeyword: parsed.sideDishKeyword,
+        sideDishKeywordEnabled: parsed.sideDishKeywordEnabled !== undefined ? parsed.sideDishKeywordEnabled : true,
         activePresetId: parsed.activePresetId !== undefined ? parsed.activePresetId : null
       };
     }
@@ -53,12 +56,14 @@ export function loadCategorySettings(): ParserPersistence {
     return {
       categories: { ...DEFAULT_CATEGORY_SETTINGS, ...parsed },
       sideDishKeyword: DEFAULT_SIDE_DISH_KEYWORD,
+      sideDishKeywordEnabled: true,
       activePresetId: null
     };
   } catch {
     return { 
       categories: { ...DEFAULT_CATEGORY_SETTINGS }, 
       sideDishKeyword: DEFAULT_SIDE_DISH_KEYWORD,
+      sideDishKeywordEnabled: true,
       activePresetId: null
     };
   }

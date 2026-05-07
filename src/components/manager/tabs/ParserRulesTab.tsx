@@ -132,10 +132,7 @@ const CAT_COLORS: Record<
 };
 
 const getCatKey = (label: string) => {
-  const entry = Object.entries(MENU_CONFIG.categoryLabels).find(
-    ([, v]) => v === label,
-  );
-  return entry ? entry[0] : "other";
+  return label || "other";
 };
 
 const PRESETS_KEY = "lunchpad_format_presets";
@@ -144,7 +141,8 @@ const PROFILES_KEY = "lunchpad_parser_profiles";
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const customCategories = useStore(s => s.customCategories) || [];
   // ── State ──
   const [settings, setSettings] = useState<ParserPersistence>(() =>
     loadCategorySettings(),
@@ -211,7 +209,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     const results = fixtures.map(f => {
       try {
         const normalized = normalizeMenuText(f.rawInput, newPreset);
-        const result = parsePastedMenu(normalized, settings);
+        const result = parsePastedMenu(normalized, settings, customCategories);
         // Simple heuristic: a "pass" means we found at least 2 items and no more than 2 unmatched lines
         // In a real scenario, we'd compare against expectedOutputJson
         const pass = result.items.length >= 2 && result.unmatchedLines.length <= 2;
@@ -329,7 +327,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
       // Calculate Sandbox Result
       if (res.preset) {
         // Mock a mini-parse using the suggested rules
-        const result = parsePastedMenu(normalizeMenuText(previewText, res.preset));
+        const result = parsePastedMenu(normalizeMenuText(previewText, res.preset), undefined, customCategories);
         const finalItems = applyItemOverrides(result.items, res.preset);
         setAiSandboxResult({ ...result, items: finalItems });
       }
@@ -586,7 +584,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
       setPreviewText(normalizedText);
     }
 
-    const result = parsePastedMenu(normalizedText);
+    const result = parsePastedMenu(normalizedText, settings, customCategories);
     const finalItems = applyItemOverrides(result.items, activePreset);
     setParseResult({ ...result, items: finalItems });
     setClassify(null);
@@ -605,7 +603,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
     // Auto-parse after normalize
     setTimeout(() => {
-      const result = parsePastedMenu(text);
+      const result = parsePastedMenu(text, settings, customCategories);
       const finalItems = applyItemOverrides(result.items, activePreset);
       setParseResult({ ...result, items: finalItems });
     }, 50);
@@ -826,7 +824,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     setIsNormalizing(false);
 
     setTimeout(() => {
-      const result = parsePastedMenu(normalizedText);
+      const result = parsePastedMenu(normalizedText, settings, customCategories);
       const finalItems = applyItemOverrides(result.items, preset);
       setParseResult({ ...result, items: finalItems });
     }, 50);
@@ -1321,10 +1319,28 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
           <div className="col-span-full pt-4 border-t border-neutral-100 mt-2">
             <div className="flex flex-col gap-2 max-w-md">
-              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
-                <Zap className="w-3 h-3 text-amber-500" />
-                {t("parser.trigger_keyword")}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  {t("parser.trigger_keyword")}
+                </label>
+                <button
+                  onClick={() =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      sideDishKeywordEnabled: !prev.sideDishKeywordEnabled,
+                    }))
+                  }
+                  title={settings.sideDishKeywordEnabled ? t("modals.disable") : t("modals.enable")}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border ${
+                    settings.sideDishKeywordEnabled
+                      ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                      : "bg-white text-neutral-400 border-neutral-200 hover:border-amber-300"
+                  }`}
+                >
+                  {settings.sideDishKeywordEnabled ? `✓ ${t("modals.enable")}` : t("modals.disable")}
+                </button>
+              </div>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1335,8 +1351,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                       sideDishKeyword: e.target.value,
                     }))
                   }
+                  disabled={!settings.sideDishKeywordEnabled}
                   placeholder="e.g. с гарнитура"
-                  className="flex-1 bg-white border border-neutral-200 rounded-xl px-4 py-2 text-xs font-bold focus:outline-none focus:border-amber-400 transition-colors"
+                  className={`flex-1 bg-white border rounded-xl px-4 py-2 text-xs font-bold focus:outline-none transition-colors ${
+                    settings.sideDishKeywordEnabled
+                      ? "border-neutral-200 focus:border-amber-400"
+                      : "border-neutral-100 text-neutral-300 cursor-not-allowed bg-neutral-50"
+                  }`}
                 />
               </div>
               <p className="text-[9px] text-neutral-400 leading-relaxed italic">
@@ -1431,6 +1452,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   {Object.entries(groupedItems).map(([cat, items]) => {
                     const key = getCatKey(cat);
                     const colors = CAT_COLORS[key] || CAT_COLORS.other;
+                    const customCat = customCategories.find((c: any) => c.id === cat);
+                    const translatedCatName = customCat ? (customCat.names[lang] || customCat.names['en'] || customCat.names['bg'] || cat) : t(`categories.${key}`);
                     return (
                       <div
                         key={cat}
@@ -1445,7 +1468,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                           <span
                             className={`text-[10px] font-black uppercase tracking-widest ${colors.text}`}
                           >
-                            {t(`categories.${key}`)}
+                            {translatedCatName}
                           </span>
                           <span className="ml-auto text-[9px] font-bold opacity-60">
                             {items.length}
@@ -1528,22 +1551,25 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                     <span className="text-[9px] font-bold text-neutral-400 uppercase mr-1 flex items-center">
                                       {t("parser.remap_to")}
                                     </span>
-                                    {Object.entries(
-                                      MENU_CONFIG.categoryLabels,
-                                    ).map(([optKey, optLabel]) => (
-                                      <button
-                                        key={optKey}
-                                        onClick={() =>
-                                          addCategoryOverrideRule(
-                                            item.name,
-                                            optLabel,
-                                          )
+                                    <select
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          addCategoryOverrideRule(item.name, e.target.value);
+                                          setRemapItem(null);
                                         }
-                                        className="px-2 py-1 text-[9px] font-bold bg-white border border-neutral-200 text-neutral-600 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-                                      >
-                                        {optLabel}
-                                      </button>
-                                    ))}
+                                      }}
+                                      defaultValue=""
+                                      title={t("parser.remap_to")}
+                                      aria-label={`${t("parser.remap_to")} ${item.name}`}
+                                      className="flex-1 bg-white border border-neutral-200 text-xs font-bold text-neutral-900 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-400"
+                                    >
+                                      <option value="" disabled>Select category...</option>
+                                      {customCategories.map((cat: any) => (
+                                        <option key={cat.id} value={cat.id}>
+                                          {cat.names[lang] || cat.names['en'] || cat.names['bg'] || cat.id}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </div>
                                 </motion.div>
                               )}

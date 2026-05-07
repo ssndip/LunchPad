@@ -4,6 +4,7 @@ import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
 import { settings } from "../config";
 import * as OrderService from "../services/orderService";
+import { getMenu } from "./menuController";
 
 export const getOrders = (limit = 50) => {
   try {

@@ -22,6 +22,8 @@ export const settings = {
   aiProvider: "openai",
   aiApiKey: "",
   preIdentificationEnabled: false,
+  publicAccessCode: "",
+  publicAccessRequired: false,
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
@@ -43,6 +45,8 @@ export const setAnnouncementConfig = (val: string) => settings.announcement = va
 export const setAiProviderConfig = (val: string) => settings.aiProvider = val;
 export const setAiApiKeyConfig = (val: string) => settings.aiApiKey = val;
 export const setPreIdentificationEnabledConfig = (val: boolean) => settings.preIdentificationEnabled = val;
+export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
+export const setPublicAccessRequiredConfig = (val: boolean) => settings.publicAccessRequired = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -200,6 +204,22 @@ export const initSettings = () => {
   } else {
     settings.preIdentificationEnabled = preIdentRecord.value === "1";
   }
+
+  const publicAccessCodeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("public_access_code") as { value: string } | undefined;
+  if (!publicAccessCodeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("public_access_code", "");
+    settings.publicAccessCode = "";
+  } else {
+    settings.publicAccessCode = publicAccessCodeRecord.value;
+  }
+
+  const publicAccessRequiredRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("public_access_required") as { value: string } | undefined;
+  if (!publicAccessRequiredRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("public_access_required", "0");
+    settings.publicAccessRequired = false;
+  } else {
+    settings.publicAccessRequired = publicAccessRequiredRecord.value === "1";
+  }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
   let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
@@ -214,4 +234,28 @@ export const initSettings = () => {
   }
   
   settings.adminPin = currentPin;
+
+  const customCatsRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("custom_categories") as { value: string } | undefined;
+  if (!customCatsRecord) {
+    // Seed with legacy defaults
+    const legacyCategories = [
+      { id: "soups", names: { en: "Soups", bg: "Супи" }, keywords: ["супи"], color: "orange" },
+      { id: "mains", names: { en: "Main Dishes", bg: "Основни ястия" }, keywords: ["основно ястие", "основни ястия"], color: "blue" },
+      { id: "salads", names: { en: "Salads", bg: "Салати" }, keywords: ["салати"], color: "green" },
+      { id: "bread", names: { en: "Bread", bg: "Хляб" }, keywords: ["хляб"], color: "amber" },
+      { id: "sides", names: { en: "Side Dishes", bg: "Гарнитури" }, keywords: ["гарнитури"], color: "teal" },
+      { id: "bbq", names: { en: "BBQ", bg: "Скара" }, keywords: ["скара"], color: "red" },
+      { id: "desserts", names: { en: "Desserts", bg: "Десерти" }, keywords: ["десерти"], color: "purple" },
+      { id: "other", names: { en: "Other", bg: "Други" }, keywords: ["други"], color: "neutral" }
+    ];
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("custom_categories", JSON.stringify(legacyCategories));
+    settings.customCategories = legacyCategories;
+  } else {
+    try {
+      settings.customCategories = JSON.parse(customCatsRecord.value);
+    } catch {
+      settings.customCategories = [];
+    }
+  }
 };
+

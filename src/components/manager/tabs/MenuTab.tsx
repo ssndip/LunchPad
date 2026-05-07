@@ -3,13 +3,13 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle, Image as ImageIcon, Upload, Loader2, Package } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
 import * as api from '../../../api';
 import { getActivePreset, getAllPresets, getAllProfiles, FormatPreset, ParserProfile, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
-
+import { loadCategorySettings } from '../../../utils/parserLocalSettings';
 import { useTranslation } from '../../../hooks/useTranslation';
 
 interface MenuTabProps {
@@ -31,11 +31,15 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   onApplyMenu,
   confirm,
 }) => {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<any | null>(null);
   const { token } = useStore();
+  const customCategories = useStore(s => s.customCategories) || [];
+
+  // Load parser category settings (autoBox / hasSideDish per category id)
+  const catParserSettings = React.useMemo(() => loadCategorySettings().categories, []);
 
   const [presets, setPresets] = React.useState<FormatPreset[]>([]);
   const [profiles, setProfiles] = React.useState<ParserProfile[]>([]);
@@ -55,16 +59,48 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const setDeliveryFee = useStore(s => s.setDeliveryFee);
   const packagingFee = useStore(s => s.packagingFee);
   const setPackagingFee = useStore(s => s.setPackagingFee);
-  // Helper to identify side dish items reliably across languages
-  const isSideDishCategory = (category?: string) => {
-    if (!category) return false;
-    return /side dishes|гарнитур/i.test(category);
+
+  // Resolve localized name for a category id
+  const getCategoryLabel = (catId: string) => {
+    const custom = customCategories.find(c => c.id === catId);
+    if (custom) return custom.names[lang] || custom.names['en'] || custom.names['bg'] || catId;
+    return t(`categories.${catId}`) || catId;
+  };
+
+  // Check if a category id represents the side-dish pool (items used as selectable sides)
+  const isSideDishCategoryId = (catId?: string) => {
+    if (!catId) return false;
+    const lower = catId.toLowerCase();
+    // Match common side dish IDs and names
+    if (['sides', 'side dishes', 'гарнитури'].includes(lower)) return true;
+    
+    // Check if any custom category with this ID is configured as a side dish category
+    const custom = customCategories.find(c => c.id === catId);
+    if (custom && custom.keywords?.some((k: string) => /^(гарнитур|side dish)/i.test(k))) {
+      return true;
+    }
+    return false;
+  };
+
+  // When user changes the category of a parsed item, auto-apply parser settings
+  const applyAutoSettings = (item: any, newCatId: string): any => {
+    const cfg = catParserSettings[newCatId] || { autoBox: false, hasSideDish: false };
+    const newTags = (item.tags || []).filter((t: string) => t !== 'autobox');
+    if (cfg.autoBox) newTags.push('autobox');
+    return {
+      ...item,
+      category: newCatId,
+      tags: newTags,
+      hasIncludedSide: cfg.hasSideDish ? true : item.hasIncludedSide,
+      requiresSideChoice: cfg.hasSideDish ? true : item.requiresSideChoice,
+    };
   };
 
   const isBBQCategory = (category?: string) => {
     if (!category) return false;
     return /bbq|скара/i.test(category);
   };
+
 
   const handleApplyPackagingFee = async () => {
     if (!token) return;
@@ -159,12 +195,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     }
 
     // 3. Normalize & Parse
-    const normalizedText = normalizeMenuText(pasteText, activePreset);
+    const normalizedText = normalizeMenuText(pasteText, activePreset, customCategories);
     if (normalizedText !== pasteText) {
       setPasteText(normalizedText);
     }
 
-    const result = parsePastedMenu(normalizedText, profileSettings);
+    const result = parsePastedMenu(normalizedText, profileSettings, customCategories);
     const finalItems = applyItemOverrides(result.items, activePreset);
     
     setParsed({
@@ -327,6 +363,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               value={deliveryFee}
               onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
               className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+              title={t('orders.delivery_fee')}
+              placeholder="0.00"
             />
             <span className="text-xs text-neutral-400">€</span>
             <button 
@@ -347,6 +385,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               value={packagingFee}
               onChange={(e) => setPackagingFee(parseFloat(e.target.value) || 0)}
               className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+              title={t('menu.packaging_fee')}
+              placeholder="0.00"
             />
             <span className="text-xs text-neutral-400">€</span>
             <button 
@@ -389,13 +429,19 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               {editingMenu.map((item) => (
                 <tr key={item.id} className="hover:bg-neutral-50 transition-colors">
                   <td className="p-5">
-                    <input
-                      type="text"
+                    <select
                       value={item.category ?? ''}
                       aria-label={`Category for ${item.name}`}
                       onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
                       className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
-                    />
+                    >
+                      {customCategories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {getCategoryLabel(c.id)}
+                        </option>
+                      ))}
+                      <option value="other">{t('categories.other') || 'Other'}</option>
+                    </select>
                   </td>
                   <td className="p-5">
                     <input
@@ -433,7 +479,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       {item.hasIncludedSide && (
                         <SideDishSelector
                           selected={item.sideChoices || []}
-                          available={editingMenu.filter(m => isSideDishCategory(m.category))}
+                          available={editingMenu.filter(m => isSideDishCategoryId(m.category))}
                           onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
                         />
                       )}
@@ -485,7 +531,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               initial={{ scale: 0.92, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.92, y: 20, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
-              className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-neutral-100 flex items-center justify-between">
                 <div>
@@ -507,6 +553,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                      accept="image/*" 
                      className="hidden" 
                      onChange={(e) => e.target.files && processFile(e.target.files[0])}
+                     title={t('ocr.upload_image')}
                    />
                 </div>
               </div>
@@ -570,6 +617,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                value={selectedProfileId}
                                onChange={e => setSelectedProfileId(e.target.value)}
                                className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                               title="Parser Profile"
                              >
                                <option value="none">{t('parser.active_profile') || 'Active Profile'}</option>
                                {profiles.map(p => (
@@ -585,6 +633,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                               value={selectedPresetId}
                               onChange={e => setSelectedPresetId(e.target.value)}
                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                              title="Format Preset"
                             >
                               <option value="none">{t('parser.no_preset')}</option>
                               {presets.map(p => (
@@ -634,91 +683,142 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                         No items could be parsed. Check the format and try again.
                       </p>
                     ) : (
-                      <div className="max-h-72 overflow-y-auto custom-scrollbar rounded-2xl border border-neutral-200">
+                      <div className="max-h-[360px] overflow-y-auto custom-scrollbar rounded-2xl border border-neutral-200">
                         <table className="w-full text-sm">
                           <thead className="sticky top-0 bg-neutral-50 border-b border-neutral-100 z-10">
                             <tr>
-                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-1/4">{t('menu.category')}</th>
-                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-2/5">{t('menu.name')}</th>
-                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.price')}</th>
-                              <th className="p-3 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.side')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.category')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('menu.name')}</th>
+                              <th className="p-3 text-left font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-20">{t('menu.price')}</th>
+                              <th className="p-3 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-10" title={t('menu.packaging_fee')}>📦</th>
+                              <th className="p-3 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-400 w-10" title={t('menu.included_side')}>🍽️</th>
                               <th className="p-3 text-right font-mono text-[10px] uppercase tracking-widest text-neutral-400">{t('cards.actions')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-neutral-50">
-                            {parsed.items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-neutral-50 group">
-                                <td className="p-2">
-                                  <input
-                                    type="text"
-                                    value={item.category}
-                                    onChange={(e) => updateParsedItem(idx, 'category', e.target.value)}
-                                    className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-[10px] uppercase tracking-widest text-neutral-400 focus:outline-none focus:border-neutral-400"
-                                  />
-                                </td>
-                                <td className="p-2">
-                                  <input
-                                    type="text"
-                                    value={item.name}
-                                    onChange={(e) => updateParsedItem(idx, 'name', e.target.value)}
-                                    className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-xs font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
-                                  />
-                                </td>
-                                <td className="p-2">
-                                  <input
-                                    type="number"
-                                    value={item.price}
-                                    onChange={(e) => updateParsedItem(idx, 'price', parseFloat(e.target.value))}
-                                    className="w-16 bg-white border border-neutral-200 rounded-lg p-1 text-xs font-mono font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
-                                  />
-                                </td>
-                                <td className="p-2 text-center align-top">
-                                  <button
-                                    onClick={() => updateParsedItem(idx, 'hasIncludedSide', !item.hasIncludedSide)}
-                                    className={`p-1.5 rounded-lg transition-colors ${item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600' : 'text-neutral-300 hover:bg-neutral-100'}`}
-                                  >
-                                    <Layers className="w-3.5 h-3.5" />
-                                  </button>
-                                  {item.hasIncludedSide && (
-                                    <div className="mt-1">
-                                      <SideDishSelector
-                                        selected={item.sideChoices || []}
-                                        available={editingMenu.filter(m => isSideDishCategory(m.category))}
-                                        onChange={(names) => updateParsedItem(idx, 'sideChoices', names)}
-                                      />
+                            {parsed.items.map((item: any, idx: number) => {
+                              const hasAutobox = item.tags?.includes('autobox');
+                              // Side dish source: items in the parsed set that are in the 'sides' category
+                              const parsedSides = parsed.items.filter((m: any) => isSideDishCategoryId(m.category));
+                              const allSideOptions = [
+                                ...editingMenu.filter(m => isSideDishCategoryId(m.category)),
+                                ...parsedSides.filter((m: any) => m !== item),
+                              ];
+                              return (
+                                <tr key={idx} className="hover:bg-neutral-50 group">
+                                  {/* Category Dropdown */}
+                                  <td className="p-2">
+                                    <select
+                                      value={item.category || 'other'}
+                                      onChange={(e) => {
+                                        const updated = applyAutoSettings(item, e.target.value);
+                                        const newItems = [...parsed.items];
+                                        newItems[idx] = updated;
+                                        setParsed({ ...parsed, items: newItems });
+                                      }}
+                                      className="w-full bg-white border border-neutral-200 rounded-lg px-1.5 py-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                                      title={t('menu.category')}
+                                    >
+                                      {customCategories.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                          {getCategoryLabel(c.id)}
+                                        </option>
+                                      ))}
+                                      <option value="other">{t('categories.other') || 'Other'}</option>
+                                    </select>
+                                  </td>
+                                  {/* Name */}
+                                  <td className="p-2">
+                                    <input
+                                      type="text"
+                                      value={item.name}
+                                      onChange={(e) => updateParsedItem(idx, 'name', e.target.value)}
+                                      className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-xs font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                      title={t('menu.name')}
+                                      placeholder={t('menu.name')}
+                                    />
+                                  </td>
+                                  {/* Price */}
+                                  <td className="p-2">
+                                    <input
+                                      type="number"
+                                      value={item.price}
+                                      onChange={(e) => updateParsedItem(idx, 'price', parseFloat(e.target.value))}
+                                      className="w-16 bg-white border border-neutral-200 rounded-lg p-1 text-xs font-mono font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                      title={t('menu.price')}
+                                      placeholder="0.00"
+                                    />
+                                  </td>
+                                  {/* Box Fee Toggle */}
+                                  <td className="p-2 text-center">
+                                    <button
+                                      onClick={() => {
+                                        const newTags = hasAutobox
+                                          ? item.tags.filter((tg: string) => tg !== 'autobox')
+                                          : [...(item.tags || []), 'autobox'];
+                                        updateParsedItem(idx, 'tags', newTags);
+                                      }}
+                                      className={`p-1.5 rounded-lg transition-colors ${hasAutobox ? 'bg-amber-100 text-amber-600' : 'text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'}`}
+                                      title={t('menu.packaging_fee')}
+                                    >
+                                      <Package className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                  {/* Side Dish Toggle */}
+                                  <td className="p-2 text-center align-top">
+                                    <button
+                                      onClick={() => updateParsedItem(idx, 'hasIncludedSide', !item.hasIncludedSide)}
+                                      className={`p-1.5 rounded-lg transition-colors ${item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600' : 'text-neutral-300 hover:bg-neutral-100'}`}
+                                      title={t('menu.included_side')}
+                                    >
+                                      <Layers className="w-3.5 h-3.5" />
+                                    </button>
+                                    {item.hasIncludedSide && (
+                                      <div className="mt-1">
+                                        <SideDishSelector
+                                          selected={item.sideChoices || []}
+                                          available={allSideOptions}
+                                          onChange={(names) => updateParsedItem(idx, 'sideChoices', names)}
+                                        />
+                                      </div>
+                                    )}
+                                  </td>
+                                  {/* Actions */}
+                                  <td className="p-2">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        onClick={() => moveParsedItem(idx, 'up')}
+                                        disabled={idx === 0}
+                                        className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                        title="Move Up"
+                                      >
+                                        <ArrowUp className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => moveParsedItem(idx, 'down')}
+                                        disabled={idx === parsed.items.length - 1}
+                                        className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                        title="Move Down"
+                                      >
+                                        <ArrowDown className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => removeParsedItem(idx)}
+                                        className="p-1.5 text-neutral-300 hover:text-red-500"
+                                        title={t('modals.remove')}
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
                                     </div>
-                                  )}
-                                </td>
-                                <td className="p-2">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <button
-                                      onClick={() => moveParsedItem(idx, 'up')}
-                                      disabled={idx === 0}
-                                      className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                    >
-                                      <ArrowUp className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => moveParsedItem(idx, 'down')}
-                                      disabled={idx === parsed.items.length - 1}
-                                      className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                    >
-                                      <ArrowDown className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => removeParsedItem(idx)}
-                                      className="p-1.5 text-neutral-300 hover:text-red-500"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     )}
+
 
                     <div className="flex justify-between gap-3">
                       <button onClick={() => setParsed(null)} className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">

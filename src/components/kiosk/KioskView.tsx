@@ -425,6 +425,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
             onSelect={setActiveCategory}
             menu={menu}
             t={t}
+            customCategories={useStore(s => s.customCategories) || []}
+            lang={lang}
           />
         </div>
 

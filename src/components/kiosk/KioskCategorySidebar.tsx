@@ -8,10 +8,12 @@ interface KioskCategorySidebarProps {
   onSelect: (cat: string) => void;
   menu: import("../../types").MenuItem[];
   t: (key: string) => string;
+  customCategories?: import("../../types").CustomCategory[];
+  lang?: string;
 }
 
 export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
-  React.memo(({ categories, activeCategory, onSelect, menu, t }) => {
+  React.memo(({ categories, activeCategory, onSelect, menu, t, customCategories = [], lang = 'bg' }) => {
     // Reads live from parser settings in localStorage — no re-parse needed
     const isPackagingFeeItem = (category: string) =>
       isCategoryAutoBox(category);
@@ -49,24 +51,12 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
                   }`}
                 >
                   {(() => {
-                    const normalizedCat = cat.trim().toLowerCase();
-                    // Try matching common English labels to our lowercase keys
-                    const keyMap: Record<string, string> = {
-                      "main dishes": "mains",
-                      "side dishes": "sides",
-                      soups: "soups",
-                      salads: "salads",
-                      bread: "bread",
-                      bbq: "bbq",
-                      desserts: "desserts",
-                      drinks: "drinks",
-                      other: "other",
-                    };
-                    const key = keyMap[normalizedCat] || normalizedCat;
-                    const translated = t(`categories.${key}`);
-                    return translated !== `categories.${key}`
-                      ? translated
-                      : cat;
+                    const customCat = customCategories.find(c => c.id === cat);
+                    if (customCat) {
+                       return customCat.names[lang] || customCat.names['en'] || customCat.names['bg'] || cat;
+                    }
+                    const translated = t(`categories.${cat}`);
+                    return translated !== `categories.${cat}` ? translated : cat;
                   })()}
                 </span>
 

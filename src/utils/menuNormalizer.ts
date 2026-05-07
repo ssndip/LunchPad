@@ -78,7 +78,7 @@ class RegexCache {
 
 const regexCache = new RegexCache();
 
-export function normalizeMenuText(originalText: string, preset?: FormatPreset | null): string {
+export function normalizeMenuText(originalText: string, preset?: FormatPreset | null, customCategories: any[] = []): string {
   if (preset && preset.type === 'json' && preset.rules && preset.rules.length > 0) {
     const rule = preset.rules[0];
     if (rule && rule.replace) {
@@ -96,7 +96,18 @@ export function normalizeMenuText(originalText: string, preset?: FormatPreset | 
   // 1. Replace common non-standard bullet styles
   text = text.replace(/^[•○*◦‣▸►▶]\s*/gm, '- ');
   // 2. Lines that look like items (have price) but no "- " and don't start with digits → prepend "- "
-  text = text.replace(/^(?![-•*]|\d)(.*[\d]+[,.]\d{1,2}\s*[€$лв].*)$/gm, (match) => `- ${match.trim()}`);
+  // EXEMPTION: Do not prepend if it starts with a known category keyword (e.g. "Скара", "Супи")
+  const CORE_BG = ['скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб', 'основно', 'супа', 'десерти'];
+  const customKeywords = customCategories.flatMap(c => c.keywords || []).map(k => k.toLowerCase().trim());
+  const allCategoryKeywords = [...new Set([...CORE_BG, ...customKeywords])];
+
+  text = text.replace(/^(?![-•*]|\d)(.*[\d]+[,.]\d{1,2}\s*[€$лв].*)$/gm, (match) => {
+    const trimmedMatch = match.trim();
+    const lower = trimmedMatch.toLowerCase();
+    const isCategory = allCategoryKeywords.some(cat => lower.startsWith(cat));
+    if (isCategory) return trimmedMatch;
+    return `- ${trimmedMatch}`;
+  });
   
   // 3. Apply all rules from active preset
   if (preset) {

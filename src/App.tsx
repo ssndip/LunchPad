@@ -10,7 +10,7 @@ import {
   useComputedKioskOpen 
 } from './store/selectors';
 import { useWebSocket } from './hooks/useWebSocket';
-import { translations } from './translations';
+import { translations, Language } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
 import { usePWA } from './hooks/usePWA';
@@ -18,6 +18,7 @@ import { usePWA } from './hooks/usePWA';
 // Components
 import { KioskView } from './components/kiosk/KioskView';
 import { KioskClosed } from './components/kiosk/KioskView';
+import { PublicAccessCodeEntry } from './components/kiosk/PublicAccessCodeEntry';
 import { ManagerLogin } from './components/manager/ManagerLogin';
 import { ManagerDashboard } from './components/manager/ManagerDashboard';
 
@@ -199,7 +200,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean, customCategories?: import('./types').CustomCategory[]) => {
     if (!s.token) return;
     try {
       const update = {
@@ -214,7 +215,8 @@ export default function App() {
         announcement: announcement ?? s.announcement,
         aiProvider: aiProvider ?? s.aiProvider,
         aiApiKey: aiApiKey ?? s.aiApiKey,
-        preIdentificationEnabled: preIdent ?? s.preIdentificationEnabled
+        preIdentificationEnabled: preIdent ?? s.preIdentificationEnabled,
+        customCategories: customCategories ?? s.customCategories
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -229,6 +231,9 @@ export default function App() {
       if (aiProvider !== undefined) s.setAiProvider(aiProvider);
       if (aiApiKey !== undefined) s.setAiApiKey(aiApiKey);
       if (preIdent !== undefined) s.setPreIdentificationEnabled(preIdent);
+      if (customCategories !== undefined) {
+        s.setCustomCategories(customCategories);
+      }
     } catch {
       setConfirmConfig({
         title: t('menu.Error'),
@@ -251,6 +256,22 @@ export default function App() {
         confirmText: t('menu.OK'),
         onConfirm: () => {}
       });
+    }
+  };
+
+  const handleUnlock = async (code: string) => {
+    try {
+      const res = await api.unlock(code);
+      if (res.success) {
+        s.setPublicAccessRequired(false);
+        if (res.token) {
+          // If public session token is provided, store it or handle accordingly
+        }
+      } else {
+        throw new Error(res.error || t('settings.invalid_code'));
+      }
+    } catch (err: any) {
+      throw err;
     }
   };
 
@@ -303,11 +324,11 @@ export default function App() {
                 s.setMenu(updatedMenu);
                 
                 // Set as editing immediately to provide feedback
-                s.setEditingMenu(newItem);
+                s.setEditingMenu(updatedMenu);
                 
                 // Persist to server in background
                 try {
-                  await api.updateMenu(updatedMenu, token);
+                  if (s.token) await api.updateMenu(s.token, updatedMenu);
                 } catch (error) {
                   console.error('Failed to persist new item:', error);
                 }
@@ -385,9 +406,9 @@ export default function App() {
                       if (res.status === 409) {
                         setConfirmConfig({
                           title: t('menu.Error'),
-                          message: data.error || "Conflict detected",
+                          message: data.error || t('cards.conflict'),
                           isDestructive: true,
-                          confirmText: 'OK',
+                          confirmText: t('menu.OK'),
                           onConfirm: () => {}
                         });
                         return false;
@@ -535,12 +556,13 @@ export default function App() {
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
               preIdentificationEnabled={s.preIdentificationEnabled}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI);
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
               bgnEnabled={s.bgnEnabled}
+              customCategories={s.customCategories}
               adminWhitelist={s.adminWhitelist}
               announcement={s.announcement}
               aiProvider={s.aiProvider}
@@ -620,6 +642,7 @@ export default function App() {
                   <button
                     onClick={() => setShowPWAInstructions(false)}
                     className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+                    title={t('modals.close')}
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -735,6 +758,7 @@ export default function App() {
                   <button
                     onClick={() => setShowPWAInstructions(false)}
                     className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all"
+                    title={t('modals.close')}
                   >
                     <X className="w-6 h-6" />
                   </button>

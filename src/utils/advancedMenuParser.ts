@@ -28,11 +28,11 @@ const RegexConfig = {
   WEIGHT: /((?:\d+[.,])?\d+\s*(?:гр|g|gr|мл|ml))/i,
   // PRICE: matches number+currency OR dash+number at end-of-string.
   // Group 1 = number with currency. Group 2 = dash-price (no currency, must be at end).
-  PRICE: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)|([-–—]\s*([\d]+[,.][\d]+|[\d]+))\s*$/i,
-  BOX_FEE: /(?:кутийка\s*[:\-–—\s]*([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?|([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|лв|е|е\.)?\s*кутийка)/i,
+  PRICE: /([\d]+[,.][\d]+|[\d]+)[\s\t]*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)|([-–—][\s\t]*([\d]+[,.][\d]+|[\d]+))[\s\t]*$/i,
+  BOX_FEE: /(?:кутийка[\s\t]*[:\-–—\s\t]*([\d]+[,.][\d]+|[\d]+)[\s\t]*(?:€|\$|лв|е|е\.)?|([\d]+[,.][\d]+|[\d]+)[\s\t]*(?:€|\$|лв|е|е\.)?[\s\t]*кутийка)/i,
   BGN_NOISE: /(?:\/|\|)?\s*[\d]+[,.][\d]+\s*(?:лв|лева|лв\.)/gi,
   BOX_KEYWORD: /кутийка/i,
-  ITEM_PREFIX: /^(?:[-•*]|(?:[0-9]️?⃣)+(?:\.\s*(?:[0-9]️?⃣)+)*\s*|\d+(?:\.\d+)*[.)]\s*|(?=\d)(?!\d+[,.]?\d*\s*(?:гр|g|gr|мл|ml))\d+\.?\s+)/,
+  ITEM_PREFIX: /^\s*(?:[-•*+>~.#]|(?:[0-9]️?⃣)+(?:\.\s*(?:[0-9]️?⃣)+)*\s*|\d+(?:\.\d+)*[.)]\s*|(?=\d)(?!\d+[,.]?\d*\s*(?:гр|g|gr|мл|ml))\d+\.?\s+)/,
   PRICE_EXPLICIT: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)/i
 };
 
@@ -70,7 +70,7 @@ function getDateForDay(dayName: string, refDate: Date): string {
   return result.toISOString().split('T')[0];
 }
 
-export function parseMenuText(rawText: string): ParsedMenu {
+export function parseMenuText(rawText: string, customCategories: { keywords: string[] }[] = []): ParsedMenu {
   const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const parsedOutput: ParsedMenu = { date: null, categories: [], unmatchedLines: [] };
   
@@ -84,6 +84,11 @@ export function parseMenuText(rawText: string): ParsedMenu {
   let currentCategoryDefaultWeight: string | null = null;
   let currentCategoryDefaultBoxFee: number = 0;
 
+  // Build dynamic categories from customCategories, fallback to legacy if empty
+  const dynamicCategoryKeywords = customCategories.length > 0 
+    ? customCategories.flatMap(c => c.keywords).map(k => k.toLowerCase())
+    : ['супи', 'основни', 'гарнитури', 'скара', 'десерти', 'други', 'салати', 'хляб'];
+
   // Helper: extract weight/price/boxFee defaults from any line
   function extractDefaults(line: string) {
     const lw = line.match(RegexConfig.WEIGHT);
@@ -95,33 +100,47 @@ export function parseMenuText(rawText: string): ParsedMenu {
     if (lp) currentCategoryDefaultPrice = safeFloat(lp[1] || lp[3]);
   }
 
-  // Helper: true if the line has meaningful Bulgarian/Latin text OUTSIDE of parentheses
-  // after stripping all data fields (weight, price, box-fee).
-  // A line is a category header if:
-  //   - it has text AND a colon (e.g. 'Супи:' or 'Салати: 0.100гр 0.67е.')
-  //   - OR it has text with NO currency-priced value (e.g. 'SIDE DISHES', 'Основно ястие')
-  // It is NOT a category if it has both text AND an inline price without a colon separator.
-  function hasCategoryText(line: string): boolean {
-    // Presence of a colon strongly indicates a category header
-    const hasColon = /[а-яА-Яa-zA-Z].*:/.test(line);
-    if (hasColon) {
-      // Confirm there's meaningful text left after stripping data
-      const withoutParens = line.replace(/\([^)]*\)/g, '');
-      const stripped = withoutParens
-        .replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '')
-        .replace(/[+():,\-–—.:\/\s\d€$]/g, '').trim();
-      return /[а-яА-Яa-zA-Z]{2,}/.test(stripped);
+  function hasCategoryText(line: string, dynamicCategoryKeywords: string[]): boolean {
+    const trimmed = line.trim();
+    if (trimmed.length < 2) return false;
+
+    // Paranoid Bulgarian Keywords (Cyrillic + Latin lookalikes)
+    const CORE_BG = ['скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб'];
+    
+    // 1. ABSOLUTE LAW: If it contains these words, it's a header.
+    // We only exclude it if it's very long (likely a description) or has a price but also starts with a bullet.
+    const lower = line.toLowerCase();
+    const matchesCore = CORE_BG.some(cat => lower.includes(cat));
+    
+    if (matchesCore) {
+      // Clean up the line for a 'starts with' check
+      const cleanLine = trimmed.replace(RegexConfig.ITEM_PREFIX, '').toLowerCase().trim();
+      
+      // If the clean line STARTS with a core keyword, it's almost certainly a header
+      const startsWithCore = CORE_BG.some(cat => cleanLine.startsWith(cat));
+      if (startsWithCore) return true;
+
+      // Fallback: If it has a bullet/prefix AND has a price, it's an item.
+      // Otherwise, it's a header.
+      const hasPrefix = RegexConfig.ITEM_PREFIX.test(trimmed);
+      const hasPrice = RegexConfig.PRICE.test(trimmed);
+      
+      if (hasPrefix && hasPrice) return false;
+      return true;
     }
-    // No colon: only treat as category if there's NO explicit price (currency symbol)
-    // Rationale: 'Зелева салата 1.50€' is an item; 'SIDE DISHES' is a category
-    const hasPricedValue = RegexConfig.PRICE_EXPLICIT.test(line);
-    if (hasPricedValue) return false;
-    // Must have at least 2 Bulgarian/Latin chars remaining after stripping all numeric noise
-    const withoutParens = line.replace(/\([^)]*\)/g, '');
-    const stripped = withoutParens
-      .replace(RegexConfig.BOX_FEE, '').replace(RegexConfig.WEIGHT, '').replace(RegexConfig.PRICE, '')
-      .replace(/[+():,\-–—.:\/\s\d€$]/g, '').trim();
-    return /[а-яА-Яa-zA-Z]{2,}/.test(stripped);
+
+    // 2. Fallback to colon-based detection
+    const hasColon = trimmed.includes(':');
+    if (hasColon) {
+      const stripped = trimmed
+        .replace(RegexConfig.PRICE, '')
+        .replace(RegexConfig.WEIGHT, '')
+        .replace(/[+():,\-–—.:\/\s\t\d€$]/g, '')
+        .trim();
+      return stripped.length >= 2;
+    }
+
+    return false;
   }
 
   for (const line of lines) {
@@ -205,36 +224,41 @@ export function parseMenuText(rawText: string): ParsedMenu {
       continue;
     }
 
-    // ── STEP 5: Category Header ──────────────────────────────────────────────
-    // A line is a category header if it has Bulgarian text OUTSIDE parentheses
-    // after stripping all data fields. Examples:
-    //   "Супи:"               → category "Супи"
-    //   "Салати: 0.100гр 0.67е." → category "Салати" + sets defaults
-    //   "Гарнитури :"         → category "Гарнитури"
-    // NOT a category:
-    //   "200гр 1.50€ + 0.10€ кутийка"     → pure context
-    //   "100гр 0.75€ (ако е отделно)"     → pure context
-    if (hasCategoryText(line)) {
-      // Extract the name: strip data and cleanup
-      const categoryName = line
-        .replace(RegexConfig.BOX_FEE, '')
-        .replace(RegexConfig.WEIGHT, '')
-        .replace(RegexConfig.PRICE, '')
-        .replace(/\([^)]*\)/g, '')  // remove parenthetical notes
-        .replace(/[+():,\-–—.:]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (categoryName.length > 1) {
-        currentCategory = { categoryName, items: [] };
+    if (hasCategoryText(line, dynamicCategoryKeywords)) {
+      if (currentCategory && currentCategory.items.length > 0) {
         parsedOutput.categories.push(currentCategory);
-        currentCategoryDefaultPrice = null;
-        currentCategoryDefaultWeight = null;
-        currentCategoryDefaultBoxFee = 0;
-        // The header line itself may carry defaults (e.g. "Салати: 0.100гр 0.67е.")
-        extractDefaults(line);
-        continue;
       }
+      
+      // Clean the category name to be just the core keyword if found
+      let cleanedName = line.trim();
+      const lower = cleanedName.toLowerCase();
+      const CORE_BG = ['скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб'];
+      const foundKeyword = CORE_BG.find(k => lower.includes(k));
+      if (foundKeyword) {
+        // Capitalize the keyword
+        cleanedName = foundKeyword.charAt(0).toUpperCase() + foundKeyword.slice(1);
+      } else {
+        // If no core keyword, just strip typical noise
+        cleanedName = cleanedName
+          .replace(RegexConfig.PRICE, '')
+          .replace(RegexConfig.WEIGHT, '')
+          .replace(RegexConfig.BOX_FEE, '')
+          .replace(/[+():,\-–—.:\/\s\t\d€$]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (cleanedName) {
+          cleanedName = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+        } else {
+          cleanedName = "Other";
+        }
+      }
+      
+      currentCategory = { categoryName: cleanedName, items: [] };
+      currentCategoryDefaultPrice = null;
+      currentCategoryDefaultWeight = null;
+      currentCategoryDefaultBoxFee = 0;
+      extractDefaults(line);
+      continue;
     }
 
     // ── STEP 6 + 7: Smart item-or-context detection inside a category ────────

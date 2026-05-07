@@ -44,6 +44,8 @@ export interface SettingsSlice {
   setAiProvider: (v: string) => void;
   setAiApiKey: (v: string) => void;
   setPreIdentificationEnabled: (v: boolean) => void;
+  customCategories: import('../../types').CustomCategory[];
+  setCustomCategories: (categories: import('../../types').CustomCategory[]) => void;
 }
 
 export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> = (set) => ({
@@ -94,4 +96,6 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAiProvider: (v) => set({ aiProvider: v }),
   setAiApiKey: (v) => set({ aiApiKey: v }),
   setPreIdentificationEnabled: (v) => set({ preIdentificationEnabled: v }),
+  customCategories: [],
+  setCustomCategories: (customCategories) => set({ customCategories }),
 });

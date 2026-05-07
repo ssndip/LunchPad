@@ -77,6 +77,13 @@ export interface UserProfile {
 
 export type AppState = 'kiosk' | 'manager';
 
+export interface CustomCategory {
+  id: string;
+  names: Record<string, string>; // e.g., { en: "Main Dishes", bg: "Основни ястия" }
+  keywords: string[];
+  color: string;
+}
+
 export interface Settings {
   adminWhitelistEnabled: boolean;
   orderButtonEnabled: boolean;
@@ -93,4 +100,5 @@ export interface Settings {
   aiApiKey: string;
   preIdentificationEnabled: boolean;
   adminPin: string;
+  customCategories?: CustomCategory[];
 }

@@ -59,7 +59,7 @@ export const deleteLanguage = (req: Request, res: Response) => {
     if (settings.systemLanguage === code) {
       settings.systemLanguage = 'en';
       db.prepare("UPDATE settings SET value = ? WHERE key = ?").run('en', 'systemLanguage');
-      broadcast({ type: "STATUS_UPDATE", data: { systemLanguage: 'en' } });
+      broadcast({ type: "SETTINGS_UPDATE", settings: { systemLanguage: 'en' } });
     }
 
     broadcast({ type: "LANGUAGES_UPDATED" });

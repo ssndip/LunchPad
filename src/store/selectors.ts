@@ -17,11 +17,24 @@ export const useGroupedMenu = () => {
 
 export const useSideItems = () => {
   const menu = useStore((state) => state.menu);
+  const customCategories = useStore((state) => state.customCategories) || [];
   return useMemo(() => {
-    return menu.filter(item => 
-      item.available && (item.category === 'Side Dishes' || item.category === 'Гарнитури')
+    // Collect all category IDs that represent side dishes:
+    // 1. The built-in 'sides' ID used by the parser
+    // 2. Legacy display-name strings (backward compat)
+    // 3. Any custom category whose id contains 'side' or keywords suggest it
+    const sideIds = new Set<string>(['sides', 'side dishes', 'Side Dishes', 'Гарнитури', 'гарнитури']);
+    // Also mark custom categories that are configured as hasSideDish=false but ARE the side dish pool
+    // (identified by their id being 'sides')
+    customCategories.forEach((c: any) => {
+      if (c.id === 'sides' || c.keywords?.some((k: string) => /^(гарнитур|side dish)/i.test(k))) {
+        sideIds.add(c.id);
+      }
+    });
+    return menu.filter(item =>
+      item.available && sideIds.has(item.category)
     );
-  }, [menu]);
+  }, [menu, customCategories]);
 };
 
 export const useTotalPrice = () => {

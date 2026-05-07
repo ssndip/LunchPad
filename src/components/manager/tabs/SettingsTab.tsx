@@ -6,6 +6,7 @@ import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
 
 import { useTranslation } from '../../../hooks/useTranslation';
+import { CategoryManagement } from './settings/CategoryManagement';
 
 interface SettingsTabProps {
   adminWhitelistEnabled: boolean;
@@ -38,7 +39,8 @@ interface SettingsTabProps {
     announcement?: string,
     aiProvider?: string,
     aiApiKey?: string,
-    preIdentificationEnabled?: boolean
+    preIdentificationEnabled?: boolean,
+    customCategories?: import('../../types').CustomCategory[]
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -52,7 +54,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
-  confirm,
+  confirm, customCategories = [],
 }) => {
   const { t, lang } = useTranslation();
 
@@ -686,6 +688,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Dynamic Category Management */}
+        <CategoryManagement 
+          categories={customCategories} 
+          systemLanguages={availableLanguages}
+          onUpdate={(newCategories) => onUpdateSettings(
+            adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, aiApiKey, preIdentificationEnabled, newCategories
+          )}
+          t={t}
+        />
 
         {/* System Backup & Restore (Full Data Portability) */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden relative">

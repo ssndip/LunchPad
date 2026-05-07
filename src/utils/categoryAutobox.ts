@@ -9,27 +9,14 @@ import { MenuItem } from '../types';
 import { loadCategorySettings } from './parserLocalSettings';
 import { MENU_CONFIG } from './menuConfig';
 
-// Build a reverse lookup from display label → category key
-// e.g. "Salads" → "salads", "Side Dishes" → "sides"
-function buildLabelToKeyMap(): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const [key, label] of Object.entries(MENU_CONFIG.categoryLabels)) {
-    map[label] = key;
-  }
-  return map;
-}
-
-const LABEL_TO_KEY = buildLabelToKeyMap();
-
 /**
- * Given a display category name (e.g. "Salads"), returns whether the
+ * Given a category ID (e.g. "salads", "cat_123"), returns whether the
  * admin has enabled autoBox for that category in parser settings.
  */
-export function isCategoryAutoBox(categoryDisplayName: string): boolean {
+export function isCategoryAutoBox(categoryId: string): boolean {
   const settings = loadCategorySettings();
-  const key = LABEL_TO_KEY[categoryDisplayName];
-  if (!key) return false;
-  return settings.categories[key]?.autoBox === true;
+  if (!categoryId) return false;
+  return settings.categories[categoryId]?.autoBox === true;
 }
 
 /**

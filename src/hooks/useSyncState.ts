@@ -102,7 +102,7 @@ export function useSyncState() {
       if (data.deliveryFee !== undefined) setDeliveryFee(data.deliveryFee);
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
-      if (data.systemLanguage !== undefined) setLang(data.systemLanguage);
+      if (data.systemLanguage !== undefined) setLang(data.systemLanguage as Language);
       if (data.cards) setCards(data.cards);
       if (data.orders) setOrders(data.orders);
       if (data.menuDate) setMenuDate(data.menuDate);
@@ -191,7 +191,8 @@ export function useSyncState() {
             announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement,
             aiProvider: settings.aiProvider || useStore.getState().aiProvider,
             aiApiKey: settings.aiApiKey || useStore.getState().aiApiKey,
-            preIdentificationEnabled: settings.preIdentificationEnabled !== undefined ? settings.preIdentificationEnabled : useStore.getState().preIdentificationEnabled
+            preIdentificationEnabled: settings.preIdentificationEnabled !== undefined ? settings.preIdentificationEnabled : useStore.getState().preIdentificationEnabled,
+            customCategories: settings.customCategories || useStore.getState().customCategories
           });
           
           const allLangs = [...languages.static, ...languages.custom];
