@@ -10,3 +10,7 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+## 2026-05-08 - Critical Authorization Bypass in requireAuth Middleware
+**Vulnerability:** The `requireAuth` middleware only validated the JWT signature and expiration, but did not check the `role` encoded within the token.
+**Learning:** Because the system issues multiple types of tokens (e.g., `role: "public"` for kiosk unlocking and `role: "admin"` for the management dashboard), any valid "public" token could be used to access sensitive administration endpoints (like `/api/settings` and `/api/cards`) that were protected by `requireAuth`.
+**Prevention:** When a system issues JWTs with varying privilege levels, middleware protecting sensitive endpoints must explicitly check the permissions/roles (e.g., `decoded.role === 'admin'`) embedded in the payload, not just rely on `jwt.verify` to check the signature.
