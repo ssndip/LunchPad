@@ -10,18 +10,18 @@ import {
   getCardProfile,
   updateSingleCard
 } from "../controllers/cardController";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/", requireAuth, fetchCards);
-router.post("/", requireAuth, addOrUpdateCard);
-router.post("/batch", requireAuth, batchAddCards);
-router.post("/update", requireAuth, updateAllCards);
-router.post("/reset-all", requireAuth, resetAllBalances);
-router.post("/:rfid/update", requireAuth, updateSingleCard);
-router.post("/:rfid/reset", requireAuth, resetSingleBalance);
+router.get("/", requireAdmin, fetchCards);
+router.post("/", requireAdmin, addOrUpdateCard);
+router.post("/batch", requireAdmin, batchAddCards);
+router.post("/update", requireAdmin, updateAllCards);
+router.post("/reset-all", requireAdmin, resetAllBalances);
+router.post("/:rfid/update", requireAdmin, updateSingleCard);
+router.post("/:rfid/reset", requireAdmin, resetSingleBalance);
 router.get("/:rfid/profile", getCardProfile);
-router.delete("/:rfid", requireAuth, deleteCard);
+router.delete("/:rfid", requireAdmin, deleteCard);
 
 export default router;

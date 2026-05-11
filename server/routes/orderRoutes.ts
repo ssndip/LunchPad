@@ -9,17 +9,17 @@ import {
   fetchAnalytics,
   applyDeliveryFee
 } from "../controllers/orderController";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/orders", requireAuth, fetchOrders);
+router.get("/orders", requireAdmin, fetchOrders);
 router.post("/v1/order", placeOrder); // Kiosk order
-router.post("/reset", requireAuth, resetOrders);
-router.post("/distribute-fee", requireAuth, applyDeliveryFee);
-router.get("/summaries", requireAuth, fetchSummaries);
-router.get("/summaries/:date", requireAuth, fetchSummaryDetails);
-router.get("/history", requireAuth, fetchHistory);
-router.get("/analytics", requireAuth, fetchAnalytics);
+router.post("/reset", requireAdmin, resetOrders);
+router.post("/distribute-fee", requireAdmin, applyDeliveryFee);
+router.get("/summaries", requireAdmin, fetchSummaries);
+router.get("/summaries/:date", requireAdmin, fetchSummaryDetails);
+router.get("/history", requireAdmin, fetchHistory);
+router.get("/analytics", requireAdmin, fetchAnalytics);
 
 export default router;

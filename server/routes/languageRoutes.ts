@@ -1,6 +1,6 @@
 import express from "express";
 import { getLanguages, getLanguageData, importLanguage, deleteLanguage } from "../controllers/languageController";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ router.get("/", getLanguages);
 router.get("/:code", getLanguageData);
 
 // Admin only operations
-router.post("/import", requireAuth, importLanguage);
-router.delete("/:code", requireAuth, deleteLanguage);
+router.post("/import", requireAdmin, importLanguage);
+router.delete("/:code", requireAdmin, deleteLanguage);
 
 export default router;
