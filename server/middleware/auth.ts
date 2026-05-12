@@ -48,3 +48,24 @@ export const requireAuth = (req: express.Request, res: express.Response, next: e
     return res.status(403).json({ error: "Forbidden: Invalid or expired token" });
   }
 };
+
+
+export const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized: Missing Token" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, settings.jwtSecret) as { rfid?: string, role: string };
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: "Forbidden: Admin access required" });
+    }
+    (req as any).user = decoded;
+    return next();
+  } catch (err) {
+    return res.status(403).json({ error: "Forbidden: Invalid or expired token" });
+  }
+};
