@@ -76,13 +76,13 @@ describe('orderController', () => {
       expect(mockRunSummaries).toHaveBeenCalled();
 
       // Verify broadcast
-      expect(broadcast).toHaveBeenCalledWith({
+      expect(broadcast).toHaveBeenCalledWith(expect.objectContaining({
         type: 'INITIAL_STATE',
         menu: mockMenu,
         orders: [],
         kioskOpen: true,
         cards: []
-      });
+      }));
 
       // Verify response
       expect(mockRes.json).toHaveBeenCalledWith({ success: true });

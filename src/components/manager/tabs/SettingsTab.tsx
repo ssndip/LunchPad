@@ -40,7 +40,7 @@ interface SettingsTabProps {
     aiProvider?: string,
     aiApiKey?: string,
     preIdentificationEnabled?: boolean,
-    customCategories?: import('../../types').CustomCategory[]
+    customCategories?: import('../../../types').CustomCategory[]
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;

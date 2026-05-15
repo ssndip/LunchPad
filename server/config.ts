@@ -1,8 +1,11 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-if (!process.env.JWT_SECRET) {
-  console.warn("[Config] WARNING: JWT_SECRET environment variable is not set. Using a default development secret. This is NOT recommended for production!");
+let jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  console.warn("[Config] WARNING: JWT_SECRET environment variable is not set. Generating a secure random secret for this session. Tokens will invalidate on server restart.");
+  jwtSecret = crypto.randomBytes(32).toString("hex");
 }
 
 // --- Settings Object (Ensures live bindings across modules) ---
@@ -25,9 +28,10 @@ export const settings = {
   publicAccessCode: "",
   publicAccessRequired: false,
   adminPin: process.env.ADMIN_PIN || "0000",
-  jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
+  jwtSecret,
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
-  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12"
+  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
+  customCategories: [] as any[]
 };
 
 // --- Setters ---
