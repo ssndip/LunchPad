@@ -10,3 +10,7 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+## 2026-04-26 - Hardcoded JWT Secret Vulnerability
+**Vulnerability:** The application was using a predictable, hardcoded string ("lunchpad-default-dev-secret-key-12345") as a fallback for the `JWT_SECRET` environment variable in local or unconfigured environments.
+**Learning:** Hardcoded cryptographic secrets allow an attacker with knowledge of the codebase to forge arbitrary JWTs (e.g., admin tokens), completely bypassing authentication when deployed without the environment variable set.
+**Prevention:** When falling back for critical environment variables like `JWT_SECRET`, never use hardcoded predictable strings. Generate a cryptographically secure random value at runtime using `crypto.randomBytes(32).toString('hex')` to prevent token forgery.
