@@ -10,3 +10,7 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+## 2024-05-17 - Insecure Hardcoded JWT Secret Fallback
+**Vulnerability:** A hardcoded predictable string was used as a fallback for the JWT_SECRET environment variable in config.
+**Learning:** Using hardcoded fallback secrets leaves environments vulnerable to token forgery if the environment variable is not explicitly set.
+**Prevention:** Always generate a cryptographically secure random string (e.g. `crypto.randomBytes(32).toString('hex')`) at runtime when falling back for critical secrets like JWT keys.
