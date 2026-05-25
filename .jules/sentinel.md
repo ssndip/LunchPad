@@ -10,3 +10,7 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+## 2025-05-25 - Prevent AI API Key Leakage in Settings Controller
+**Vulnerability:** The `aiApiKey` was being returned in plaintext via the `fetchSettings` API response, allowing anyone with access to the settings UI (or network traffic) to view the sensitive API key.
+**Learning:** Returning full configuration objects directly to the frontend without a filtering/masking pass is a common pattern that accidentally leaks secrets.
+**Prevention:** Always explicitly mask sensitive credentials (e.g., `aiApiKey ? '********' : ''`) before sending them to the client. Corresponding update endpoints must also be patched to ignore the `'********'` placeholder so users don't accidentally overwrite the real key with the mask when saving other settings.
