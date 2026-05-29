@@ -33,7 +33,7 @@ export const settings = {
   preIdentificationEnabled: false,
   publicAccessCode: "",
   publicAccessRequired: false,
-  adminPin: process.env.ADMIN_PIN || "0000",
+  adminPin: "",
   jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex"),
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
   adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
@@ -73,12 +73,15 @@ export const incrementMenuVersion = () => {
   return settings.menuVersion;
 };
 
-/**
- * Verifies if the provided PIN matches the hashed admin PIN.
- */
 export const verifyAdminPin = (pin: string): boolean => {
   try {
-    return bcrypt.compareSync(pin, settings.adminPin);
+    const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
+    if (adminPinRecord && adminPinRecord.value) {
+      return bcrypt.compareSync(pin, adminPinRecord.value);
+    }
+    // Secure fallback: If not set in DB yet, verify against the env ADMIN_PIN or default to "0000"
+    const defaultPin = process.env.ADMIN_PIN || "0000";
+    return pin === defaultPin;
   } catch (err) {
     console.error("[Auth] PIN verification error", err);
     return false;
@@ -272,18 +275,19 @@ export const initSettings = () => {
   }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
-  let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
-
-  // Auto-migration: If PIN is not hashed, hash it now
-  const isHashed = currentPin.startsWith("$2a$") || currentPin.startsWith("$2b$");
-  if (!isHashed) {
-    console.log("[Config] Migrating plain-text PIN to bcrypt hash...");
-    const salt = bcrypt.genSaltSync(10);
-    currentPin = bcrypt.hashSync(currentPin, salt);
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_pin", currentPin);
+  if (adminPinRecord && adminPinRecord.value) {
+    let currentPin = adminPinRecord.value;
+    const isHashed = currentPin.startsWith("$2a$") || currentPin.startsWith("$2b$");
+    if (!isHashed) {
+      console.log("[Config] Migrating plain-text PIN to bcrypt hash...");
+      const salt = bcrypt.genSaltSync(10);
+      currentPin = bcrypt.hashSync(currentPin, salt);
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_pin", currentPin);
+    }
+    settings.adminPin = currentPin;
+  } else {
+    settings.adminPin = "";
   }
-  
-  settings.adminPin = currentPin;
 
   const customCatsRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("custom_categories") as { value: string } | undefined;
   if (!customCatsRecord) {
