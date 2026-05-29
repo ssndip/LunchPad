@@ -36,6 +36,7 @@ export class MenuParserEngine {
   // Caches for array/rule based regexes
   private preprocessRegexCache: Map<string, RegExp>;
   private ignoreRegexCache: RegExp[];
+  private startsWithWeightRegex: RegExp;
   private sectionRegexCache: Map<string, RegExp>;
 
   constructor(config: ParserConfig) {
@@ -68,6 +69,9 @@ export class MenuParserEngine {
     for (const rule of this.config.sectionDetection) {
       this.sectionRegexCache.set(rule.id, new RegExp(`^(${rule.pattern})$`, 'i'));
     }
+
+    // Cached for performance to avoid recompiling on every line
+    this.startsWithWeightRegex = new RegExp('^' + this.config.entityExtraction.weightPattern, 'i');
   }
 
   /**
@@ -126,7 +130,7 @@ export class MenuParserEngine {
       // 4. Item Extraction
       // Use price/weight as fallback signals only when meaningful text
       // (an actual item name) remains after stripping those values.
-      const startsWithWeight = new RegExp('^' + this.config.entityExtraction.weightPattern, 'i').test(line);
+      const startsWithWeight = this.startsWithWeightRegex.test(line);
       const startsWithPriceOrFee = /^\d+(?:[.,]\d+)?\s*(?:€|\$|лв|лева|е|е\.|евро|кутийка)/i.test(line);
       const hasBulletPrefix = !startsWithWeight && !startsWithPriceOrFee && this.itemPrefixRegex.test(line);
       const hasSignal = this.priceRegex.test(line) || this.weightRegex.test(line);
