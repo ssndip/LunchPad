@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { fetchSettings, updateSettings, updatePin } from "../controllers/settingsController";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/", requireAuth, fetchSettings);
-router.post("/", requireAuth, updateSettings);
-router.post("/pin", requireAuth, updatePin);
+router.get("/", requireAdmin, fetchSettings);
+router.post("/", requireAdmin, updateSettings);
+router.post("/pin", requireAdmin, updatePin);
 
 export default router;

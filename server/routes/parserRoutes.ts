@@ -13,28 +13,28 @@ import {
   exportAllProfiles,
   importBundle
 } from "../controllers/parserController";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
 // Bulk Sync (Database Agnostic)
-router.get("/export-all", requireAuth, exportAllProfiles);
-router.post("/import-bundle", requireAuth, importBundle);
+router.get("/export-all", requireAdmin, exportAllProfiles);
+router.post("/import-bundle", requireAdmin, importBundle);
 
 // Profiles
-router.get("/profiles", requireAuth, getProfiles);
-router.post("/profiles", requireAuth, createProfile);
-router.get("/profiles/:id/versions", requireAuth, getVersions);
-router.post("/profiles/:id/publish", requireAuth, publishVersion);
-router.post("/profiles/:id/activate", requireAuth, activateProfile);
-router.post("/profiles/:id/duplicate", requireAuth, duplicateProfile);
+router.get("/profiles", requireAdmin, getProfiles);
+router.post("/profiles", requireAdmin, createProfile);
+router.get("/profiles/:id/versions", requireAdmin, getVersions);
+router.post("/profiles/:id/publish", requireAdmin, publishVersion);
+router.post("/profiles/:id/activate", requireAdmin, activateProfile);
+router.post("/profiles/:id/duplicate", requireAdmin, duplicateProfile);
 
 // Fixtures
-router.get("/fixtures", requireAuth, getFixtures);
-router.post("/fixtures", requireAuth, saveFixture);
+router.get("/fixtures", requireAdmin, getFixtures);
+router.post("/fixtures", requireAdmin, saveFixture);
 
 // Logs
-router.get("/logs", requireAuth, getLogs);
-router.post("/logs", requireAuth, saveLog);
+router.get("/logs", requireAdmin, getLogs);
+router.post("/logs", requireAdmin, saveLog);
 
 export default router;

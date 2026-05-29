@@ -37,6 +37,13 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: OrderService.RequestedItem[], menuVersion?: number };
 
+    if (pin !== undefined && typeof pin !== 'string') {
+      return res.status(400).json({ error: "Invalid PIN format" });
+    }
+    if (rfid !== undefined && typeof rfid !== 'string') {
+      return res.status(400).json({ error: "Invalid RFID format" });
+    }
+
     const isBypass = settings.testModeEnabled && !rfid && !pin;
 
     if (!isBypass && (!rfid && !pin) || !requestedItems || !Array.isArray(requestedItems) || requestedItems.length === 0) {
@@ -185,14 +192,16 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
   if (startDate) { sql += " AND date >= ?"; params.push(startDate); }
   if (endDate) { sql += " AND date <= ?"; params.push(endDate); }
   if (rfid) { 
+    if (typeof rfid !== 'string') return res.status(400).json({ error: "Invalid RFID format" });
     sql += " AND (rfid = ? OR ownerName LIKE ? ESCAPE '\\')"; 
     params.push(rfid);
-    const escapedSearch = String(rfid).replace(/[\\%_]/g, '\\$&');
+    const escapedSearch = rfid.replace(/[\\%_]/g, '\\$&');
     params.push(`%${escapedSearch}%`);
   }
   if (ownerName) {
+    if (typeof ownerName !== 'string') return res.status(400).json({ error: "Invalid ownerName format" });
     sql += " AND ownerName LIKE ? ESCAPE '\\'";
-    const escapedOwnerName = String(ownerName).replace(/[\\%_]/g, '\\$&');
+    const escapedOwnerName = ownerName.replace(/[\\%_]/g, '\\$&');
     params.push(`%${escapedOwnerName}%`);
   }
 

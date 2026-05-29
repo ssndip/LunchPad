@@ -24,6 +24,9 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     if (typeof ownerName !== 'string' || ownerName.length > 100) {
       return res.status(400).json({ error: "Invalid ownerName length" });
     }
+    if (pin !== undefined && pin !== null && typeof pin !== 'string') {
+      return res.status(400).json({ error: "Invalid PIN format" });
+    }
     const now = new Date().toISOString();
     const cleanRfid = cleanRfidUtil(rfid);
 
@@ -67,6 +70,9 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
       }
       if (!c.ownerName || typeof c.ownerName !== 'string' || c.ownerName.length > 100) {
          return res.status(400).json({ error: "Invalid ownerName length in batch" });
+      }
+      if (c.pin !== undefined && c.pin !== null && typeof c.pin !== 'string') {
+         return res.status(400).json({ error: "Invalid PIN format in batch" });
       }
     }
     const now = new Date().toISOString();

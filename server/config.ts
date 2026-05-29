@@ -34,7 +34,7 @@ export const settings = {
   publicAccessCode: "",
   publicAccessRequired: false,
   adminPin: process.env.ADMIN_PIN || "0000",
-  jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
+  jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex"),
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
   adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
   kioskAutoTiming: false,

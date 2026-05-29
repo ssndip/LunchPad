@@ -27,37 +27,10 @@ export const initDb = () => {
       ownerName TEXT NOT NULL,
       balance REAL DEFAULT 0,
       lastUpdated TEXT,
-      isAdmin INTEGER DEFAULT 0
+      isAdmin INTEGER DEFAULT 0,
+      pin TEXT
     );
-  `);
 
-  // --- Database Migrations ---
-  const migrations = [
-    { name: "isAdmin", sql: "ALTER TABLE cards ADD COLUMN isAdmin INTEGER DEFAULT 0" },
-    { name: "pin", sql: "ALTER TABLE cards ADD COLUMN pin TEXT" },
-    { name: "requiresSideChoice", sql: "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0" },
-    { name: "sideChoices", sql: "ALTER TABLE menu ADD COLUMN sideChoices TEXT" },
-    { name: "selectedSide", sql: "ALTER TABLE menu ADD COLUMN selectedSide TEXT" },
-    { name: "hasIncludedSide", sql: "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0" },
-    { name: "tags", sql: "ALTER TABLE menu ADD COLUMN tags TEXT" },
-    { name: "packagingFee", sql: "ALTER TABLE menu ADD COLUMN packagingFee REAL" },
-    { name: "date", sql: "ALTER TABLE menu ADD COLUMN date TEXT" },
-    { name: "feeDistributed", sql: "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0" },
-    { name: "distributedAmount", sql: "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0" }
-  ];
-
-  migrations.forEach(m => {
-    try {
-      db.exec(m.sql);
-      console.log(`[DB] Migration applied: ${m.name}`);
-    } catch (e) {
-      // Column likely already exists
-    }
-  });
-
-  console.log("[DB] Schema verification complete");
-
-  db.exec(`
     CREATE TABLE IF NOT EXISTS menu (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
@@ -65,7 +38,13 @@ export const initDb = () => {
       price REAL,
       available INTEGER,
       category TEXT,
-      date TEXT
+      date TEXT,
+      requiresSideChoice INTEGER DEFAULT 0,
+      sideChoices TEXT,
+      selectedSide TEXT,
+      hasIncludedSide INTEGER DEFAULT 0,
+      tags TEXT,
+      packagingFee REAL
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -151,6 +130,32 @@ export const initDb = () => {
       translations TEXT NOT NULL -- JSON string
     );
   `);
+
+  // --- Database Migrations ---
+  const migrations = [
+    { name: "isAdmin", sql: "ALTER TABLE cards ADD COLUMN isAdmin INTEGER DEFAULT 0" },
+    { name: "pin", sql: "ALTER TABLE cards ADD COLUMN pin TEXT" },
+    { name: "requiresSideChoice", sql: "ALTER TABLE menu ADD COLUMN requiresSideChoice INTEGER DEFAULT 0" },
+    { name: "sideChoices", sql: "ALTER TABLE menu ADD COLUMN sideChoices TEXT" },
+    { name: "selectedSide", sql: "ALTER TABLE menu ADD COLUMN selectedSide TEXT" },
+    { name: "hasIncludedSide", sql: "ALTER TABLE menu ADD COLUMN hasIncludedSide INTEGER DEFAULT 0" },
+    { name: "tags", sql: "ALTER TABLE menu ADD COLUMN tags TEXT" },
+    { name: "packagingFee", sql: "ALTER TABLE menu ADD COLUMN packagingFee REAL" },
+    { name: "date", sql: "ALTER TABLE menu ADD COLUMN date TEXT" },
+    { name: "feeDistributed", sql: "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0" },
+    { name: "distributedAmount", sql: "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0" }
+  ];
+
+  migrations.forEach(m => {
+    try {
+      db.exec(m.sql);
+      console.log(`[DB] Migration applied: ${m.name}`);
+    } catch (e) {
+      // Column likely already exists
+    }
+  });
+
+  console.log("[DB] Schema verification complete");
 };
 
 // Seed logic
