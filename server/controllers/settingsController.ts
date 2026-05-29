@@ -39,7 +39,7 @@ export const fetchSettings = (req: Request, res: Response) => {
     adminWhitelist: settings.adminWhitelist,
     announcement: settings.announcement,
     aiProvider: settings.aiProvider,
-    aiApiKey: settings.aiApiKey,
+    aiApiKey: settings.aiApiKey ? "********" : "",
     preIdentificationEnabled: settings.preIdentificationEnabled,
     customCategories: settings.customCategories,
     kioskAutoTiming: settings.kioskAutoTiming,
@@ -156,7 +156,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setAiProviderConfig(aiProvider);
     }
 
-    if (aiApiKey !== undefined) {
+    if (aiApiKey !== undefined && aiApiKey !== "********") {
       if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
       setAiApiKeyConfig(aiApiKey);
@@ -211,7 +211,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelist: settings.adminWhitelist,
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
+      aiApiKey: settings.aiApiKey ? "********" : "",
       preIdentificationEnabled: settings.preIdentificationEnabled,
       customCategories: settings.customCategories,
       kioskAutoTiming: settings.kioskAutoTiming,
