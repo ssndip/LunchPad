@@ -2,9 +2,10 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "antigravity" ]
+    tags: [ "v*" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "antigravity" ]
 
 env:
   REGISTRY: ghcr.io
@@ -39,6 +40,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,format=long
 
