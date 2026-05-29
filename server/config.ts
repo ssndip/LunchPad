@@ -36,7 +36,7 @@ export const settings = {
   adminPin: "",
   jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex"),
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
-  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
+  adminWhitelist: process.env.ADMIN_WHITELIST || "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
   kioskAutoTiming: false,
   kioskOpenTime: "08:00",
   kioskCloseTime: "11:00",
@@ -111,6 +111,11 @@ export const initSettings = () => {
     settings.adminWhitelistEnabled = true;
   } else {
     settings.adminWhitelistEnabled = whitelistEnabled.value === "1";
+  }
+
+  // Environment override to disable admin whitelist (e.g. for initial setup over public IP)
+  if (process.env.DISABLE_ADMIN_WHITELIST === 'true') {
+    settings.adminWhitelistEnabled = false;
   }
 
   const orderButton = db.prepare("SELECT value FROM settings WHERE key = ?").get("order_button_enabled") as { value: string } | undefined;
@@ -198,6 +203,11 @@ export const initSettings = () => {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist", settings.adminWhitelist);
   } else {
     settings.adminWhitelist = whitelistRecord.value;
+  }
+
+  // Environment override for custom whitelist entries
+  if (process.env.ADMIN_WHITELIST) {
+    settings.adminWhitelist = process.env.ADMIN_WHITELIST;
   }
   
   const announcementRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("announcement") as { value: string } | undefined;

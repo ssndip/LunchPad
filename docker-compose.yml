@@ -14,3 +14,4 @@ services:
       - JWT_SECRET=lunchpad-secret-key-change-me-in-production
       - ADMIN_PIN=0000
       - ENABLE_TEST_BYPASS=true
+      - DISABLE_ADMIN_WHITELIST=true # Set to true to bypass IP whitelist checks for remote admin login
