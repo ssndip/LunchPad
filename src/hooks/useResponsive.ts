@@ -19,6 +19,7 @@ export interface ResponsiveState {
   isPhone: boolean;   // < 768px
   isTablet: boolean;  // 768px - 1023px
   isDesktop: boolean; // >= 1024px
+  useMobileLayout: boolean; // true on mobile and portrait tablets
 
   // Granular Tailwind breakpoint booleans for convenience
   sm: boolean;
@@ -42,22 +43,25 @@ export function useResponsive(): ResponsiveState {
         isPhone: false,
         isTablet: false,
         isDesktop: true,
+        useMobileLayout: false,
         sm: true, md: true, lg: true, xl: false, xxl: false
       };
     }
 
     const { innerWidth: width, innerHeight: height } = window;
+    const isPortrait = height >= width;
     
     return {
       width,
       height,
-      isPortrait: height >= width,
+      isPortrait,
       isLandscape: width > height,
       
       // Target bounds
       isPhone: width < BREAKPOINTS.md,
       isTablet: width >= BREAKPOINTS.md && width < BREAKPOINTS.lg,
       isDesktop: width >= BREAKPOINTS.lg,
+      useMobileLayout: width < BREAKPOINTS.md || (width < BREAKPOINTS.lg && isPortrait),
 
       // Specific minimal checks
       sm: width >= BREAKPOINTS.sm,

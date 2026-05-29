@@ -52,19 +52,19 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
   }) => {
     const packagingFee = useStore((s) => s.packagingFee);
     const bgnEnabled = useStore((s) => s.bgnEnabled);
-    const { isPhone } = useResponsive();
+    const { useMobileLayout } = useResponsive();
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     const bgTotal = (totalPrice * 1.95583).toFixed(2);
     const orderDisabled =
       !selectedItems.length ||
-      (!rfid && !testModeEnabled && !isPhone) ||
+      (!rfid && !testModeEnabled && !useMobileLayout) ||
       isScanning ||
       !computedKioskOpen;
     const itemCount = selectedItems.reduce((acc, i) => acc + i.quantity, 0);
 
-    // Phone Sticky Bottom Layout
-    if (isPhone) {
+    // Phone & Portrait Tablet Sticky Bottom Layout
+    if (useMobileLayout) {
       return (
         <>
           {/* Backdrop for expanded state */}
@@ -475,13 +475,13 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                 {isScanning ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm font-black uppercase tracking-widest">
+                    <span className="text-[10px] xl:text-xs xxl:text-sm font-black uppercase tracking-wider xl:tracking-widest whitespace-nowrap px-1">
                       {t("kiosk.processing")}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-sm font-black uppercase tracking-widest">
+                    <span className="text-[10px] xl:text-xs xxl:text-sm font-black uppercase tracking-wider xl:tracking-widest whitespace-nowrap px-1">
                       {testModeEnabled && !rfid
                         ? t("kiosk.place_order")
                         : rfid
@@ -522,7 +522,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
           </div>
 
           {/* RFID hint if scanning */}
-          {!orderDisabled && !rfid && !testModeEnabled && !isPhone && (
+          {!orderDisabled && !rfid && !testModeEnabled && !useMobileLayout && (
             <div className="flex items-center justify-center gap-1.5 p-2 bg-yellow-50 text-yellow-700 rounded-xl border border-yellow-100">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span className="text-[9px] font-black uppercase tracking-tighter">
@@ -536,9 +536,10 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
   },
 );
 
-export const OrderSuccessOverlay: React.FC<{ show: boolean; t: any }> = ({
+export const OrderSuccessOverlay: React.FC<{ show: boolean; t: any; message?: string }> = ({
   show,
   t,
+  message,
 }) => (
   <AnimatePresence>
     {show && (
@@ -562,7 +563,7 @@ export const OrderSuccessOverlay: React.FC<{ show: boolean; t: any }> = ({
             {t("kiosk.order_success")}
           </h2>
           <p className="text-neutral-400 text-sm">
-            {t("kiosk.balance_cleared")}
+            {message || t("kiosk.balance_cleared")}
           </p>
         </motion.div>
       </motion.div>

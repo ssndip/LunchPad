@@ -224,5 +224,66 @@ export function useSyncState() {
     return () => clearInterval(id);
   }, [isManagerLoggedIn, fetchInitFallback]);
 
+  // Offline Synchronization Queue Logic
+  const offlineQueue = useStore(s => s.offlineQueue);
+  const setOfflineQueue = useStore(s => s.setOfflineQueue);
+
+  const syncOfflineQueue = useCallback(async () => {
+    if (offlineQueue.length === 0) return;
+    console.log(`[Offline Sync] Syncing ${offlineQueue.length} offline orders...`);
+    
+    let currentQueue = [...offlineQueue];
+    let hasChanges = false;
+
+    for (const order of offlineQueue) {
+      try {
+        const res = await api.placeOrder(order.rfid, order.items, order.menuVersion, order.pin);
+        if (res.ok || res.status < 500) {
+          currentQueue = currentQueue.filter(item => item.tempId !== order.tempId);
+          hasChanges = true;
+          console.log(`[Offline Sync] Order ${order.tempId} processed by server (status ${res.status}). Removed from queue.`);
+        } else {
+          console.warn(`[Offline Sync] Server error ${res.status} during order sync. Stopping sync.`);
+          break;
+        }
+      } catch (err) {
+        console.log('[Offline Sync] Connection still offline. Stopping sync.', err);
+        break;
+      }
+    }
+
+    if (hasChanges) {
+      setOfflineQueue(currentQueue);
+    }
+  }, [offlineQueue, setOfflineQueue]);
+
+  // Sync when online event is triggered
+  useEffect(() => {
+    const handleOnline = () => {
+      syncOfflineQueue();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [syncOfflineQueue]);
+
+  // Sync when connection is restored (connectionError is null) or WebSocket is connected
+  useEffect(() => {
+    if (connectionError === null && offlineQueue.length > 0) {
+      syncOfflineQueue();
+    }
+  }, [connectionError, offlineQueue.length, syncOfflineQueue]);
+
+  // Periodically check/sync every 15s in the background
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (offlineQueue.length > 0 && navigator.onLine) {
+        syncOfflineQueue();
+      }
+    }, 15000);
+    return () => clearInterval(intervalId);
+  }, [offlineQueue.length, syncOfflineQueue]);
+
   return { fetchCards, fetchInitFallback, fetchLanguages };
 }

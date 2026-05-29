@@ -2,6 +2,15 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../useStore';
 import { Order, CartItem } from '../../types';
 
+export interface OfflineOrder {
+  tempId: string;
+  rfid: string | null;
+  items: { id: number; side?: string }[];
+  menuVersion?: number;
+  pin?: string;
+  timestamp: number;
+}
+
 export interface OrderSlice {
   orders: Order[];
   history: Order[];
@@ -17,6 +26,8 @@ export interface OrderSlice {
     rfid: string;
     ownerName: string;
   };
+  offlineQueue: OfflineOrder[];
+  successMessage: string | null;
   
   setOrders: (orders: Order[]) => void;
   setHistory: (history: Order[]) => void;
@@ -29,6 +40,9 @@ export interface OrderSlice {
   setHistoryFilters: (filters: any) => void;
   resetCart: () => void;
   updateItemQuantity: (id: number, delta: number) => void;
+  addToOfflineQueue: (order: Omit<OfflineOrder, 'tempId' | 'timestamp'>) => void;
+  setOfflineQueue: (queue: OfflineOrder[]) => void;
+  setSuccessMessage: (msg: string | null) => void;
 }
 
 export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set) => ({
@@ -40,12 +54,20 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
   showSuccess: false,
   error: null,
   connectionError: null,
+  successMessage: null,
   historyFilters: {
     startDate: '',
     endDate: '',
     rfid: '',
     ownerName: '',
   },
+  offlineQueue: (() => {
+    try {
+      return JSON.parse(localStorage.getItem('lunchpad_offline_queue') || '[]');
+    } catch {
+      return [];
+    }
+  })(),
 
   setOrders: (orders) => set({ orders }),
   setHistory: (history) => set({ history }),
@@ -56,6 +78,7 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
   setError: (error) => set({ error }),
   setConnectionError: (connectionError) => set({ connectionError }),
   setHistoryFilters: (historyFilters) => set({ historyFilters }),
+  setSuccessMessage: (successMessage) => set({ successMessage }),
   
   resetCart: () => set({ selectedItems: [] }),
   
@@ -69,4 +92,20 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
     }).filter(i => i.quantity > 0);
     return { selectedItems: updated };
   }),
+
+  addToOfflineQueue: (order) => set((state) => {
+    const newOrder: OfflineOrder = {
+      ...order,
+      tempId: Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+      timestamp: Date.now(),
+    };
+    const newQueue = [...state.offlineQueue, newOrder];
+    localStorage.setItem('lunchpad_offline_queue', JSON.stringify(newQueue));
+    return { offlineQueue: newQueue };
+  }),
+
+  setOfflineQueue: (offlineQueue) => {
+    localStorage.setItem('lunchpad_offline_queue', JSON.stringify(offlineQueue));
+    set({ offlineQueue });
+  },
 });

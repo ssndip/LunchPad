@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { broadcast } from "../broadcast";
 import { kioskOpen } from "./statusController";
-import { settings } from "../config";
+import { settings, hashPin, cleanRfid as cleanRfidUtil } from "../config";
 import * as OrderService from "../services/orderService";
 import { getMenu } from "./menuController";
 
@@ -51,16 +51,29 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       });
     }
     
-    if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
+    if (!settings.testModeEnabled) {
+      if (!kioskOpen) return res.status(403).json({ error: "Kiosk is closed." });
+
+      if (settings.kioskAutoTiming) {
+        const now = new Date();
+        const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + 
+                            now.getMinutes().toString().padStart(2, '0');
+        const isWithinWindow = currentHHmm >= settings.kioskOpenTime && currentHHmm < settings.kioskCloseTime;
+        if (!isWithinWindow) {
+          return res.status(403).json({ error: "Kiosk is closed (outside operating hours)." });
+        }
+      }
+    }
 
     let card: any;
 
     if (pin) {
       if (pin.length !== 6) return res.status(400).json({ error: "PIN must be 6 digits" });
-      card = db.prepare("SELECT * FROM cards WHERE pin = ?").get(pin) as any;
+      const hashedPin = hashPin(pin);
+      card = db.prepare("SELECT * FROM cards WHERE pin = ?").get(hashedPin) as any;
       if (!card) return res.status(401).json({ error: "Incorrect or unknown PIN" });
     } else if (rfid) {
-      const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+      const cleanRfid = cleanRfidUtil(rfid);
       card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
       
       if (!card && cleanRfid === 'test-admin' && settings.enableTestBypass) {
@@ -80,7 +93,7 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     try {
       enrichedItems = OrderService.validateAndEnrichItems(requestedItems);
     } catch (err: any) {
-      return res.status(400).json({ error: "Validation Error", message: err.message });
+      return res.status(400).json({ error: err.message });
     }
 
     const newOrder = OrderService.processOrderTransaction(card, enrichedItems);

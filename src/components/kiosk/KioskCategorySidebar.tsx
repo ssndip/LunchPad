@@ -18,9 +18,49 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
     const isPackagingFeeItem = (category: string) =>
       isCategoryAutoBox(category);
 
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const [showLeftFade, setShowLeftFade] = React.useState(false);
+    const [showRightFade, setShowRightFade] = React.useState(false);
+
+    const handleScroll = React.useCallback(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setShowLeftFade(scrollLeft > 5);
+      setShowRightFade(scrollLeft < scrollWidth - clientWidth - 5);
+    }, []);
+
+    React.useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      handleScroll();
+      container.addEventListener("scroll", handleScroll);
+
+      const resizeObserver = new ResizeObserver(handleScroll);
+      resizeObserver.observe(container);
+
+      // Also trigger scroll handle on category count updates
+      return () => {
+        container.removeEventListener("scroll", handleScroll);
+        resizeObserver.disconnect();
+      };
+    }, [categories, handleScroll]);
+
     return (
-      <div className="flex-1 flex md:flex-col overflow-hidden">
-        <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-y-auto custom-scrollbar p-1 md:p-2 gap-1 md:space-y-1">
+      <div className="flex-1 flex md:flex-col overflow-hidden relative">
+        {/* Left Fade Overlay */}
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none transition-opacity duration-200 z-20 md:hidden"
+          style={{ opacity: showLeftFade ? 1 : 0 }}
+        />
+        {/* Right Fade Overlay */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none transition-opacity duration-200 z-20 md:hidden"
+          style={{ opacity: showRightFade ? 1 : 0 }}
+        />
+
+        <div ref={containerRef} className="flex-1 flex md:flex-col overflow-x-auto md:overflow-y-auto custom-scrollbar p-1 md:p-2 gap-1 md:space-y-1 no-scrollbar">
           {[...categories]
             .sort((a, b) => {
               const isOtherA =

@@ -27,6 +27,7 @@ interface KioskViewProps {
   setRfid: (v: string) => void;
   isScanning: boolean;
   showSuccess: boolean;
+  successMessage?: string | null;
   error: string | null;
   connectionError: string | null;
   orderButtonEnabled: boolean;
@@ -57,6 +58,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
   setRfid,
   isScanning,
   showSuccess,
+  successMessage,
   error,
   connectionError,
   orderButtonEnabled,
@@ -205,7 +207,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
     return [...normalCats, ...otherCats];
   }, [filteredGroupedMenu]);
   const [activeCategory, setActiveCategory] = useState<string>('');
-  const { isPhone, isTablet } = useResponsive();
+  const { isPhone, isTablet, useMobileLayout } = useResponsive();
 
   // Ensure activeCategory stays valid
   React.useEffect(() => {
@@ -415,10 +417,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
       </AnimatePresence>
 
 
-      {/* 2. Main Area — 3 Columns (Responsive) */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Col 1: Categories (Horizontal Top Bar on Phone, Vertical Sidebar on Tablet/Desktop) */}
-        <div className="flex shrink-0 md:w-[20%] xl:w-40 bg-white border-b md:border-b-0 md:border-r border-neutral-200 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar">
+      {/* 2. Main Area — 3 Columns (Responsive based on orientation & width) */}
+      <main className={`flex-1 flex overflow-hidden relative ${useMobileLayout ? 'flex-col' : 'flex-row'}`}>
+        {/* Col 1: Categories (Horizontal Top Bar on Mobile & Portrait Tablet, Vertical Sidebar on Desktop & Landscape Tablet) */}
+        <div className={`flex shrink-0 bg-white border-neutral-200 ${useMobileLayout ? 'border-b overflow-x-auto no-scrollbar' : 'md:w-[20%] xl:w-40 border-r overflow-y-auto custom-scrollbar'}`}>
           <KioskCategorySidebar 
             categories={categories}
             activeCategory={activeCategory}
@@ -430,7 +432,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           />
         </div>
 
-        {/* Col 2: Items (Flexible Grid on Tablet, List on Phone) */}
+        {/* Col 2: Items (Flexible Grid / List) */}
         <div className="flex-1 overflow-hidden relative">
           <KioskItemList
             items={activeItems}
@@ -448,8 +450,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
           />
         </div>
 
-        {/* Col 3: Order Panel (Fixed Right Panel Tablet/Desktop, Bottom Sheet Phone) */}
-        <div className="md:w-[35%] lg:w-80 md:border-t-0 md:border-l border-neutral-200">
+        {/* Col 3: Order Panel (Fixed Right Panel on Widescreen, hidden on Mobile & Portrait Tablet where it renders as sticky bottom drawer) */}
+        <div className={useMobileLayout ? 'hidden' : 'md:w-[35%] lg:w-80 border-l border-neutral-200'}>
           <KioskOrderPanel
             selectedItems={selectedItems}
             totalPrice={totalPrice}
@@ -470,7 +472,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       </main>
 
       {/* Overlays */}
-      <OrderSuccessOverlay show={showSuccess} t={t} />
+      <OrderSuccessOverlay show={showSuccess} message={successMessage || undefined} t={t} />
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}

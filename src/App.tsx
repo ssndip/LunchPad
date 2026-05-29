@@ -14,6 +14,7 @@ import { translations, Language } from './translations';
 import * as api from './api';
 import { MenuItem, Card, CartItem } from './types';
 import { usePWA } from './hooks/usePWA';
+import { APP_VERSION } from './version';
 
 // Components
 import { KioskView } from './components/kiosk/KioskView';
@@ -128,12 +129,12 @@ export default function App() {
     s.setIsScanning(true);
     s.setError(null);
 
+    // Map CartItems to simple ID+Side objects for the API, duplicating by quantity
+    const items = s.selectedItems.flatMap((i) => 
+      Array(i.quantity).fill({ id: i.id, side: i.side })
+    );
+
     try {
-      // Map CartItems to simple ID+Side objects for the API, duplicating by quantity
-      const items = s.selectedItems.flatMap((i) => 
-        Array(i.quantity).fill({ id: i.id, side: i.side })
-      );
-      
       const res = await api.placeOrder(finalRfid, items, s.menuVersion, finalPin);
 
       if (!res.ok) {
@@ -142,9 +143,27 @@ export default function App() {
           s.setError(t('modals.menu_updated') || err.message);
           return;
         }
+        if (res.status >= 500) {
+          s.addToOfflineQueue({
+            rfid: finalRfid,
+            items,
+            menuVersion: s.menuVersion,
+            pin: finalPin || undefined
+          });
+          s.setSuccessMessage(t('kiosk.order_queued_offline') || 'Order queued offline! It will sync once connection is restored.');
+          s.setShowSuccess(true);
+          s.resetCart();
+          s.setRfid('');
+          setTimeout(() => {
+            s.setShowSuccess(false);
+            s.setSuccessMessage(null);
+          }, 3000);
+          return;
+        }
         const err = await res.json();
         s.setError(err.error || t('menu.order_failed'));
       } else {
+        s.setSuccessMessage(null);
         s.setShowSuccess(true);
         s.resetCart();
         s.setRfid('');
@@ -152,11 +171,24 @@ export default function App() {
       }
     } catch (err) {
       console.error('Order error:', err);
-      s.setError(t('navigation.network_error'));
+      s.addToOfflineQueue({
+        rfid: finalRfid,
+        items,
+        menuVersion: s.menuVersion,
+        pin: finalPin || undefined
+      });
+      s.setSuccessMessage(t('kiosk.order_queued_offline') || 'Order queued offline! It will sync once connection is restored.');
+      s.setShowSuccess(true);
+      s.resetCart();
+      s.setRfid('');
+      setTimeout(() => {
+        s.setShowSuccess(false);
+        s.setSuccessMessage(null);
+      }, 3000);
     } finally {
       s.setIsScanning(false);
     }
-  }, [s.rfid, s.testModeEnabled, s.selectedItems, s.menuVersion, s.setError, s.setIsScanning, s.setShowSuccess, s.resetCart, s.setRfid, t]);
+  }, [s.rfid, s.testModeEnabled, s.selectedItems, s.menuVersion, s.setError, s.setIsScanning, s.setShowSuccess, s.resetCart, s.setRfid, s.addToOfflineQueue, s.setSuccessMessage, t]);
 
   const handleIdentify = React.useCallback((rfid: string) => {
     s.setRfid(rfid);
@@ -279,23 +311,29 @@ export default function App() {
 
   // ─── Render Logic ──────────────────────────────────────────────────────────
   if (s.publicAccessRequired) {
-    return <PublicAccessCodeEntry onUnlock={handleUnlock} />;
+    return (
+      <div className="relative">
+        <PublicAccessCodeEntry onUnlock={handleUnlock} />
+        <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
+      </div>
+    );
   }
 
   if (s.mode === 'manager') {
     if (!s.isManagerLoggedIn) {
       return (
-        <div key="manager-login-view">
+        <div key="manager-login-view" className="relative">
           <ManagerLogin
             onLogin={(pin) => s.loginManager(pin)}
             onBack={() => { window.location.href = window.location.origin + '/'; }}
           />
+          <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
         </div>
       );
     }
 
     return (
-      <div key="manager-dashboard-view" className="min-h-screen bg-neutral-900">
+      <div key="manager-dashboard-view" className="min-h-screen bg-neutral-900 relative">
         <ManagerDashboard
           activeTab={s.activeTab}
           onTabChange={s.setActiveTab}
@@ -686,17 +724,24 @@ export default function App() {
             />
           )}
         </AnimatePresence>
+        {/* Dynamic Build Version Overlay in Manager Dashboard */}
+        <div className="fixed bottom-3 left-3 z-[9999] bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-white/50 pointer-events-none select-none">{APP_VERSION}</div>
       </div>
     );
   }
 
   if (!computedKioskOpen && !s.testModeEnabled) {
-    return <KioskClosed onGoToManager={() => { 
-      const url = new URL(window.location.href);
-      url.searchParams.set('view', 'manager');
-      window.history.pushState({}, '', url);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    }} />;
+    return (
+      <div className="relative">
+        <KioskClosed onGoToManager={() => { 
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'manager');
+          window.history.pushState({}, '', url);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }} />
+        <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
+      </div>
+    );
   }
 
   return (
@@ -713,6 +758,7 @@ export default function App() {
           setRfid={s.setRfid}
           isScanning={s.isScanning}
           showSuccess={s.showSuccess}
+          successMessage={s.successMessage}
           error={s.error}
           connectionError={s.connectionError}
           orderButtonEnabled={s.orderButtonEnabled}
@@ -797,6 +843,14 @@ export default function App() {
           )}
         </AnimatePresence>
       </PullToRefresh>
+
+      {/* Dynamic Build Version Overlay */}
+      <div 
+        className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none"
+        title={`Build Version: ${APP_VERSION}`}
+      >
+        {APP_VERSION}
+      </div>
     </div>
   );
 }

@@ -3,6 +3,15 @@ import { db } from "../db";
 import { broadcast } from "../broadcast";
 import { incrementMenuVersion, settings } from "../config";
 
+const safeParseJSON = (jsonStr: string, fallback: any = []) => {
+  if (!jsonStr) return fallback;
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    return fallback;
+  }
+};
+
 export const getMenu = (database = db) => {
   const items = database.prepare("SELECT * FROM menu").all() as any[];
   return items.map(i => ({ 
@@ -10,8 +19,8 @@ export const getMenu = (database = db) => {
     available: i.available === 1,
     requiresSideChoice: i.requiresSideChoice === 1,
     hasIncludedSide: i.hasIncludedSide === 1,
-    sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
-    tags: i.tags ? JSON.parse(i.tags) : [],
+    sideChoices: safeParseJSON(i.sideChoices, []),
+    tags: safeParseJSON(i.tags, []),
     packagingFee: i.packagingFee,
     date: i.date,
     menuVersion: settings.menuVersion,
@@ -19,13 +28,8 @@ export const getMenu = (database = db) => {
   }));
 };
 
-let getMenuItemStmt: any = null;
-
 export const getMenuItemById = (database = db, id: number) => {
-  if (!getMenuItemStmt) {
-    getMenuItemStmt = database.prepare("SELECT * FROM menu WHERE id = ?");
-  }
-  const i = getMenuItemStmt.get(id) as any;
+  const i = database.prepare("SELECT * FROM menu WHERE id = ?").get(id) as any;
   if (!i) return null;
 
   return {
@@ -33,8 +37,8 @@ export const getMenuItemById = (database = db, id: number) => {
     available: i.available === 1,
     requiresSideChoice: i.requiresSideChoice === 1,
     hasIncludedSide: i.hasIncludedSide === 1,
-    sideChoices: i.sideChoices ? JSON.parse(i.sideChoices) : [],
-    tags: i.tags ? JSON.parse(i.tags) : [],
+    sideChoices: safeParseJSON(i.sideChoices, []),
+    tags: safeParseJSON(i.tags, []),
     packagingFee: i.packagingFee,
     date: i.date,
     menuVersion: settings.menuVersion,

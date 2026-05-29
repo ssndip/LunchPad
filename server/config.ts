@@ -1,9 +1,18 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 if (!process.env.JWT_SECRET) {
   console.warn("[Config] WARNING: JWT_SECRET environment variable is not set. Using a default development secret. This is NOT recommended for production!");
 }
+
+export const hashPin = (pin: string): string => {
+  return crypto.createHmac("sha256", settings.jwtSecret || "lunchpad-default-dev-secret-key-12345").update(pin).digest("hex");
+};
+
+export const cleanRfid = (rfid: string | null | undefined): string => {
+  return String(rfid || "").trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+};
 
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
@@ -27,7 +36,12 @@ export const settings = {
   adminPin: process.env.ADMIN_PIN || "0000",
   jwtSecret: process.env.JWT_SECRET || "lunchpad-default-dev-secret-key-12345",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
-  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12"
+  adminWhitelist: "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
+  kioskAutoTiming: false,
+  kioskOpenTime: "08:00",
+  kioskCloseTime: "11:00",
+  kioskCloseDay: 0,
+  customCategories: [] as any[]
 };
 
 // --- Setters ---
@@ -47,6 +61,10 @@ export const setAiApiKeyConfig = (val: string) => settings.aiApiKey = val;
 export const setPreIdentificationEnabledConfig = (val: boolean) => settings.preIdentificationEnabled = val;
 export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
 export const setPublicAccessRequiredConfig = (val: boolean) => settings.publicAccessRequired = val;
+export const setKioskAutoTimingConfig = (val: boolean) => settings.kioskAutoTiming = val;
+export const setKioskOpenTimeConfig = (val: string) => settings.kioskOpenTime = val;
+export const setKioskCloseTimeConfig = (val: string) => settings.kioskCloseTime = val;
+export const setKioskCloseDayConfig = (val: number) => settings.kioskCloseDay = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -220,6 +238,38 @@ export const initSettings = () => {
   } else {
     settings.publicAccessRequired = publicAccessRequiredRecord.value === "1";
   }
+
+  const kioskAutoTimingRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_auto_timing") as { value: string } | undefined;
+  if (!kioskAutoTimingRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_auto_timing", "0");
+    settings.kioskAutoTiming = false;
+  } else {
+    settings.kioskAutoTiming = kioskAutoTimingRecord.value === "1";
+  }
+
+  const kioskOpenTimeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_open_time") as { value: string } | undefined;
+  if (!kioskOpenTimeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_open_time", "08:00");
+    settings.kioskOpenTime = "08:00";
+  } else {
+    settings.kioskOpenTime = kioskOpenTimeRecord.value || "08:00";
+  }
+
+  const kioskCloseTimeRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_close_time") as { value: string } | undefined;
+  if (!kioskCloseTimeRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_close_time", "11:00");
+    settings.kioskCloseTime = "11:00";
+  } else {
+    settings.kioskCloseTime = kioskCloseTimeRecord.value || "11:00";
+  }
+
+  const kioskCloseDayRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("kiosk_close_day") as { value: string } | undefined;
+  if (!kioskCloseDayRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("kiosk_close_day", "0");
+    settings.kioskCloseDay = 0;
+  } else {
+    settings.kioskCloseDay = parseInt(kioskCloseDayRecord.value) || 0;
+  }
   
   const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
   let currentPin = adminPinRecord ? adminPinRecord.value : settings.adminPin;
@@ -256,6 +306,31 @@ export const initSettings = () => {
     } catch {
       settings.customCategories = [];
     }
+  }
+
+  // Auto-migration: If card PINs are plain-text, hash them now
+  try {
+    const userCards = db.prepare("SELECT rfid, pin FROM cards WHERE pin IS NOT NULL").all() as any[];
+    let migratedCount = 0;
+    
+    db.transaction(() => {
+      const updateStmt = db.prepare("UPDATE cards SET pin = ? WHERE rfid = ?");
+      userCards.forEach(c => {
+        // Plain-text user PIN is typically a 6-digit numeric string (not a 64-character SHA-256 hex string)
+        const isHashed = c.pin.length === 64; 
+        if (!isHashed) {
+          const hashed = hashPin(c.pin);
+          updateStmt.run(hashed, c.rfid);
+          migratedCount++;
+        }
+      });
+    })();
+    
+    if (migratedCount > 0) {
+      console.log(`[Config] Migrated ${migratedCount} plain-text user PINs to SHA-256 HMAC hashes...`);
+    }
+  } catch (err) {
+    console.error("[Config] User card PIN migration error", err);
   }
 };
 

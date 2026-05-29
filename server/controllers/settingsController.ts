@@ -17,7 +17,11 @@ import {
   setAiProviderConfig,
   setAiApiKeyConfig,
   setPreIdentificationEnabledConfig,
-  hashAndSetAdminPin
+  hashAndSetAdminPin,
+  setKioskAutoTimingConfig,
+  setKioskOpenTimeConfig,
+  setKioskCloseTimeConfig,
+  setKioskCloseDayConfig
 } from "../config";
 import { kioskOpen } from "./statusController";
 
@@ -37,7 +41,11 @@ export const fetchSettings = (req: Request, res: Response) => {
     aiProvider: settings.aiProvider,
     aiApiKey: settings.aiApiKey,
     preIdentificationEnabled: settings.preIdentificationEnabled,
-    customCategories: settings.customCategories
+    customCategories: settings.customCategories,
+    kioskAutoTiming: settings.kioskAutoTiming,
+    kioskOpenTime: settings.kioskOpenTime,
+    kioskCloseTime: settings.kioskCloseTime,
+    kioskCloseDay: settings.kioskCloseDay
   });
 };
 
@@ -47,7 +55,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
-      aiProvider, aiApiKey, preIdentificationEnabled, customCategories
+      aiProvider, aiApiKey, preIdentificationEnabled, customCategories,
+      kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -68,8 +77,6 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setPreIdentificationEnabledConfig(preIdentificationEnabled);
       broadcast({ type: "SETTINGS_UPDATE", settings: { preIdentificationEnabled } as any });
     }
-
-
 
     if (orderButtonEnabled !== undefined) {
       if (typeof orderButtonEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for orderButtonEnabled" });
@@ -162,6 +169,34 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       broadcast({ type: "SETTINGS_UPDATE", settings: { customCategories } as any });
     }
 
+    if (kioskAutoTiming !== undefined) {
+      if (typeof kioskAutoTiming !== 'boolean') return res.status(400).json({ error: "Invalid value for kioskAutoTiming" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_auto_timing", kioskAutoTiming ? "1" : "0");
+      setKioskAutoTimingConfig(kioskAutoTiming);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskAutoTiming } as any });
+    }
+
+    if (kioskOpenTime !== undefined) {
+      if (typeof kioskOpenTime !== 'string') return res.status(400).json({ error: "Invalid value for kioskOpenTime" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_open_time", kioskOpenTime);
+      setKioskOpenTimeConfig(kioskOpenTime);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskOpenTime } as any });
+    }
+
+    if (kioskCloseTime !== undefined) {
+      if (typeof kioskCloseTime !== 'string') return res.status(400).json({ error: "Invalid value for kioskCloseTime" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_time", kioskCloseTime);
+      setKioskCloseTimeConfig(kioskCloseTime);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskCloseTime } as any });
+    }
+
+    if (kioskCloseDay !== undefined) {
+      if (typeof kioskCloseDay !== 'number') return res.status(400).json({ error: "Invalid value for kioskCloseDay" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_day", String(kioskCloseDay));
+      setKioskCloseDayConfig(kioskCloseDay);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskCloseDay } as any });
+    }
+
     res.json({ 
       success: true, 
       adminWhitelistEnabled: settings.adminWhitelistEnabled, 
@@ -178,7 +213,11 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       aiProvider: settings.aiProvider,
       aiApiKey: settings.aiApiKey,
       preIdentificationEnabled: settings.preIdentificationEnabled,
-      customCategories: settings.customCategories
+      customCategories: settings.customCategories,
+      kioskAutoTiming: settings.kioskAutoTiming,
+      kioskOpenTime: settings.kioskOpenTime,
+      kioskCloseTime: settings.kioskCloseTime,
+      kioskCloseDay: settings.kioskCloseDay
     });
   } catch (err: any) {
     next(err);

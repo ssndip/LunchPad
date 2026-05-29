@@ -359,7 +359,13 @@ export const translations = {
       ios_add: 'Select Add to Home Screen',
       android_menu: 'Tap Menu',
       android_install: 'Select Install App',
-      step: 'Step'
+      step: 'Step',
+      haptic_level: 'Haptic Feedback Level',
+      haptic_level_desc: 'Adjust touch vibration strength',
+      haptic_disabled: 'Disabled',
+      haptic_light: 'Light',
+      haptic_default: 'Default',
+      haptic_robust: 'Robust'
     },
     modals: {
       confirm: 'Confirm',
@@ -403,6 +409,7 @@ export const translations = {
       processing: 'Processing...',
       balance_cleared: 'Balance Cleared',
       order_success: 'Order Successful!',
+      order_queued_offline: 'Order queued offline! It will sync once connection is restored.',
       no_items_selected: 'No items selected',
       ordering_closed: 'Ordering Closed',
       orders_for: 'Orders for',
@@ -818,7 +825,13 @@ export const translations = {
       ios_add: 'Изберете "Add to Home Screen"',
       android_menu: 'Докоснете Менюто',
       android_install: 'Изберете "Install App"',
-      step: 'Стъпка'
+      step: 'Стъпка',
+      haptic_level: 'Ниво на вибрация',
+      haptic_level_desc: 'Регулирайте силата на тактилната обратна връзка',
+      haptic_disabled: 'Изключена',
+      haptic_light: 'Лека',
+      haptic_default: 'Стандартна',
+      haptic_robust: 'Силна'
     },
     modals: {
       confirm: 'Потвърди',
@@ -862,6 +875,7 @@ export const translations = {
       processing: 'Обработка...',
       balance_cleared: 'Балансът е изчистен',
       order_success: 'Поръчката е успешна!',
+      order_queued_offline: 'Поръчката е добавена в опашката офлайн! Ще се синхронизира при възстановяване на връзката.',
       no_items_selected: 'Няма избрани артикули',
       ordering_closed: 'Поръчките са преустановени',
       orders_for: 'Поръчки за',

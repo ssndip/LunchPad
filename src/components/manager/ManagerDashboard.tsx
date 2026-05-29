@@ -101,44 +101,87 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   );
 
   // Tablet Top Navigation
-  const TabletNav = () => (
-    <nav className="hidden md:flex lg:hidden w-full bg-white border-b border-neutral-100 shrink-0 z-40 overflow-x-auto no-scrollbar items-center px-4 h-16">
-      <div className="flex items-center gap-2 mr-6 shrink-0">
-        <div className="w-8 h-8 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
-          <ShoppingBag className="w-4 h-4" />
+  const TabletNav = () => {
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+    const [showLeftFade, setShowLeftFade] = React.useState(false);
+    const [showRightFade, setShowRightFade] = React.useState(false);
+
+    const handleScroll = React.useCallback(() => {
+      const container = scrollRef.current;
+      if (!container) return;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setShowLeftFade(scrollLeft > 5);
+      setShowRightFade(scrollLeft < scrollWidth - clientWidth - 5);
+    }, []);
+
+    React.useEffect(() => {
+      const container = scrollRef.current;
+      if (!container) return;
+      handleScroll();
+      container.addEventListener('scroll', handleScroll);
+      const resizeObserver = new ResizeObserver(handleScroll);
+      resizeObserver.observe(container);
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+        resizeObserver.disconnect();
+      };
+    }, [handleScroll]);
+
+    return (
+      <div className="hidden md:flex lg:hidden w-full relative border-b border-neutral-100 bg-white z-40">
+        {/* Left Fade */}
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
+          style={{ opacity: showLeftFade ? 1 : 0 }}
+        />
+        {/* Right Fade */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
+          style={{ opacity: showRightFade ? 1 : 0 }}
+        />
+
+        <div 
+          ref={scrollRef}
+          className="w-full flex overflow-x-auto no-scrollbar items-center px-4 h-16 gap-4"
+        >
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
+              <ShoppingBag className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {menuItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap active:scale-95 ${
+                    isActive
+                      ? 'bg-neutral-900 text-white shadow-md'
+                      : 'text-neutral-500 hover:bg-neutral-50'
+                  }`}
+                >
+                  <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
+                  <span className="font-bold text-xs">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="ml-auto flex items-center pl-4 border-l border-neutral-100 shrink-0">
+            <button
+              onClick={onLogout}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              aria-label={t('navigation.logout')}
+              title={t('navigation.logout')}
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        {menuItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap active:scale-95 ${
-                isActive
-                  ? 'bg-neutral-900 text-white shadow-md'
-                  : 'text-neutral-500 hover:bg-neutral-50'
-              }`}
-            >
-              <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
-              <span className="font-bold text-xs">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="ml-auto flex items-center pl-4 border-l border-neutral-100">
-        <button
-          onClick={onLogout}
-          className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-          aria-label={t('navigation.logout')}
-          title={t('navigation.logout')}
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
-      </div>
-    </nav>
-  );
+    );
+  };
 
   // Phone Bottom Navigation
   const PhoneBottomNav = () => (

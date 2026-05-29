@@ -14,7 +14,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   onRefresh,
   disabled = false 
 }) => {
-  const { isPhone } = useResponsive();
+  const { useMobileLayout } = useResponsive();
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const startY = useRef(0);
@@ -26,11 +26,23 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const MAX_PULL = 150;
 
   useEffect(() => {
-    if (!isPhone || disabled) return;
+    if (!useMobileLayout || disabled) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Only trigger if we are at the top of the scroll
-      if (window.scrollY === 0) {
+      // Traverse up the DOM to see if any scrollable container is currently scrolled down.
+      // If a container is scrolled down, we should not trigger pull-to-refresh.
+      let target = e.target as HTMLElement | null;
+      let isScrollTop = true;
+      
+      while (target && target !== document.body) {
+        if (target.scrollTop > 0) {
+          isScrollTop = false;
+          break;
+        }
+        target = target.parentElement;
+      }
+
+      if (isScrollTop && window.scrollY === 0) {
         startY.current = e.touches[0].pageY;
       } else {
         startY.current = 0;
@@ -53,6 +65,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         if (distance > 10) {
           if (e.cancelable) e.preventDefault();
         }
+      } else {
+        // Let pullDistance scale back if they drag up before letting go
+        setPullDistance(0);
       }
     };
 
@@ -77,7 +92,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isPhone, pullDistance, isRefreshing, disabled]);
+  }, [useMobileLayout, pullDistance, isRefreshing, disabled]);
 
   const triggerRefresh = () => {
     setIsRefreshing(true);

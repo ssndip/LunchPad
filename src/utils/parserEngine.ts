@@ -126,20 +126,23 @@ export class MenuParserEngine {
       // 4. Item Extraction
       // Use price/weight as fallback signals only when meaningful text
       // (an actual item name) remains after stripping those values.
-      const hasBulletPrefix = this.itemPrefixRegex.test(line);
+      const startsWithWeight = new RegExp('^' + this.config.entityExtraction.weightPattern, 'i').test(line);
+      const startsWithPriceOrFee = /^\d+(?:[.,]\d+)?\s*(?:€|\$|лв|лева|е|е\.|евро|кутийка)/i.test(line);
+      const hasBulletPrefix = !startsWithWeight && !startsWithPriceOrFee && this.itemPrefixRegex.test(line);
       const hasSignal = this.priceRegex.test(line) || this.weightRegex.test(line);
       let isItemLine = hasBulletPrefix;
       if (!isItemLine && hasSignal) {
         // Strip weight, price and prefix then check if a name is left
         const residual = line
-          .replace(this.itemPrefixRegex, '')
+          .replace((startsWithWeight || startsWithPriceOrFee) ? '' : this.itemPrefixRegex, '')
           .replace(this.weightRegex, '')
           .replace(this.boxFeeRegex, '')
           .replace(this.priceRegex, '')
           .replace(/[(),.:+\-–—\/]/g, '')
           .trim();
         // Only treat as item if there are at least 2 meaningful characters left
-        isItemLine = residual.length >= 2;
+        // and it contains actual letters (Latin or Cyrillic)
+        isItemLine = residual.length >= 2 && /[a-zA-Z\u0400-\u04FF]/.test(residual);
       }
       if (isItemLine) {
         const item = this.extractItem(line, currentCategory?.categoryName || this.config.fallbackCategory, categoryDefaults, currentCategory);
@@ -247,6 +250,8 @@ export class MenuParserEngine {
     }
 
     // 3. Extract Price
+    // Strip trailing punctuation/noise (like +) before matching the price pattern
+    name = name.replace(/[+:\s\-–—]+$/, '').trim();
     const priceMatch = name.match(this.priceRegex);
     if (priceMatch) {
       price = safeFloat(priceMatch[1]);
@@ -336,7 +341,9 @@ export class MenuParserEngine {
     }
 
     // Price (strip box fee pattern first to avoid double matching)
-    const lineWithoutBox = line.replace(this.boxFeeRegex, '');
+    let lineWithoutBox = line.replace(this.boxFeeRegex, '').trim();
+    // Also, strip trailing punctuation/noise (like +) before matching the price pattern.
+    lineWithoutBox = lineWithoutBox.replace(/[+:\s\-–—]+$/, '').trim();
     const priceMatch = lineWithoutBox.match(this.priceRegex);
     if (priceMatch) {
       defaults.price = safeFloat(priceMatch[1]);

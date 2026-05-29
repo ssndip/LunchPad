@@ -7,6 +7,7 @@ import { usePWA } from '../../../hooks/usePWA';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { CategoryManagement } from './settings/CategoryManagement';
+import { triggerHaptic } from '../../../utils/haptics';
 
 interface SettingsTabProps {
   adminWhitelistEnabled: boolean;
@@ -40,7 +41,7 @@ interface SettingsTabProps {
     aiProvider?: string,
     aiApiKey?: string,
     preIdentificationEnabled?: boolean,
-    customCategories?: import('../../types').CustomCategory[]
+    customCategories?: import('../../../types').CustomCategory[]
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -67,6 +68,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [localAnnouncement, setLocalAnnouncement] = React.useState(announcement);
   const [localAiApiKey, setLocalAiApiKey] = React.useState(aiApiKey);
   const [showAiKey, setShowAiKey] = React.useState(false);
+
+  const [hapticIntensity, setHapticIntensity] = React.useState(() => {
+    return localStorage.getItem('lunchpad_haptic_intensity') || 'default';
+  });
+
+  const changeHapticIntensity = (val: string) => {
+    localStorage.setItem('lunchpad_haptic_intensity', val);
+    setHapticIntensity(val);
+    triggerHaptic('light');
+  };
 
   React.useEffect(() => {
     setLocalAnnouncement(announcement);
@@ -348,6 +359,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 color="bg-violet-600"
                 label="Toggle Allow Install" 
               />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-neutral-50 gap-4">
+              <div>
+                <h4 className="font-bold text-neutral-900">{t('pwa.haptic_level')}</h4>
+                <p className="text-xs text-neutral-500">{t('pwa.haptic_level_desc')}</p>
+              </div>
+              <div className="flex flex-wrap gap-1 bg-neutral-50 p-1 rounded-2xl border border-neutral-100 self-start sm:self-auto">
+                {['disabled', 'light', 'default', 'robust'].map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => changeHapticIntensity(level)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+                      hapticIntensity === level
+                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-600/10'
+                        : 'text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100'
+                    }`}
+                  >
+                    {t(`pwa.haptic_${level}`)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {allowPWAInstall && !isStandalone && (isIOS || isAndroid) && (

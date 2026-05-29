@@ -16,7 +16,18 @@ import { MENU_CONFIG } from './menuConfig';
 export function isCategoryAutoBox(categoryId: string): boolean {
   const settings = loadCategorySettings();
   if (!categoryId) return false;
-  return settings.categories[categoryId]?.autoBox === true;
+  
+  let normalizedKey = categoryId.toLowerCase().trim();
+  if (normalizedKey === 'salads') normalizedKey = 'salads';
+  else if (normalizedKey === 'side dishes' || normalizedKey === 'sides') normalizedKey = 'sides';
+  else if (normalizedKey === 'bbq') normalizedKey = 'bbq';
+  else if (normalizedKey === 'soups') normalizedKey = 'soups';
+  else if (normalizedKey === 'main dishes' || normalizedKey === 'mains') normalizedKey = 'mains';
+  else if (normalizedKey === 'bread') normalizedKey = 'bread';
+  else if (normalizedKey === 'desserts') normalizedKey = 'desserts';
+  else if (normalizedKey === 'other') normalizedKey = 'other';
+
+  return settings.categories[normalizedKey]?.autoBox === true;
 }
 
 /**

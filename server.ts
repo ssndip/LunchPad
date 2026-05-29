@@ -14,6 +14,7 @@ import { db, initDb, seedInitialData } from "./server/db";
 import { initSettings, settings, incrementMenuVersion } from "./server/config";
 import { setWssInstance } from "./server/broadcast";
 import { isLocalOrigin } from "./server/middleware/auth";
+import { isWhitelisted } from "./server/middleware/whitelist";
 
 // Controllers (for init/broadcast)
 import { getMenu } from "./server/controllers/menuController";
@@ -69,6 +70,11 @@ export async function startServer() {
     standardHeaders: true,
     legacyHeaders: false,
     validate: { trustProxy: false },
+    skip: (req) => {
+      if (process.env.NODE_ENV === 'test') return false;
+      const clientIp = req.ip || "";
+      return isWhitelisted(clientIp, settings.adminWhitelist);
+    },
     message: { error: "Too many login attempts", message: "Please try again in a minute" },
     handler: (req, res, next, options) => {
       logger.warn(`Rate limit hit: Auth endpoint from IP ${req.ip}`);
@@ -85,7 +91,12 @@ export async function startServer() {
     skip: (req) => {
       // EXEMPT critical endpoints from the general rate limit
       const exemptPaths = ["/auth/login", "/auth/unlock", "/init", "/ping"];
-      return exemptPaths.some(p => req.path === p);
+      if (exemptPaths.some(p => req.path === p)) return true;
+
+      // EXEMPT whitelisted local/admin IPs
+      if (process.env.NODE_ENV === 'test') return false;
+      const clientIp = req.ip || "";
+      return isWhitelisted(clientIp, settings.adminWhitelist);
     },
     message: { error: "Too many requests", message: "Please try again later" },
     handler: (req, res, next, options) => {

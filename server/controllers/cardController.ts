@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { broadcast } from "../broadcast";
+import { hashPin, cleanRfid as cleanRfidUtil } from "../config";
 
 export const getCards = () => {
   const cards = db.prepare("SELECT * FROM cards").all() as any[];
@@ -24,11 +25,13 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ error: "Invalid ownerName length" });
     }
     const now = new Date().toISOString();
-    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = cleanRfidUtil(rfid);
 
     // PIN Uniqueness Check
+    let hashedPin = pin || null;
     if (pin) {
-      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(pin, cleanRfid) as any;
+      hashedPin = hashPin(pin);
+      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(hashedPin, cleanRfid) as any;
       if (existing) {
         return res.status(409).json({ error: "PIN is already assigned to another card." });
       }
@@ -43,7 +46,7 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
         lastUpdated = excluded.lastUpdated,
         isAdmin = excluded.isAdmin,
         pin = excluded.pin
-    `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0, pin || null);
+    `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0, hashedPin);
     
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -72,7 +75,11 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
         INSERT OR IGNORE INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
-      cards.forEach((c: any) => insert.run(String(c.rfid).trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
+      cards.forEach((c: any) => {
+        const cleanRfid = cleanRfidUtil(c.rfid);
+        const hashedPin = c.pin ? hashPin(c.pin) : null;
+        insert.run(cleanRfid, c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, hashedPin);
+      });
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -84,7 +91,7 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
 export const deleteCard = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = cleanRfidUtil(rfid);
     db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -111,7 +118,11 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
       db.prepare("DELETE FROM cards").run();
       const insert = db.prepare("INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin) VALUES (?, ?, ?, ?, ?, ?)");
       const now = new Date().toISOString();
-      cards.forEach((c: any) => insert.run(String(c.rfid).trim(), c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, c.pin || null));
+      cards.forEach((c: any) => {
+        const cleanRfid = cleanRfidUtil(c.rfid);
+        const hashedPin = c.pin ? hashPin(c.pin) : null;
+        insert.run(cleanRfid, c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, hashedPin);
+      });
     })();
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -133,7 +144,7 @@ export const resetAllBalances = (req: Request, res: Response, next: NextFunction
 export const resetSingleBalance = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = cleanRfidUtil(rfid);
     db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -146,11 +157,13 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
   try {
     const { rfid } = req.params;
     const { ownerName, balance, isAdmin, pin } = req.body;
-    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = cleanRfidUtil(rfid);
 
     // PIN Uniqueness Check (if PIN is provided and changing)
+    let hashedPin = pin || null;
     if (pin) {
-      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(pin, cleanRfid) as any;
+      hashedPin = hashPin(pin);
+      const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(hashedPin, cleanRfid) as any;
       if (existing) {
         return res.status(409).json({ error: "PIN is already assigned to another card." });
       }
@@ -160,7 +173,7 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
       UPDATE cards 
       SET ownerName = ?, balance = ?, isAdmin = ?, pin = ?, lastUpdated = ?
       WHERE LOWER(rfid) = ?
-    `).run(ownerName, balance || 0, isAdmin ? 1 : 0, pin || null, new Date().toISOString(), cleanRfid);
+    `).run(ownerName, balance || 0, isAdmin ? 1 : 0, hashedPin, new Date().toISOString(), cleanRfid);
 
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, card: getCards().find(c => c.rfid.toLowerCase() === cleanRfid) });
@@ -172,7 +185,7 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
 export const getCardProfile = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
-    const cleanRfid = String(rfid).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+    const cleanRfid = cleanRfidUtil(rfid);
     
     const card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
     if (!card) return res.status(404).json({ error: "Card not found" });

@@ -28,8 +28,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  const reconnectDelay = useRef(2000);
-  const maxReconnectDelay = 30000;
+  const retryCount = useRef(0);
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;
@@ -47,7 +46,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
 
       ws.current.onopen = () => {
         console.log('[WS] Connected');
-        reconnectDelay.current = 2000; // Reset delay on success
+        retryCount.current = 0; // Reset retries on success
         handlersRef.current.onConnectionError(null);
         if (reconnectTimer) clearTimeout(reconnectTimer);
         
@@ -130,11 +129,14 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
           handlersRef.current.onConnectionError('Access Denied');
         } else {
           handlersRef.current.onConnectionError('Reconnecting...');
+          // Exponential backoff with random jitter
+          const delay = Math.min(1000 * Math.pow(2, retryCount.current), 30000) + Math.random() * 1000;
+          console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (retry #${retryCount.current + 1})...`);
+          
           reconnectTimer = setTimeout(() => {
+            retryCount.current += 1;
             connect();
-            // Exponential backoff
-            reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, maxReconnectDelay);
-          }, reconnectDelay.current);
+          }, delay);
         }
       };
 

@@ -36,6 +36,26 @@ const RegexConfig = {
   PRICE_EXPLICIT: /([\d]+[,.][\d]+|[\d]+)\s*(?:€|\$|е\.|евро|лв\.|лв(?!\.?\d)|лева)/i
 };
 
+const CategoryMapping: Record<string, string> = {
+  'суп': 'Супи',
+  'чорб': 'Супи',
+  'салат': 'Салати',
+  'гарнитур': 'Гарнитури',
+  'основн': 'Основни ястия',
+  'десерт': 'Десерти',
+  'хляб': 'Хляб',
+  'скара': 'Скара',
+  'друг': 'Други',
+  'soup': 'Soups',
+  'salad': 'Salads',
+  'side': 'Side Dishes',
+  'main': 'Main Dishes',
+  'dessert': 'Desserts',
+  'bread': 'Bread',
+  'bbq': 'BBQ',
+  'other': 'Other'
+};
+
 function safeFloat(value: any, fallback: number | null = null): number | null {
   if (value === null || value === undefined) return fallback;
   const str = String(value).replace(',', '.');
@@ -104,29 +124,30 @@ export function parseMenuText(rawText: string, customCategories: { keywords: str
     const trimmed = line.trim();
     if (trimmed.length < 2) return false;
 
-    // Paranoid Bulgarian Keywords (Cyrillic + Latin lookalikes)
-    const CORE_BG = ['скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб'];
+    // Standard core keywords in Bulgarian and English
+    const CORE_KEYWORDS = Array.from(new Set([
+      'скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб',
+      'soup', 'salad', 'side', 'main', 'dessert', 'bread', 'bbq', 'other',
+      ...dynamicCategoryKeywords.map(k => k.toLowerCase())
+    ]));
     
-    // 1. ABSOLUTE LAW: If it contains these words, it's a header.
-    // We only exclude it if it's very long (likely a description) or has a price but also starts with a bullet.
     const lower = line.toLowerCase();
-    const matchesCore = CORE_BG.some(cat => lower.includes(cat));
+    const matchesCore = CORE_KEYWORDS.some(cat => lower.includes(cat));
     
     if (matchesCore) {
-      // Clean up the line for a 'starts with' check
       const cleanLine = trimmed.replace(RegexConfig.ITEM_PREFIX, '').toLowerCase().trim();
+      const startsWithCore = CORE_KEYWORDS.some(cat => cleanLine.startsWith(cat));
       
-      // If the clean line STARTS with a core keyword, it's almost certainly a header
-      const startsWithCore = CORE_BG.some(cat => cleanLine.startsWith(cat));
-      if (startsWithCore) return true;
-
-      // Fallback: If it has a bullet/prefix AND has a price, it's an item.
-      // Otherwise, it's a header.
-      const hasPrefix = RegexConfig.ITEM_PREFIX.test(trimmed);
       const hasPrice = RegexConfig.PRICE.test(trimmed);
+      const hasColon = trimmed.includes(':');
       
-      if (hasPrefix && hasPrice) return false;
-      return true;
+      // If it has a price and NO colon, it's an item (e.g. "Зелева салата 1.50€"), not a category
+      if (hasPrice && !hasColon) {
+        return false;
+      }
+      
+      if (startsWithCore) return true;
+      return false;
     }
 
     // 2. Fallback to colon-based detection
@@ -225,18 +246,17 @@ export function parseMenuText(rawText: string, customCategories: { keywords: str
     }
 
     if (hasCategoryText(line, dynamicCategoryKeywords)) {
-      if (currentCategory && currentCategory.items.length > 0) {
-        parsedOutput.categories.push(currentCategory);
-      }
-      
       // Clean the category name to be just the core keyword if found
       let cleanedName = line.trim();
       const lower = cleanedName.toLowerCase();
-      const CORE_BG = ['скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб'];
-      const foundKeyword = CORE_BG.find(k => lower.includes(k));
+      const CORE_KEYWORDS = [
+        'скара', 'салат', 'суп', 'гарнитур', 'основн', 'десерт', 'хляб', 'друг', 'чорб',
+        'soup', 'salad', 'side', 'main', 'dessert', 'bread', 'bbq', 'other'
+      ];
+      const foundKeyword = CORE_KEYWORDS.find(k => lower.includes(k));
       if (foundKeyword) {
-        // Capitalize the keyword
-        cleanedName = foundKeyword.charAt(0).toUpperCase() + foundKeyword.slice(1);
+        // Map to standard category name
+        cleanedName = CategoryMapping[foundKeyword];
       } else {
         // If no core keyword, just strip typical noise
         cleanedName = cleanedName
@@ -254,6 +274,8 @@ export function parseMenuText(rawText: string, customCategories: { keywords: str
       }
       
       currentCategory = { categoryName: cleanedName, items: [] };
+      parsedOutput.categories.push(currentCategory);
+      
       currentCategoryDefaultPrice = null;
       currentCategoryDefaultWeight = null;
       currentCategoryDefaultBoxFee = 0;
@@ -313,5 +335,6 @@ export function parseMenuText(rawText: string, customCategories: { keywords: str
     }
   }
 
+  parsedOutput.categories = parsedOutput.categories.filter(c => c.items.length > 0);
   return parsedOutput;
 }

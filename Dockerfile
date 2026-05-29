@@ -13,6 +13,9 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
+# Generate dynamic build version timestamp
+RUN echo "export const APP_VERSION = 'v$(date +'%Y.%m.%d-%H%M')';" > src/version.ts
+
 # Build the frontend
 RUN npm run build
 
