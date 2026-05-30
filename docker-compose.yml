@@ -7,6 +7,8 @@ services:
     volumes:
       - ./data:/app/data
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - NODE_ENV=production
       - PORT=3400
