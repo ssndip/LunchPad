@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Generate dynamic build version timestamp
-RUN echo "export const APP_VERSION = 'v$(date +'%Y.%m.%d-%H%M')';" > src/version.ts
+RUN VERSION=$(node -e "import fs from 'fs'; console.log(JSON.parse(fs.readFileSync('./package.json', 'utf8')).version);") && DATE=$(date +'%Y.%m.%d') && echo "export const APP_VERSION = 'v$VERSION ($DATE)';" > src/version.ts
 
 # Build the frontend
 RUN npm run build
