@@ -19,6 +19,12 @@ console.log(`[DB] Initializing database at: ${dbPath}`);
 export const db = new Database(dbPath);
 db.pragma('foreign_keys = ON');
 
+// ⚡ Bolt: Enable WAL journal mode and optimized synchronous setting for concurrent canteen reads/writes
+if (process.env.NODE_ENV !== 'test') {
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+}
+
 // Create tables and indexes
 export const initDb = () => {
   db.exec(`

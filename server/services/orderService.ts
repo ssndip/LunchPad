@@ -80,7 +80,7 @@ export const processOrderTransaction = (card: any, enrichedItems: EnrichedItem[]
   
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
-  const orderId = `ORD-${Date.now()}`;
+  const orderId = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const orderData = {
     id: orderId,

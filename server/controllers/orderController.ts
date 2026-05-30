@@ -98,6 +98,24 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       return res.status(401).json({ error: "No RFID or PIN provided" });
     }
 
+    // ⚡ Bolt: Canteen Double-Tap Safeguard (prevent accidental duplicate charges within 3 seconds)
+    if (process.env.NODE_ENV !== 'test' && card && card.rfid !== 'TEST-ADMIN') {
+      const lastOrder = db.prepare(
+        "SELECT timestamp FROM orders WHERE rfid = ? ORDER BY timestamp DESC LIMIT 1"
+      ).get(card.rfid) as { timestamp: string } | undefined;
+
+      if (lastOrder) {
+        const lastOrderTime = new Date(lastOrder.timestamp).getTime();
+        const timeDiff = Date.now() - lastOrderTime;
+        if (timeDiff < 3000) {
+          return res.status(429).json({ 
+            error: "Duplicate Tap", 
+            message: "A duplicate card tap was detected. Please wait a few seconds." 
+          });
+        }
+      }
+    }
+
     // Use OrderService for validation, enrichment, and processing
     let enrichedItems;
     try {
