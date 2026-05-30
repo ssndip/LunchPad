@@ -117,7 +117,7 @@ async function callOpenAI(apiKey: string, profile: any, menuText: string, instru
   }
 
   const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
+  return cleanAndParseJSON(data.choices[0].message.content);
 }
 
 async function callOpenAIVision(apiKey: string, base64Image: string) {
@@ -249,7 +249,18 @@ export const testConnection = async (req: Request, res: Response) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: model, prompt: 'Hello', max_tokens: 5, stream: false })
       });
-      if (!resp.ok) throw new Error(await resp.text());
+      if (!resp.ok) {
+        const errText = await resp.text();
+        let errMsg = errText;
+        try {
+          const parsed = JSON.parse(errText);
+          errMsg = parsed.error || errText;
+        } catch {}
+        if (resp.status === 404 || errMsg.toLowerCase().includes('not found')) {
+          throw new Error(`Model '${model}' not found in Ollama. Please run 'ollama pull ${model}' on your host machine first.`);
+        }
+        throw new Error(errMsg);
+      }
       result = `Ollama Connected! (Model: ${model})`;
     }
     res.json({ success: true, message: result });
@@ -298,7 +309,7 @@ async function callGemini(apiKey: string, profile: any, menuText: string, instru
   }
 
   const data = await response.json();
-  return JSON.parse(data.candidates[0].content.parts[0].text);
+  return cleanAndParseJSON(data.candidates[0].content.parts[0].text);
 }
 
 async function callGeminiVision(apiKey: string, base64Image: string) {
@@ -403,10 +414,7 @@ async function callAnthropic(apiKey: string, profile: any, menuText: string, ins
   }
 
   const data = await response.json();
-  const text = data.content[0].text;
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Anthropic failed to return valid JSON");
-  return JSON.parse(jsonMatch[0]);
+  return cleanAndParseJSON(data.content[0].text);
 }
 
 async function callAnthropicVision(apiKey: string, base64Image: string) {
@@ -578,12 +586,20 @@ async function callOllama(profile: any, menuText: string, instructions?: string,
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Ollama Error: Status ${response.status}. ${errorBody}`);
+    let errMsg = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      errMsg = parsed.error || errorBody;
+    } catch {}
+    if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
+      throw new Error(`Model '${model}' not found in Ollama. Please run 'ollama pull ${model}' on your host machine first.`);
+    }
+    throw new Error(`Ollama Error: Status ${response.status}. ${errMsg}`);
   }
 
   const data = await response.json();
   const text = data.response;
-  return JSON.parse(text);
+  return cleanAndParseJSON(text);
 }
 
 async function callOllamaVision(base64Image: string) {
@@ -624,9 +640,38 @@ SOUPS
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Ollama Vision Error: Status ${response.status}. ${errorBody}`);
+    let errMsg = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      errMsg = parsed.error || errorBody;
+    } catch {}
+    if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
+      throw new Error(`Vision model '${model}' not found in Ollama. Please run 'ollama pull ${model}' on your host machine first.`);
+    }
+    throw new Error(`Ollama Vision Error: Status ${response.status}. ${errMsg}`);
   }
 
   const data = await response.json();
   return data.response;
+}
+
+function cleanAndParseJSON(text: string): any {
+  // Remove markdown block backticks if present
+  const cleanedText = text.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+  
+  // Extract block starting from '{' to '}'
+  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    try {
+      return JSON.parse(cleanedText);
+    } catch (err: any) {
+      throw new Error(`Failed to extract valid JSON payload from AI response: ${err.message}. Raw: "${text.substring(0, 100)}..."`);
+    }
+  }
+  
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (err: any) {
+    throw new Error(`Extracted block is not valid JSON: ${err.message}. Content: "${jsonMatch[0].substring(0, 100)}..."`);
+  }
 }
