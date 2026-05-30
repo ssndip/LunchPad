@@ -54,7 +54,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = React.memo(
           t={t}
           icon={<AlertCircle />}
           title={t("kiosk.connection_restricted")}
-          message={t("restricted_message")}
+          message={t("kiosk.restricted_message")}
         />
       );
 

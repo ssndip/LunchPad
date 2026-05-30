@@ -53,6 +53,28 @@ export const updateMenu = async (token: string, menu: MenuItem[], date?: string)
   if (!res.ok) throw new Error('Failed to update menu');
 };
 
+export interface MenuBackup {
+  id: number;
+  timestamp: string;
+  menuDate: string;
+  menuVersion: number;
+  itemCount: number;
+}
+
+export const fetchMenuBackups = async (token: string): Promise<MenuBackup[]> => {
+  const res = await fetch('/api/menu/backups', { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch menu backups');
+  return res.json();
+};
+
+export const restoreMenuBackup = async (token: string, id: number): Promise<void> => {
+  const res = await fetch(`/api/menu/backups/restore/${id}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to restore menu backup');
+};
+
 // ─── Orders ──────────────────────────────────────────────────────────────────
 export const fetchOrders = async (token: string): Promise<Order[]> => {
   const res = await fetch('/api/orders', { headers: authHeaders(token) });

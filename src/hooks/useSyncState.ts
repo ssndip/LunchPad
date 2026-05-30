@@ -30,7 +30,13 @@ export function useSyncState() {
   const setAnnouncement = useStore(s => s.setAnnouncement);
   const setAiProvider = useStore(s => s.setAiProvider);
   const setAiApiKey = useStore(s => s.setAiApiKey);
+  const setAiModel = useStore(s => s.setAiModel);
+  const setAiEndpoint = useStore(s => s.setAiEndpoint);
   const setPreIdentificationEnabled = useStore(s => s.setPreIdentificationEnabled);
+  const setKioskAutoTiming = useStore(s => s.setKioskAutoTiming);
+  const setKioskOpenTime = useStore(s => s.setKioskOpenTime);
+  const setKioskCloseTime = useStore(s => s.setKioskCloseTime);
+  const setKioskCloseDay = useStore(s => s.setKioskCloseDay);
 
   const fetchCards = useCallback(async () => {
     if (!token) return;
@@ -81,14 +87,20 @@ export function useSyncState() {
         if (data.announcement !== undefined) setAnnouncement(data.announcement);
         if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
         if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+        if (data.aiModel !== undefined) setAiModel(data.aiModel);
+        if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
         if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+        if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
+        if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
+        if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
+        if (data.kioskCloseDay !== undefined) setKioskCloseDay(data.kioskCloseDay);
         setConnectionError(null);
         fetchLanguages();
       }
     } catch {
       // Keep existing error state
     }
-  }, [setMenu, setKioskOpen, setAdminWhitelistEnabled, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError]);
+  }, [setMenu, setKioskOpen, setAdminWhitelistEnabled, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError, setAiProvider, setAiApiKey, setAiModel, setAiEndpoint, setPreIdentificationEnabled, setKioskAutoTiming, setKioskOpenTime, setKioskCloseTime, setKioskCloseDay, fetchLanguages]);
 
   // WebSocket Handlers
   useWebSocket({
@@ -111,7 +123,13 @@ export function useSyncState() {
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
       if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
       if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+      if (data.aiModel !== undefined) setAiModel(data.aiModel);
+      if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
       if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+      if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
+      if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
+      if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
+      if (data.kioskCloseDay !== undefined) setKioskCloseDay(data.kioskCloseDay);
       setMenuVersion(data.menuVersion);
       setConnectionError(null);
       fetchLanguages();
@@ -136,7 +154,13 @@ export function useSyncState() {
       if (data.announcement !== undefined) setAnnouncement(data.announcement);
       if (data.aiProvider !== undefined) setAiProvider(data.aiProvider);
       if (data.aiApiKey !== undefined) setAiApiKey(data.aiApiKey);
+      if (data.aiModel !== undefined) setAiModel(data.aiModel);
+      if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
       if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+      if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
+      if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
+      if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
+      if (data.kioskCloseDay !== undefined) setKioskCloseDay(data.kioskCloseDay);
     },
     onPWASettingsUpdate: (data: any) => {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
@@ -191,7 +215,13 @@ export function useSyncState() {
             announcement: settings.announcement !== undefined ? settings.announcement : useStore.getState().announcement,
             aiProvider: settings.aiProvider || useStore.getState().aiProvider,
             aiApiKey: settings.aiApiKey || useStore.getState().aiApiKey,
+            aiModel: settings.aiModel !== undefined ? settings.aiModel : useStore.getState().aiModel,
+            aiEndpoint: settings.aiEndpoint !== undefined ? settings.aiEndpoint : useStore.getState().aiEndpoint,
             preIdentificationEnabled: settings.preIdentificationEnabled !== undefined ? settings.preIdentificationEnabled : useStore.getState().preIdentificationEnabled,
+            kioskAutoTiming: settings.kioskAutoTiming !== undefined ? settings.kioskAutoTiming : useStore.getState().kioskAutoTiming,
+            kioskOpenTime: settings.kioskOpenTime || useStore.getState().kioskOpenTime,
+            kioskCloseTime: settings.kioskCloseTime || useStore.getState().kioskCloseTime,
+            kioskCloseDay: settings.kioskCloseDay !== undefined ? settings.kioskCloseDay : useStore.getState().kioskCloseDay,
             customCategories: settings.customCategories || useStore.getState().customCategories
           });
           

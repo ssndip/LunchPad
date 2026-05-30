@@ -63,6 +63,9 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
 
       if (settings.kioskAutoTiming) {
         const now = new Date();
+        if (settings.kioskCloseDay !== undefined && settings.kioskCloseDay !== -1 && now.getDay() === settings.kioskCloseDay) {
+          return res.status(403).json({ error: "Kiosk is closed on this day (weekend/non-operating day)." });
+        }
         const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + 
                             now.getMinutes().toString().padStart(2, '0');
         const isWithinWindow = currentHHmm >= settings.kioskOpenTime && currentHHmm < settings.kioskCloseTime;

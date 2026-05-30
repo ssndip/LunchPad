@@ -22,6 +22,8 @@ export interface SettingsSlice {
   announcement: string;
   aiProvider: string;
   aiApiKey: string;
+  aiModel: string;
+  aiEndpoint: string;
   preIdentificationEnabled: boolean;
 
   setAdminWhitelistEnabled: (v: boolean) => void;
@@ -43,6 +45,8 @@ export interface SettingsSlice {
   setAnnouncement: (v: string) => void;
   setAiProvider: (v: string) => void;
   setAiApiKey: (v: string) => void;
+  setAiModel: (v: string) => void;
+  setAiEndpoint: (v: string) => void;
   setPreIdentificationEnabled: (v: boolean) => void;
   customCategories: import('../../types').CustomCategory[];
   setCustomCategories: (categories: import('../../types').CustomCategory[]) => void;
@@ -71,6 +75,8 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   announcement: '',
   aiProvider: 'openai',
   aiApiKey: '',
+  aiModel: '',
+  aiEndpoint: '',
   preIdentificationEnabled: false,
 
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
@@ -95,6 +101,8 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAnnouncement: (v) => set({ announcement: v }),
   setAiProvider: (v) => set({ aiProvider: v }),
   setAiApiKey: (v) => set({ aiApiKey: v }),
+  setAiModel: (v) => set({ aiModel: v }),
+  setAiEndpoint: (v) => set({ aiEndpoint: v }),
   setPreIdentificationEnabled: (v) => set({ preIdentificationEnabled: v }),
   customCategories: [],
   setCustomCategories: (customCategories) => set({ customCategories }),

@@ -16,6 +16,8 @@ import {
   setAnnouncementConfig,
   setAiProviderConfig,
   setAiApiKeyConfig,
+  setAiModelConfig,
+  setAiEndpointConfig,
   setPreIdentificationEnabledConfig,
   hashAndSetAdminPin,
   setKioskAutoTimingConfig,
@@ -40,6 +42,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     announcement: settings.announcement,
     aiProvider: settings.aiProvider,
     aiApiKey: settings.aiApiKey,
+    aiModel: settings.aiModel,
+    aiEndpoint: settings.aiEndpoint,
     preIdentificationEnabled: settings.preIdentificationEnabled,
     customCategories: settings.customCategories,
     kioskAutoTiming: settings.kioskAutoTiming,
@@ -55,7 +59,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
-      aiProvider, aiApiKey, preIdentificationEnabled, customCategories,
+      aiProvider, aiApiKey, aiModel, aiEndpoint, preIdentificationEnabled, customCategories,
       kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay
     } = req.body;
     
@@ -154,12 +158,28 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       if (typeof aiProvider !== 'string') return res.status(400).json({ error: "Invalid value for aiProvider" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_provider", aiProvider);
       setAiProviderConfig(aiProvider);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { aiProvider } as any });
     }
 
     if (aiApiKey !== undefined) {
       if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
       setAiApiKeyConfig(aiApiKey);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { aiApiKey } as any });
+    }
+
+    if (aiModel !== undefined) {
+      if (typeof aiModel !== 'string') return res.status(400).json({ error: "Invalid value for aiModel" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_model", aiModel);
+      setAiModelConfig(aiModel);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { aiModel } as any });
+    }
+
+    if (aiEndpoint !== undefined) {
+      if (typeof aiEndpoint !== 'string') return res.status(400).json({ error: "Invalid value for aiEndpoint" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_endpoint", aiEndpoint);
+      setAiEndpointConfig(aiEndpoint);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { aiEndpoint } as any });
     }
 
     if (customCategories !== undefined) {
@@ -212,6 +232,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
       aiApiKey: settings.aiApiKey,
+      aiModel: settings.aiModel,
+      aiEndpoint: settings.aiEndpoint,
       preIdentificationEnabled: settings.preIdentificationEnabled,
       customCategories: settings.customCategories,
       kioskAutoTiming: settings.kioskAutoTiming,

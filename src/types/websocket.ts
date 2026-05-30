@@ -46,7 +46,13 @@ export interface InitialStateMessage extends BaseWsMessage {
   announcement?: string;
   aiProvider?: string;
   aiApiKey?: string;
+  aiModel?: string;
+  aiEndpoint?: string;
   preIdentificationEnabled?: boolean;
+  kioskAutoTiming?: boolean;
+  kioskOpenTime?: string;
+  kioskCloseTime?: string;
+  kioskCloseDay?: number;
   publicAccessRequired?: boolean;
   publicAccessCode?: string;
 }
@@ -95,6 +101,12 @@ export interface SettingsUpdateMessage extends BaseWsMessage {
     announcement?: string;
     aiProvider?: string;
     aiApiKey?: string;
+    aiModel?: string;
+    aiEndpoint?: string;
+    kioskAutoTiming?: boolean;
+    kioskOpenTime?: string;
+    kioskCloseTime?: string;
+    kioskCloseDay?: number;
     packagingFee?: number;
     deliveryFee?: number;
     currency?: string;

@@ -232,7 +232,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean, customCategories?: import('./types').CustomCategory[]) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean, customCategories?: import('./types').CustomCategory[], aiModel?: string, aiEndpoint?: string, kioskAutoTiming?: boolean, kioskOpenTime?: string, kioskCloseTime?: string, kioskCloseDay?: number) => {
     if (!s.token) return;
     try {
       const update = {
@@ -247,8 +247,14 @@ export default function App() {
         announcement: announcement ?? s.announcement,
         aiProvider: aiProvider ?? s.aiProvider,
         aiApiKey: aiApiKey ?? s.aiApiKey,
+        aiModel: aiModel ?? s.aiModel,
+        aiEndpoint: aiEndpoint ?? s.aiEndpoint,
         preIdentificationEnabled: preIdent ?? s.preIdentificationEnabled,
-        customCategories: customCategories ?? s.customCategories
+        customCategories: customCategories ?? s.customCategories,
+        kioskAutoTiming: kioskAutoTiming ?? s.kioskAutoTiming,
+        kioskOpenTime: kioskOpenTime ?? s.kioskOpenTime,
+        kioskCloseTime: kioskCloseTime ?? s.kioskCloseTime,
+        kioskCloseDay: kioskCloseDay ?? s.kioskCloseDay
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -262,7 +268,13 @@ export default function App() {
       if (announcement !== undefined) s.setAnnouncement(announcement);
       if (aiProvider !== undefined) s.setAiProvider(aiProvider);
       if (aiApiKey !== undefined) s.setAiApiKey(aiApiKey);
+      if (aiModel !== undefined) s.setAiModel(aiModel);
+      if (aiEndpoint !== undefined) s.setAiEndpoint(aiEndpoint);
       if (preIdent !== undefined) s.setPreIdentificationEnabled(preIdent);
+      if (kioskAutoTiming !== undefined) s.setKioskAutoTiming(kioskAutoTiming);
+      if (kioskOpenTime !== undefined) s.setKioskOpenTime(kioskOpenTime);
+      if (kioskCloseTime !== undefined) s.setKioskCloseTime(kioskCloseTime);
+      if (kioskCloseDay !== undefined) s.setKioskCloseDay(kioskCloseDay);
       if (customCategories !== undefined) {
         s.setCustomCategories(customCategories);
       }
@@ -594,8 +606,12 @@ export default function App() {
               setConfirmPin={s.setConfirmPin}
               pinUpdateStatus={s.pinUpdateStatus}
               preIdentificationEnabled={s.preIdentificationEnabled}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats);
+              kioskAutoTiming={s.kioskAutoTiming}
+              kioskOpenTime={s.kioskOpenTime}
+              kioskCloseTime={s.kioskCloseTime}
+              kioskCloseDay={s.kioskCloseDay}
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}
@@ -605,6 +621,8 @@ export default function App() {
               announcement={s.announcement}
               aiProvider={s.aiProvider}
               aiApiKey={s.aiApiKey}
+              aiModel={s.aiModel}
+              aiEndpoint={s.aiEndpoint}
               availableLanguages={s.availableLanguages}
               confirm={setConfirmConfig}
               onImportLanguage={async (code, name, data) => {

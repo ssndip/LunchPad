@@ -20,6 +20,12 @@ interface SettingsTabProps {
   announcement: string;
   aiProvider: string;
   aiApiKey: string;
+  aiModel: string;
+  aiEndpoint: string;
+  kioskAutoTiming: boolean;
+  kioskOpenTime: string;
+  kioskCloseTime: string;
+  kioskCloseDay: number;
   newPin: string;
   setNewPin: (v: string) => void;
   confirmPin: string;
@@ -41,7 +47,13 @@ interface SettingsTabProps {
     aiProvider?: string,
     aiApiKey?: string,
     preIdentificationEnabled?: boolean,
-    customCategories?: import('../../../types').CustomCategory[]
+    customCategories?: import('../../../types').CustomCategory[],
+    aiModel?: string,
+    aiEndpoint?: string,
+    kioskAutoTiming?: boolean,
+    kioskOpenTime?: string,
+    kioskCloseTime?: string,
+    kioskCloseDay?: number
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -51,7 +63,8 @@ interface SettingsTabProps {
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   adminWhitelistEnabled, orderButtonEnabled, testModeEnabled,
   kioskModeEnabled, allowPWAInstall, bgnEnabled, preIdentificationEnabled, adminWhitelist, announcement,
-  aiProvider, aiApiKey,
+  aiProvider, aiApiKey, aiModel, aiEndpoint,
+  kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay,
   newPin, setNewPin, confirmPin, setConfirmPin, pinUpdateStatus,
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
@@ -67,6 +80,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [importModalData, setImportModalData] = React.useState<any | null>(null);
   const [localAnnouncement, setLocalAnnouncement] = React.useState(announcement);
   const [localAiApiKey, setLocalAiApiKey] = React.useState(aiApiKey);
+  const [localAiModel, setLocalAiModel] = React.useState(aiModel);
+  const [localAiEndpoint, setLocalAiEndpoint] = React.useState(aiEndpoint);
+  const [localKioskOpenTime, setLocalKioskOpenTime] = React.useState(kioskOpenTime);
+  const [localKioskCloseTime, setLocalKioskCloseTime] = React.useState(kioskCloseTime);
+  const [localKioskCloseDay, setLocalKioskCloseDay] = React.useState(kioskCloseDay);
   const [showAiKey, setShowAiKey] = React.useState(false);
 
   const [hapticIntensity, setHapticIntensity] = React.useState(() => {
@@ -82,7 +100,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   React.useEffect(() => {
     setLocalAnnouncement(announcement);
     setLocalAiApiKey(aiApiKey);
-  }, [announcement, aiApiKey]);
+    setLocalAiModel(aiModel);
+    setLocalAiEndpoint(aiEndpoint);
+    setLocalKioskOpenTime(kioskOpenTime);
+    setLocalKioskCloseTime(kioskCloseTime);
+    setLocalKioskCloseDay(kioskCloseDay);
+  }, [announcement, aiApiKey, aiModel, aiEndpoint, kioskOpenTime, kioskCloseTime, kioskCloseDay]);
   
   React.useEffect(() => {
     setLocalWhitelist(adminWhitelist);
@@ -465,6 +488,120 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <Toggle checked={testModeEnabled} onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, !testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} label="Toggle Test Mode" color="bg-indigo-600" />
           </div>
         </div>
+
+        {/* Kiosk Timing and Operating Hours */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900">{t('settings.auto_operating_hours') || 'Auto Operating Hours'}</h3>
+                <p className="text-sm text-neutral-500 italic">{t('settings.auto_operating_hours_desc') || 'Automatically restrict kiosk ordering to custom daily hours and weekends'}</p>
+              </div>
+            </div>
+            <Toggle 
+              checked={kioskAutoTiming} 
+              onChange={() => onUpdateSettings(
+                adminWhitelistEnabled, 
+                orderButtonEnabled, 
+                testModeEnabled, 
+                kioskModeEnabled, 
+                allowPWAInstall, 
+                lang, 
+                bgnEnabled, 
+                adminWhitelist, 
+                announcement, 
+                aiProvider, 
+                aiApiKey, 
+                preIdentificationEnabled, 
+                customCategories, 
+                aiModel, 
+                aiEndpoint, 
+                !kioskAutoTiming, 
+                kioskOpenTime, 
+                kioskCloseTime, 
+                kioskCloseDay
+              )} 
+              label="Toggle Auto Operating Hours" 
+              color="bg-indigo-600" 
+            />
+          </div>
+
+          {kioskAutoTiming && (
+            <div className="space-y-6 pt-6 border-t border-neutral-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.open_time') || 'Open Time'}</label>
+                  <input
+                    type="time"
+                    value={localKioskOpenTime}
+                    onChange={(e) => setLocalKioskOpenTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.close_time') || 'Close Time'}</label>
+                  <input
+                    type="time"
+                    value={localKioskCloseTime}
+                    onChange={(e) => setLocalKioskCloseTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.closed_weekly_day') || 'Closed Weekly Day'}</label>
+                  <select
+                    value={localKioskCloseDay}
+                    onChange={(e) => setLocalKioskCloseDay(Number(e.target.value))}
+                    className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-semibold"
+                  >
+                    <option value={-1}>{t('settings.none') || 'None'}</option>
+                    <option value={0}>{t('settings.sunday') || 'Sunday'}</option>
+                    <option value={1}>{t('settings.monday') || 'Monday'}</option>
+                    <option value={2}>{t('settings.tuesday') || 'Tuesday'}</option>
+                    <option value={3}>{t('settings.wednesday') || 'Wednesday'}</option>
+                    <option value={4}>{t('settings.thursday') || 'Thursday'}</option>
+                    <option value={5}>{t('settings.friday') || 'Friday'}</option>
+                    <option value={6}>{t('settings.saturday') || 'Saturday'}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => onUpdateSettings(
+                    adminWhitelistEnabled, 
+                    orderButtonEnabled, 
+                    testModeEnabled, 
+                    kioskModeEnabled, 
+                    allowPWAInstall, 
+                    lang, 
+                    bgnEnabled, 
+                    adminWhitelist, 
+                    announcement, 
+                    aiProvider, 
+                    aiApiKey, 
+                    preIdentificationEnabled, 
+                    customCategories, 
+                    aiModel, 
+                    aiEndpoint, 
+                    kioskAutoTiming, 
+                    localKioskOpenTime, 
+                    localKioskCloseTime, 
+                    localKioskCloseDay
+                  )}
+                  disabled={localKioskOpenTime === kioskOpenTime && localKioskCloseTime === kioskCloseTime && localKioskCloseDay === kioskCloseDay}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                  title={t('settings.save_operating_hours') || 'Save Operating Hours'}
+                >
+                  {t('settings.save_operating_hours') || 'Save Operating Hours'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Admin Whitelist */}
         <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-6">
@@ -588,7 +725,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center"><Sparkles className="w-6 h-6 text-indigo-600" /></div>
             <div>
               <h3 className="text-xl font-bold text-neutral-900">{t('settings.ai_integration')}</h3>
-              <p className="text-sm text-neutral-500 italic">Power the Parser Auto-Teacher with external models</p>
+              <p className="text-sm text-neutral-500 italic">{t('settings.ai_integration_desc')}</p>
             </div>
           </div>
 
@@ -596,11 +733,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="flex-1">
                 <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_provider')}</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['openai', 'anthropic', 'gemini'].map(p => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {['openai', 'anthropic', 'gemini', 'ollama'].map(p => (
                     <button title="Select AI Provider"
                       key={p}
-                      onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, p, aiApiKey)}
+                      onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, p, aiApiKey, preIdentificationEnabled, customCategories, aiModel, aiEndpoint)}
                       className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${aiProvider === p ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-neutral-100 text-neutral-400 hover:border-indigo-200 hover:text-indigo-600'}`}
                     >
                       {p}
@@ -610,72 +747,111 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-neutral-50">
-              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_api_key')}</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type={showAiKey ? 'text' : 'password'}
-                    value={localAiApiKey}
-                    onChange={(e) => setLocalAiApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
-                  />
-                  <button 
-                    onClick={() => setShowAiKey(!showAiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
-                    title={showAiKey ? "Hide API Key" : "Show API Key"}
-                    aria-label={showAiKey ? "Hide API Key" : "Show API Key"}
+            {aiProvider !== 'ollama' ? (
+              <div className="pt-4 border-t border-neutral-50">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_api_key')}</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showAiKey ? 'text' : 'password'}
+                      value={localAiApiKey}
+                      onChange={(e) => setLocalAiApiKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
+                    />
+                    <button 
+                      onClick={() => setShowAiKey(!showAiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                      title={showAiKey ? "Hide API Key" : "Show API Key"}
+                      aria-label={showAiKey ? "Hide API Key" : "Show API Key"}
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey, preIdentificationEnabled, customCategories, aiModel, aiEndpoint)}
+                    disabled={localAiApiKey === aiApiKey}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                    title={t('settings.update')}
                   >
-                    <Info className="w-4 h-4" />
+                    {t('settings.update')}
                   </button>
                 </div>
-                <button
-                  onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey)}
-                  disabled={localAiApiKey === aiApiKey}
-                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
-                  title={t('settings.update')}
-                >
-                  {t('settings.update')}
-                </button>
+                <p className="mt-2 text-[10px] text-neutral-400 italic leading-relaxed">
+                  {t('settings.ai_api_key_desc')}
+                </p>
               </div>
-              
-              <div className="mt-4 flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-indigo-600" />
-                  <span className="text-xs font-bold text-neutral-900">Verify Connection</span>
+            ) : (
+              <div className="pt-4 border-t border-neutral-50 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ollama_endpoint')}</label>
+                    <input
+                      type="text"
+                      value={localAiEndpoint}
+                      onChange={(e) => setLocalAiEndpoint(e.target.value)}
+                      placeholder="http://localhost:11434"
+                      className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ollama_model')}</label>
+                    <input
+                      type="text"
+                      value={localAiModel}
+                      onChange={(e) => setLocalAiModel(e.target.value)}
+                      placeholder="llama3"
+                      className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
+                    />
+                  </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    if (!aiApiKey) {
-                      alert("Please update and save your API key first.");
-                      return;
-                    }
-                    try {
-                      const res = await fetch('/api/ai/test', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
-                      });
-                      const data = await res.json();
-                      if (data.success) {
-                        alert(data.message);
-                      } else {
-                        alert("Connection Failed: " + data.error);
-                      }
-                    } catch (err: any) {
-                      alert("Network Error: " + err.message);
-                    }
-                  }}
-                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
-                  title="Verify AI Connection"
-                >
-                  Test Connection
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, aiApiKey, preIdentificationEnabled, customCategories, localAiModel, localAiEndpoint)}
+                    disabled={localAiModel === aiModel && localAiEndpoint === aiEndpoint}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                    title={t('settings.update')}
+                  >
+                    {t('settings.update')}
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] text-neutral-400 italic leading-relaxed">
+                  {t('settings.ollama_desc')}
+                </p>
               </div>
+            )}
 
-              <p className="mt-2 text-[10px] text-neutral-400 italic leading-relaxed">
-                {t('settings.ai_api_key_desc')}
-              </p>
+            <div className="mt-4 flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-neutral-900">{t('settings.verify_connection')}</span>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!aiApiKey && aiProvider !== 'ollama') {
+                    alert(t('settings.please_save_api_key'));
+                    return;
+                  }
+                  try {
+                    const res = await fetch('/api/ai/test', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      alert(data.message);
+                    } else {
+                      alert(`${t('navigation.connection_failed') || 'Connection Failed:'} ${data.error}`);
+                    }
+                  } catch (err: any) {
+                    alert(`${t('navigation.network_error') || 'Network Error:'} ${err.message}`);
+                  }
+                }}
+                className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
+                title={t('settings.verify_ai_connection')}
+              >
+                {t('settings.test_connection')}
+              </button>
             </div>
           </div>
         </div>
@@ -861,7 +1037,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               if (confirm) {
                 confirm({
                   title: t('modals.copy_success'),
-                  message: "Language imported successfully!",
+                  message: t('settings.language_import_success'),
                   confirmText: t('menu.OK'),
                   onConfirm: () => {}
                 });

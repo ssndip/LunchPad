@@ -62,6 +62,7 @@ export const useComputedKioskOpen = () => {
   const kioskAutoTiming = useStore((state) => state.kioskAutoTiming);
   const openTime = useStore((state) => state.kioskOpenTime);
   const closeTime = useStore((state) => state.kioskCloseTime);
+  const closeDay = useStore((state) => state.kioskCloseDay);
 
   return useMemo(() => {
     // 1. Manual override takes precedence? 
@@ -70,6 +71,8 @@ export const useComputedKioskOpen = () => {
     if (!kioskAutoTiming) return kioskOpen;
 
     const now = new Date();
+    if (closeDay !== undefined && closeDay !== -1 && now.getDay() === closeDay) return false;
+
     const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + 
                         now.getMinutes().toString().padStart(2, '0');
 
@@ -78,5 +81,5 @@ export const useComputedKioskOpen = () => {
     const isWithinWindow = currentHHmm >= openTime && currentHHmm < closeTime;
     
     return isWithinWindow;
-  }, [kioskOpen, kioskAutoTiming, openTime, closeTime]);
+  }, [kioskOpen, kioskAutoTiming, openTime, closeTime, closeDay]);
 };

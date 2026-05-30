@@ -389,7 +389,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                                   onClick={() => handleSave(card.rfid)}
                                   disabled={isSaving}
                                   className="p-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
-                                  title={t('menu.save')}
+                                  title={t('modals.save')}
                                 >
                                   {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <div className="flex items-center px-1"><Plus className="w-3.5 h-3.5 rotate-45" style={{transform:'rotate(0deg)'}} /><span className="text-[9px] font-black uppercase ml-0.5">OK</span></div>}
                                 </button>

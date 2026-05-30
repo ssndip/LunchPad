@@ -30,6 +30,8 @@ export const settings = {
   announcement: "",
   aiProvider: "openai",
   aiApiKey: "",
+  aiModel: "",
+  aiEndpoint: "",
   preIdentificationEnabled: false,
   publicAccessCode: "",
   publicAccessRequired: false,
@@ -58,6 +60,8 @@ export const setAdminWhitelistConfig = (val: string) => settings.adminWhitelist 
 export const setAnnouncementConfig = (val: string) => settings.announcement = val;
 export const setAiProviderConfig = (val: string) => settings.aiProvider = val;
 export const setAiApiKeyConfig = (val: string) => settings.aiApiKey = val;
+export const setAiModelConfig = (val: string) => settings.aiModel = val;
+export const setAiEndpointConfig = (val: string) => settings.aiEndpoint = val;
 export const setPreIdentificationEnabledConfig = (val: boolean) => settings.preIdentificationEnabled = val;
 export const setPublicAccessCodeConfig = (val: string) => settings.publicAccessCode = val;
 export const setPublicAccessRequiredConfig = (val: boolean) => settings.publicAccessRequired = val;
@@ -232,6 +236,22 @@ export const initSettings = () => {
     settings.aiApiKey = "";
   } else {
     settings.aiApiKey = aiApiKeyRecord.value;
+  }
+
+  const aiModelRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("ai_model") as { value: string } | undefined;
+  if (!aiModelRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("ai_model", "");
+    settings.aiModel = "";
+  } else {
+    settings.aiModel = aiModelRecord.value;
+  }
+
+  const aiEndpointRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("ai_endpoint") as { value: string } | undefined;
+  if (!aiEndpointRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("ai_endpoint", "");
+    settings.aiEndpoint = "";
+  } else {
+    settings.aiEndpoint = aiEndpointRecord.value;
   }
 
   const preIdentRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("pre_identification_enabled") as { value: string } | undefined;

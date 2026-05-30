@@ -7,7 +7,7 @@ export const suggestRules = async (req: Request, res: Response) => {
   const profile = currentProfile || currentConfig;
   const { aiApiKey, aiProvider } = settings;
 
-  if (!aiApiKey) {
+  if (!aiApiKey && aiProvider !== 'ollama') {
     return res.status(400).json({ error: "AI API Key not configured in settings." });
   }
 
@@ -24,6 +24,8 @@ export const suggestRules = async (req: Request, res: Response) => {
       result = await callGemini(aiApiKey, profile, menuText, instructions, currentResult);
     } else if (aiProvider === 'anthropic') {
       result = await callAnthropic(aiApiKey, profile, menuText, instructions, currentResult);
+    } else if (aiProvider === 'ollama') {
+      result = await callOllama(profile, menuText, instructions, currentResult);
     } else {
       return res.status(400).json({ error: "Unsupported AI provider." });
     }
@@ -39,7 +41,7 @@ export const ocrImage = async (req: Request, res: Response) => {
   const { imageData } = req.body; // base64 string
   const { aiApiKey, aiProvider } = settings;
 
-  if (!aiApiKey) {
+  if (!aiApiKey && aiProvider !== 'ollama') {
     return res.status(400).json({ error: "AI API Key not configured in settings." });
   }
 
@@ -55,6 +57,8 @@ export const ocrImage = async (req: Request, res: Response) => {
       text = await callGeminiVision(aiApiKey, imageData);
     } else if (aiProvider === 'anthropic') {
       text = await callAnthropicVision(aiApiKey, imageData);
+    } else if (aiProvider === 'ollama') {
+      text = await callOllamaVision(imageData);
     } else {
       return res.status(400).json({ error: "Unsupported AI provider for Vision." });
     }
@@ -187,7 +191,7 @@ export const listModels = async (req: Request, res: Response) => {
 
 export const testConnection = async (req: Request, res: Response) => {
   const { aiApiKey, aiProvider } = settings;
-  if (!aiApiKey) return res.status(400).json({ error: 'API Key is missing.' });
+  if (!aiApiKey && aiProvider !== 'ollama') return res.status(400).json({ error: 'API Key is missing.' });
 
   try {
     let result;
@@ -237,6 +241,16 @@ export const testConnection = async (req: Request, res: Response) => {
       });
       if (!resp.ok) throw new Error(await resp.text());
       result = `Anthropic Connected! (Model: ${model})`;
+    } else if (aiProvider === 'ollama') {
+      const endpoint = settings.aiEndpoint || 'http://localhost:11434';
+      const model = settings.aiModel || 'llama3';
+      const resp = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model, prompt: 'Hello', max_tokens: 5, stream: false })
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      result = `Ollama Connected! (Model: ${model})`;
     }
     res.json({ success: true, message: result });
   } catch (err: any) {
@@ -542,4 +556,77 @@ TASK:
 
 Only suggest necessary rules. Support Bulgarian Cyrillic.
 `;
+}
+
+async function callOllama(profile: any, menuText: string, instructions?: string, currentResult?: any) {
+  const prompt = constructPrompt(profile, menuText, instructions, currentResult);
+  const endpoint = settings.aiEndpoint || 'http://localhost:11434';
+  const model = settings.aiModel || 'llama3';
+  
+  console.log(`[Ollama] Connecting to: ${endpoint}/api/generate using model: ${model}`);
+  
+  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      prompt: prompt + "\n\nIMPORTANT: Return ONLY a valid JSON object. No markdown, no prose.",
+      format: 'json',
+      stream: false
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Ollama Error: Status ${response.status}. ${errorBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.response;
+  return JSON.parse(text);
+}
+
+async function callOllamaVision(base64Image: string) {
+  const base64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+  const endpoint = settings.aiEndpoint || 'http://localhost:11434';
+  const model = settings.aiModel || 'llava';
+
+  console.log(`[Ollama Vision] Connecting to: ${endpoint}/api/generate using model: ${model}`);
+
+  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      prompt: `You are an OCR expert. Extract all text from this menu image. 
+
+SPECIAL INSTRUCTIONS FOR WEEKLY MENUS:
+- If the menu is a TABLE (e.g. Days as columns, Categories as rows), you MUST transcribe it into a vertical list grouped by day.
+- Example format:
+MONDAY
+SOUPS
+- Soup name 1.50€
+MAINS
+- Main name 3.00€
+
+TUESDAY
+SOUPS
+...
+
+- Maintain the structure as much as possible. 
+- Support Cyrillic (Bulgarian). 
+- If handwriting is present, transcribe it accurately. 
+- Output ONLY the extracted text, no explanations.`,
+      images: [base64],
+      stream: false
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Ollama Vision Error: Status ${response.status}. ${errorBody}`);
+  }
+
+  const data = await response.json();
+  return data.response;
 }

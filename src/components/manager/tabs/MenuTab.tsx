@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle, Image as ImageIcon, Upload, Loader2, Package } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, CheckCircle2, Layers, ArrowUp, ArrowDown, X, Square, CheckSquare, RefreshCw, Truck, AlertTriangle, Image as ImageIcon, Upload, Loader2, Package, History } from 'lucide-react';
 import { MenuItem } from '../../../types';
 import { parsePastedMenu } from '../../../utils/menuParser';
 import { useStore } from '../../../store/useStore';
@@ -36,6 +36,45 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [pasteText, setPasteText] = useState('');
   const [parsed, setParsed] = useState<any | null>(null);
   const { token } = useStore();
+  const [isBackupsOpen, setIsBackupsOpen] = useState(false);
+  const [backups, setBackups] = useState<api.MenuBackup[]>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
+
+  const openBackupsModal = async () => {
+    if (!token) return;
+    setIsBackupsOpen(true);
+    setIsLoadingBackups(true);
+    try {
+      const data = await api.fetchMenuBackups(token);
+      setBackups(data);
+    } catch (err) {
+      console.error('Failed to load menu backups', err);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const handleRestoreBackup = async (id: number) => {
+    if (!token) return;
+    confirm({
+      title: t('menu.restore_backup_title') || 'Restore Menu Backup',
+      message: t('menu.restore_backup_confirm') || 'Are you sure you want to restore this menu backup? This will overwrite the current active menu.',
+      onConfirm: async () => {
+        try {
+          await api.restoreMenuBackup(token, id);
+          setIsBackupsOpen(false);
+          confirm({
+            title: t('modals.confirm'),
+            message: t('menu.restore_success') || 'Menu backup restored successfully!',
+            confirmText: 'OK',
+            onConfirm: () => {}
+          });
+        } catch (err) {
+          console.error('Failed to restore menu backup', err);
+        }
+      }
+    });
+  };
   const customCategories = useStore(s => s.customCategories) || [];
 
   // Load parser category settings (autoBox / hasSideDish per category id)
@@ -397,6 +436,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </div>
+          <button
+            onClick={openBackupsModal}
+            className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
+          >
+            <History className="w-4 h-4 text-neutral-500" /> {t('menu.backups') || 'Restore Backup'}
+          </button>
           <button
             onClick={() => setIsPasteOpen(true)}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
@@ -839,6 +884,110 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       </div>
                     </div>
                   </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Backups Modal */}
+      <AnimatePresence>
+        {isBackupsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-neutral-100 flex flex-col max-h-[85vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-neutral-100 flex items-center justify-between bg-neutral-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-neutral-900 text-white rounded-xl flex items-center justify-center">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">
+                      {t('menu.backups') || 'Menu Backups'}
+                    </h2>
+                    <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider mt-0.5">
+                      {t('menu.backups_desc') || 'Select a historical menu snapshot to restore'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBackupsOpen(false)}
+                  className="p-2 hover:bg-neutral-200 rounded-full text-neutral-400 hover:text-neutral-900 transition-all active:scale-90"
+                  title={t('modals.close') || 'Close'}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar min-h-[300px]">
+                {isLoadingBackups ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3">
+                    <Loader2 className="w-10 h-10 animate-spin text-neutral-900" />
+                    <span className="text-xs font-black uppercase tracking-widest">{t('kiosk.waiting_for_scan') || 'Loading Backups...'}</span>
+                  </div>
+                ) : backups.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3 text-center px-8">
+                    <History className="w-12 h-12 stroke-[1.5]" />
+                    <h3 className="text-sm font-black text-neutral-700 uppercase tracking-tight">{t('menu.no_backups_found') || 'No Backups Available'}</h3>
+                    <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                      {t('menu.no_backups_desc') || 'Snapshots of your menu are automatically saved here whenever you save or import new menus.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {backups.map((backup) => {
+                      const dateObj = new Date(backup.timestamp);
+                      const formattedTime = dateObj.toLocaleString(lang === 'bg' ? 'bg-BG' : 'en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      });
+
+                      return (
+                        <div 
+                          key={backup.id} 
+                          className="flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200/50 rounded-2xl transition-all"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-black text-neutral-800">
+                              {formattedTime}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              {backup.menuDate && (
+                                <span className="text-[10px] bg-neutral-200 text-neutral-600 font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                  {backup.menuDate}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                                {backup.itemCount} {backup.itemCount === 1 ? t('menu.item') : t('menu.items')}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                                v{backup.menuVersion}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleRestoreBackup(backup.id)}
+                            className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                          >
+                            {t('menu.restore') || 'Restore'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </motion.div>

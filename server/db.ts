@@ -71,10 +71,19 @@ export const initDb = () => {
       value TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS menu_backups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      menuDate TEXT,
+      menuData TEXT NOT NULL,
+      menuVersion INTEGER
+    );
+
     -- ⚡ Bolt: Indexes for O(1) descending sorts & filters
     CREATE INDEX IF NOT EXISTS idx_orders_timestamp ON orders(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date DESC);
     CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(date DESC);
+    CREATE INDEX IF NOT EXISTS idx_menu_backups_timestamp ON menu_backups(timestamp DESC);
 
     -- ⚡ Bolt: Index for O(1) lookup of lowercased RFIDs
     CREATE INDEX IF NOT EXISTS idx_cards_lower_rfid ON cards(LOWER(rfid));

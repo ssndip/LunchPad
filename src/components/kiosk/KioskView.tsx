@@ -6,6 +6,7 @@ import { Language } from '../../translations';
 import { KioskCategorySidebar } from './KioskCategorySidebar';
 import { KioskItemList } from './KioskItemList';
 import { KioskOrderPanel, OrderSuccessOverlay } from './KioskOrderPanel';
+import { KioskOrderBar } from './KioskOrderBar';
 import { UserHistoryModal } from './UserHistoryModal';
 import { useRfidScanner } from '../../hooks/useRfidScanner';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -470,6 +471,24 @@ export const KioskView: React.FC<KioskViewProps> = ({
           />
         </div>
       </main>
+
+      {useMobileLayout && (
+        <KioskOrderBar
+          selectedItems={selectedItems}
+          totalPrice={totalPrice}
+          rfid={rfid}
+          setRfid={setRfid}
+          rfidInputRef={rfidInputRef}
+          isScanning={isScanning}
+          computedKioskOpen={computedKioskOpen}
+          testModeEnabled={testModeEnabled}
+          orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
+          onOrder={handleOrderSubmit}
+          onClearCart={onClearCart}
+          onChangeSide={handleUpdateSide}
+          t={t}
+        />
+      )}
 
       {/* Overlays */}
       <OrderSuccessOverlay show={showSuccess} message={successMessage || undefined} t={t} />
