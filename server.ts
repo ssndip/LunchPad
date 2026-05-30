@@ -21,6 +21,7 @@ import { getMenu } from "./server/controllers/menuController";
 import { getCards } from "./server/controllers/cardController";
 import { getOrders } from "./server/controllers/orderController";
 import { kioskOpen } from "./server/controllers/statusController";
+import { initAutoBackup } from "./server/controllers/backupController";
 
 // Routes
 import statusRoutes from "./server/routes/statusRoutes";
@@ -43,6 +44,7 @@ const __dirname = path.dirname(__filename);
 initDb();
 seedInitialData();
 initSettings();
+initAutoBackup();
 
 export const appPromise = startServer();
 

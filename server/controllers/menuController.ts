@@ -59,6 +59,17 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: "Expected an array of menu items" });
     }
 
+    // Validate each menu item before saving to prevent negative or non-numeric prices
+    for (const i of finalItems) {
+      if (!i.name || typeof i.name !== 'string') {
+        return res.status(400).json({ error: "Each menu item must have a valid name" });
+      }
+      const price = Number(i.price);
+      if (isNaN(price) || price < 0) {
+        return res.status(400).json({ error: `Invalid price for item "${i.name}": must be a valid non-negative number` });
+      }
+    }
+
     db.transaction(() => {
       // Create auto-recovery backup before updating
       const prevMenu = getMenu(db);

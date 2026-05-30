@@ -27,8 +27,18 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     if (pin !== undefined && pin !== null && typeof pin !== 'string') {
       return res.status(400).json({ error: "Invalid PIN format" });
     }
+    const numBalance = balance !== undefined && balance !== null ? Number(balance) : 0;
+    if (isNaN(numBalance)) {
+      return res.status(400).json({ error: "Balance must be a valid number" });
+    }
     const now = new Date().toISOString();
     const cleanRfid = cleanRfidUtil(rfid);
+
+    // RFID Conflict Check
+    const existingRfid = db.prepare("SELECT 1 FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid);
+    if (existingRfid) {
+      return res.status(409).json({ error: "Card with this RFID already exists." });
+    }
 
     // PIN Uniqueness Check
     let hashedPin = pin || null;
@@ -43,13 +53,7 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     db.prepare(`
       INSERT INTO cards (rfid, ownerName, balance, lastUpdated, isAdmin, pin)
       VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(rfid) DO UPDATE SET
-        ownerName = excluded.ownerName,
-        balance = excluded.balance,
-        lastUpdated = excluded.lastUpdated,
-        isAdmin = excluded.isAdmin,
-        pin = excluded.pin
-    `).run(cleanRfid, ownerName, balance || 0, now, isAdmin ? 1 : 0, hashedPin);
+    `).run(cleanRfid, ownerName, numBalance, now, isAdmin ? 1 : 0, hashedPin);
     
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
@@ -165,6 +169,11 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
     const { ownerName, balance, isAdmin, pin } = req.body;
     const cleanRfid = cleanRfidUtil(rfid);
 
+    const numBalance = balance !== undefined && balance !== null ? Number(balance) : 0;
+    if (isNaN(numBalance)) {
+      return res.status(400).json({ error: "Balance must be a valid number" });
+    }
+
     // PIN Uniqueness Check (if PIN is provided and changing)
     let hashedPin = pin || null;
     if (pin) {
@@ -179,7 +188,7 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
       UPDATE cards 
       SET ownerName = ?, balance = ?, isAdmin = ?, pin = ?, lastUpdated = ?
       WHERE LOWER(rfid) = ?
-    `).run(ownerName, balance || 0, isAdmin ? 1 : 0, hashedPin, new Date().toISOString(), cleanRfid);
+    `).run(ownerName, numBalance, isAdmin ? 1 : 0, hashedPin, new Date().toISOString(), cleanRfid);
 
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, card: getCards().find(c => c.rfid.toLowerCase() === cleanRfid) });

@@ -109,6 +109,20 @@ export const hashAndSetAdminPin = (newPin: string) => {
 };
 
 export const initSettings = () => {
+  // Load or persist JWT Secret in SQLite settings to avoid user lockouts on restart if process.env.JWT_SECRET is unset
+  let secret = process.env.JWT_SECRET;
+  if (!secret) {
+    const dbSecret = db.prepare("SELECT value FROM settings WHERE key = ?").get("jwt_secret") as { value: string } | undefined;
+    if (dbSecret && dbSecret.value) {
+      secret = dbSecret.value;
+    } else {
+      secret = crypto.randomBytes(32).toString("hex");
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("jwt_secret", secret);
+      console.log("[Config] Generated and persisted new secure JWT secret in database settings");
+    }
+  }
+  settings.jwtSecret = secret;
+
   const whitelistEnabled = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_whitelist_enabled") as { value: string } | undefined;
   if (!whitelistEnabled) {
     db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist_enabled", "1");

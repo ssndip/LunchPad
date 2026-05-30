@@ -370,9 +370,15 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
         updateStmt.run(splitFee, now, row.rfid);
       }
       
-      // Mark as distributed in summary
-      db.prepare("UPDATE daily_summaries SET feeDistributed = 1, distributedAmount = ? WHERE date = ?")
-        .run(fee, date);
+      // Mark as distributed in summary (inserting a row if it does not exist yet)
+      const hasSummary = db.prepare("SELECT 1 FROM daily_summaries WHERE date = ?").get(date);
+      if (!hasSummary) {
+        db.prepare("INSERT INTO daily_summaries (date, totalSales, orderCount, feeDistributed, distributedAmount) VALUES (?, 0, 0, 1, ?)")
+          .run(date, fee);
+      } else {
+        db.prepare("UPDATE daily_summaries SET feeDistributed = 1, distributedAmount = ? WHERE date = ?")
+          .run(fee, date);
+      }
     })();
 
     console.log(`[Fee] Distributed ${fee}€ to ${uniqueUsersCount} users (${splitFee}€ each) for ${date}`);
