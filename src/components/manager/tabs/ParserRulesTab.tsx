@@ -899,6 +899,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                         onClick={() => setAiSuggestions(null)}
                         className="p-1 text-indigo-400 hover:text-indigo-600"
                         title={t("modals.close") || "Close"}
+                        aria-label={t("modals.close") || "Close"}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -2038,6 +2039,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                     onClick={() => setManualRulePreset(null)}
                     className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400"
                     title={t("modals.cancel") || "Cancel"}
+                    aria-label={t("modals.cancel") || "Cancel"}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

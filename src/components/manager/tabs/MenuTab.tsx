@@ -544,6 +544,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     <button
                       onClick={() => onRemoveItem(item.id)}
                       className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                      title={t('modals.remove')}
                       aria-label={`Remove ${item.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -851,6 +852,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         onClick={() => removeParsedItem(idx)}
                                         className="p-1.5 text-neutral-300 hover:text-red-500"
                                         title={t('modals.remove')}
+                                        aria-label={t('modals.remove')}
                                       >
                                         <X className="w-3.5 h-3.5" />
                                       </button>

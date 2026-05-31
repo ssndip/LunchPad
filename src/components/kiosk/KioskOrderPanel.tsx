@@ -167,6 +167,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                               }}
                               className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 active:scale-90 transition-all shrink-0"
                               title={t("modals.remove")}
+                              aria-label={t("modals.remove")}
                             >
                               <X className="w-5 h-5 stroke-[2.5]" />
                             </button>
@@ -381,6 +382,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                       onClick={() => onUpdateQuantity(item.id, -item.quantity)}
                       className="ml-1 w-8 h-8 flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"
                       title={t("modals.remove")}
+                      aria-label={t("modals.remove")}
                     >
                       <X className="w-4 h-4 stroke-[2.5]" />
                     </button>
