@@ -58,7 +58,7 @@ export const deleteLanguage = (req: Request, res: Response) => {
     // If the deleted language was active, fallback to English
     if (settings.systemLanguage === code) {
       settings.systemLanguage = 'en';
-      db.prepare("UPDATE settings SET value = ? WHERE key = ?").run('en', 'systemLanguage');
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run('system_language', 'en');
       broadcast({ type: "SETTINGS_UPDATE", settings: { systemLanguage: 'en' } });
     }
 

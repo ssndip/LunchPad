@@ -883,12 +883,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono focus:outline-none"
               />
             </div>
-            {newPin && confirmPin && newPin !== confirmPin && (
+             {newPin && confirmPin && newPin !== confirmPin && (
               <p className="text-xs text-red-500 font-bold">{t('settings.pin_mismatch')}</p>
+            )}
+            {newPin && !/^\d{4,6}$/.test(newPin) && (
+              <p className="text-xs text-red-500 font-bold">PIN must be between 4 and 6 digits and contain only numbers</p>
             )}
             <button title={t('settings.update_pin')}
               onClick={onUpdatePin}
-              disabled={pinUpdateStatus === 'loading' || !newPin || newPin !== confirmPin}
+              disabled={pinUpdateStatus === 'loading' || !newPin || newPin !== confirmPin || !/^\d{4,6}$/.test(newPin)}
               className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all shadow-lg flex items-center justify-center gap-2 ${
                 pinUpdateStatus === 'success' ? 'bg-green-600 text-white' : pinUpdateStatus === 'error' ? 'bg-red-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50'
               }`}

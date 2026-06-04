@@ -252,6 +252,9 @@ export const updatePin = (req: Request, res: Response, next: NextFunction) => {
     if (!newPin || typeof newPin !== 'string') {
       return res.status(400).json({ error: "Invalid PIN" });
     }
+    if (!/^\d{4,6}$/.test(newPin)) {
+      return res.status(400).json({ error: "PIN must be between 4 and 6 digits and contain only numbers" });
+    }
     hashAndSetAdminPin(newPin);
     res.json({ success: true });
   } catch (err: any) {
