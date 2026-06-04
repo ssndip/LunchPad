@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, CreditCard, Loader2, AlertCircle, Clock, Calendar, ChevronLeft, Receipt, ChevronRight } from 'lucide-react';
 import { UserProfile, Order } from '../../types';
 import * as api from '../../api';
+import { formatDate, formatDateTime } from '../../utils/dateFormatter';
 
 interface UserHistoryModalProps {
   isOpen: boolean;
@@ -121,7 +122,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             {t('orders.timestamp')}
           </p>
           <p className="text-xs font-bold text-neutral-900 mt-1">
-            {new Date(order.timestamp).toLocaleString()}
+            {formatDateTime(order.timestamp)}
           </p>
         </div>
       </div>
@@ -182,7 +183,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   </div>
                   <div>
                     <p className="text-sm font-bold text-neutral-900">
-                      {new Date(order.timestamp).toLocaleDateString()}
+                      {formatDate(order.timestamp)}
                     </p>
                     <p className="text-[10px] text-neutral-400 mt-0.5 max-w-[200px] truncate">
                       {order.items.map(i => i.name).join(', ')}

@@ -3,6 +3,7 @@ import { Order } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Printer, X, Download } from 'lucide-react';
 import { motion } from 'motion/react';
+import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
 
 interface HistoryReportProps {
   orders: Order[];
@@ -95,7 +96,7 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2 font-black">{t('orders.timestamp')}</p>
-                <p className="text-lg font-black text-neutral-900">{new Date().toLocaleString()}</p>
+                <p className="text-lg font-black text-neutral-900">{formatDateTime(new Date())}</p>
               </div>
             </div>
 
@@ -130,7 +131,7 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
                   {orders.map((order, idx) => (
                     <tr key={order.id} className="page-break-inside-avoid hover:bg-neutral-50/50 transition-colors">
                       <td className="p-5 text-xs align-top">
-                        <p className="font-black text-neutral-900">{new Date(order.timestamp).toLocaleDateString()}</p>
+                        <p className="font-black text-neutral-900">{formatDate(order.timestamp)}</p>
                         <p className="text-neutral-400 font-mono text-[10px]">{new Date(order.timestamp).toLocaleTimeString()}</p>
                       </td>
                       <td className="p-5 text-xs align-top">
@@ -165,7 +166,7 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
                 <span>{t('analytics.summary_report')}</span>
               </div>
               <div className="flex items-center gap-4">
-                <span>{new Date().toLocaleDateString()}</span>
+                <span>{formatDate(new Date())}</span>
                 <span className="bg-neutral-100 px-2 py-0.5 rounded text-neutral-900">LUNCHPAD PRO</span>
               </div>
             </div>

@@ -6,6 +6,7 @@ import * as api from '../../../api';
 import { Truck, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
 
 import { useTranslation } from '../../../hooks/useTranslation';
+import { formatDate } from '../../../utils/dateFormatter';
 
 interface OrdersTabProps {
   summaries: DailySummary[];
@@ -106,7 +107,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${expandedDate === summary.date ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400 group-hover:bg-neutral-200'}`}>
                           <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedDate === summary.date ? 'rotate-90' : ''}`} />
                         </div>
-                        <span>{summary.date ?? t('menu.unknown_date')}</span>
+                        <span>{summary.date ? formatDate(summary.date) : t('menu.unknown_date')}</span>
                       </div>
                     </td>
                     <td className="p-6 text-center">

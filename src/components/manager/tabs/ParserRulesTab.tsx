@@ -47,6 +47,7 @@ import {
   DEFAULT_CATEGORY_SETTINGS,
   ParserPersistence,
 } from "../../../utils/parserLocalSettings";
+import { formatDate, formatDateTime } from "../../../utils/dateFormatter";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { suggestParserRules, getParserFixtures } from "../../../api";
 import { useStore } from "../../../store/useStore";
@@ -248,7 +249,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   };
 
   const handleSaveCurrentAsProfile = (name?: string) => {
-    const defaultName = `Snapshot ${new Date().toLocaleString("bg-BG")}`;
+    const defaultName = `Snapshot ${formatDateTime(new Date())}`;
     const profileName = typeof name === "string" ? name : defaultName;
 
     const newProfile: ParserProfile = {
@@ -394,7 +395,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
         isPrompt: true,
         initialValue:
           aiSuggestions.profileName ||
-          `AI Guided - ${new Date().toLocaleDateString()}`,
+          `AI Guided - ${formatDate(new Date())}`,
         confirmText: t("modals.save") || "Save",
         onConfirm: (name) => {
           if (!name) return;
@@ -529,7 +530,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
         const newProfile: ParserProfile = {
           id: new Date().toISOString(),
-          name: json.name || `Imported ${new Date().toLocaleDateString()}`,
+          name: json.name || `Imported ${formatDate(new Date())}`,
           settings: json.settings,
           presets: json.presets,
           createdAt: new Date().toISOString(),
@@ -1134,7 +1135,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                     </p>
                     <p className="text-[9px] text-neutral-400 font-mono mt-1 flex items-center gap-1">
                       <Calendar className="w-2.5 h-2.5" />
-                      {new Date(profile.createdAt).toLocaleString("bg-BG")}
+                      {formatDateTime(profile.createdAt)}
                     </p>
                   </div>
                   <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">

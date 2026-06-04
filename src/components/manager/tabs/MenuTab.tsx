@@ -11,6 +11,7 @@ import * as api from '../../../api';
 import { getActivePreset, getAllPresets, getAllProfiles, FormatPreset, ParserProfile, normalizeMenuText, applyItemOverrides } from '../../../utils/menuNormalizer';
 import { loadCategorySettings } from '../../../utils/parserLocalSettings';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -948,12 +949,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 ) : (
                   <div className="grid gap-3">
                     {backups.map((backup) => {
-                      const dateObj = new Date(backup.timestamp);
-                      const formattedTime = dateObj.toLocaleString(lang === 'bg' ? 'bg-BG' : 'en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                      });
-
+                      const formattedTime = formatDateTime(backup.timestamp);
                       return (
                         <div 
                           key={backup.id} 

@@ -3,6 +3,7 @@ import { Order } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { FileText } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
+import { formatDate } from '../../../utils/dateFormatter';
 
 interface Filters {
   startDate: string;
@@ -150,7 +151,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               {Array.isArray(history) && history.map((order) => (
                 <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
                   <td className="p-6">
-                    <p className="font-bold text-neutral-900">{new Date(order.timestamp).toLocaleDateString()}</p>
+                    <p className="font-bold text-neutral-900">{formatDate(order.timestamp)}</p>
                     <p className="text-[10px] text-neutral-400 font-mono">{new Date(order.timestamp).toLocaleTimeString()}</p>
                   </td>
                   <td className="p-6">

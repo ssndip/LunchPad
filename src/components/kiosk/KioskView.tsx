@@ -14,6 +14,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { triggerHaptic } from '../../utils/haptics';
 import { useStore } from '../../store/useStore';
 import { PinPadModal } from '../shared/PinPadModal';
+import { formatDate } from '../../utils/dateFormatter';
 
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -252,7 +253,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
     if (isNaN(d.getTime()) || d.getTime() === 0) return { dayName: '???', fullDate: dateStr };
     
     const dayName = d.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { weekday: 'long' });
-    const fullDate = d.toLocaleDateString(lang === 'bg' ? 'bg-BG' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fullDate = formatDate(d);
     return { dayName, fullDate };
   };
 
