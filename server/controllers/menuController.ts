@@ -177,6 +177,16 @@ export const restoreMenuBackup = (req: Request, res: Response, next: NextFunctio
       if (currentMenu && currentMenu.length > 0) {
         db.prepare("INSERT INTO menu_backups (timestamp, menuDate, menuData, menuVersion) VALUES (?, ?, ?, ?)")
           .run(new Date().toISOString(), settings.menuDate || "", JSON.stringify(currentMenu), settings.menuVersion);
+        
+        // Prune backups: Keep only the latest 10 backups
+        db.prepare(`
+          DELETE FROM menu_backups 
+          WHERE id NOT IN (
+            SELECT id FROM menu_backups 
+            ORDER BY timestamp DESC 
+            LIMIT 10
+          )
+        `).run();
       }
 
       // Restore menuDate

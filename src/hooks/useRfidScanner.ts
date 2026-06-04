@@ -26,6 +26,7 @@ export function useRfidScanner({
 }: UseRfidScannerOptions) {
   // Buffer accumulates rapid keystrokes
   const bufferRef = useRef('');
+  const firstKeyTimeRef = useRef<number>(0);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback(
@@ -48,9 +49,14 @@ export function useRfidScanner({
           .trim()
           .replace(/[^\x20-\x7E]/g, '')
           .toLowerCase();
+        const bufferLength = bufferRef.current.length;
+        const totalDuration = Date.now() - firstKeyTimeRef.current;
         bufferRef.current = '';
         if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-        if (raw.length >= minLength) {
+        
+        // Differentiate hardware scanner (rapid successive keystrokes) from manual human typing
+        const averageDelay = bufferLength > 0 ? totalDuration / bufferLength : 0;
+        if (raw.length >= minLength && averageDelay < 100) {
           onScan(raw);
         }
         return;
@@ -58,6 +64,9 @@ export function useRfidScanner({
 
       // Accumulate printable characters
       if (e.key.length === 1) {
+        if (bufferRef.current === '') {
+          firstKeyTimeRef.current = Date.now();
+        }
         bufferRef.current += e.key;
         // Auto-clear buffer after 2 s of inactivity (no Enter received)
         if (resetTimerRef.current) clearTimeout(resetTimerRef.current);

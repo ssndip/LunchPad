@@ -94,13 +94,15 @@ export function useSyncState() {
         if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
         if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
         if (data.kioskCloseDay !== undefined) setKioskCloseDay(data.kioskCloseDay);
+        if (data.deliveryFee !== undefined) setDeliveryFee(data.deliveryFee);
+        if (data.packagingFee !== undefined) setPackagingFee(data.packagingFee);
         setConnectionError(null);
         fetchLanguages();
       }
     } catch {
       // Keep existing error state
     }
-  }, [setMenu, setKioskOpen, setAdminWhitelistEnabled, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError, setAiProvider, setAiApiKey, setAiModel, setAiEndpoint, setPreIdentificationEnabled, setKioskAutoTiming, setKioskOpenTime, setKioskCloseTime, setKioskCloseDay, fetchLanguages]);
+  }, [setMenu, setKioskOpen, setAdminWhitelistEnabled, setOrderButtonEnabled, setTestModeEnabled, setMenuVersion, setLang, setConnectionError, setAiProvider, setAiApiKey, setAiModel, setAiEndpoint, setPreIdentificationEnabled, setKioskAutoTiming, setKioskOpenTime, setKioskCloseTime, setKioskCloseDay, setDeliveryFee, setPackagingFee, fetchLanguages]);
 
   // WebSocket Handlers
   useWebSocket({

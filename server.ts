@@ -20,7 +20,7 @@ import { isWhitelisted } from "./server/middleware/whitelist";
 import { getMenu } from "./server/controllers/menuController";
 import { getCards } from "./server/controllers/cardController";
 import { getOrders } from "./server/controllers/orderController";
-import { kioskOpen } from "./server/controllers/statusController";
+import { kioskOpen, loadKioskStatus } from "./server/controllers/statusController";
 import { initAutoBackup } from "./server/controllers/backupController";
 
 // Routes
@@ -44,6 +44,7 @@ const __dirname = path.dirname(__filename);
 initDb();
 seedInitialData();
 initSettings();
+loadKioskStatus();
 initAutoBackup();
 
 export const appPromise = startServer();
@@ -157,7 +158,9 @@ export async function startServer() {
       kioskAutoTiming: settings.kioskAutoTiming,
       kioskOpenTime: settings.kioskOpenTime,
       kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay
+      kioskCloseDay: settings.kioskCloseDay,
+      deliveryFee: settings.deliveryFee || 0,
+      packagingFee: settings.packagingFee || 0.1
     });
   });
 

@@ -86,12 +86,12 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       const cleanRfid = cleanRfidUtil(rfid);
       card = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ?").get(cleanRfid) as any;
       
-      if (!card && cleanRfid === 'test-admin' && settings.enableTestBypass) {
+      if (!card && cleanRfid === 'test-admin' && (settings.testModeEnabled || settings.enableTestBypass)) {
         card = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
       }
 
       if (!card) return res.status(404).json({ error: `Card not found: ${cleanRfid}` });
-    } else if (settings.testModeEnabled && settings.enableTestBypass) {
+    } else if (settings.testModeEnabled) {
       card = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN") as any;
       if (!card) card = { rfid: "test-bypass", ownerName: "Test Mode User", balance: 0 };
     } else {
@@ -99,7 +99,7 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
     }
 
     // ⚡ Bolt: Canteen Double-Tap Safeguard (prevent accidental duplicate charges within 3 seconds)
-    if (process.env.NODE_ENV !== 'test' && card && card.rfid !== 'TEST-ADMIN') {
+    if (process.env.NODE_ENV !== 'test' && card && card.rfid !== 'TEST-ADMIN' && card.rfid !== 'test-bypass' && !settings.testModeEnabled) {
       const lastOrder = db.prepare(
         "SELECT timestamp FROM orders WHERE rfid = ? ORDER BY timestamp DESC LIMIT 1"
       ).get(card.rfid) as { timestamp: string } | undefined;

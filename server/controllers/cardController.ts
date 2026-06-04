@@ -24,8 +24,10 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     if (typeof ownerName !== 'string' || ownerName.length > 100) {
       return res.status(400).json({ error: "Invalid ownerName length" });
     }
-    if (pin !== undefined && pin !== null && typeof pin !== 'string') {
-      return res.status(400).json({ error: "Invalid PIN format" });
+    if (pin !== undefined && pin !== null) {
+      if (typeof pin !== 'string') return res.status(400).json({ error: "Invalid PIN format" });
+      if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
+      if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
     }
     const numBalance = balance !== undefined && balance !== null ? Number(balance) : 0;
     if (isNaN(numBalance)) {
@@ -75,8 +77,10 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
       if (!c.ownerName || typeof c.ownerName !== 'string' || c.ownerName.length > 100) {
          return res.status(400).json({ error: "Invalid ownerName length in batch" });
       }
-      if (c.pin !== undefined && c.pin !== null && typeof c.pin !== 'string') {
-         return res.status(400).json({ error: "Invalid PIN format in batch" });
+      if (c.pin !== undefined && c.pin !== null) {
+         if (typeof c.pin !== 'string') return res.status(400).json({ error: "Invalid PIN format in batch" });
+         if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in batch" });
+         if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in batch" });
       }
     }
     const now = new Date().toISOString();
@@ -122,6 +126,11 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
       }
       if (!c.ownerName || typeof c.ownerName !== 'string' || c.ownerName.length > 100) {
          return res.status(400).json({ error: "Invalid ownerName length in update" });
+      }
+      if (c.pin !== undefined && c.pin !== null) {
+         if (typeof c.pin !== 'string') return res.status(400).json({ error: "Invalid PIN format in update" });
+         if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in update" });
+         if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in update" });
       }
     }
     db.transaction(() => {
@@ -174,9 +183,12 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
       return res.status(400).json({ error: "Balance must be a valid number" });
     }
 
-    // PIN Uniqueness Check (if PIN is provided and changing)
+    // PIN Validation & Uniqueness Check (if PIN is provided and changing)
     let hashedPin = pin || null;
     if (pin) {
+      if (typeof pin !== 'string') return res.status(400).json({ error: "Invalid PIN format" });
+      if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
+      if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
       hashedPin = hashPin(pin);
       const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(hashedPin, cleanRfid) as any;
       if (existing) {

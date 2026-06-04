@@ -112,4 +112,59 @@ describe('POST /api/v1/order', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  it('should allow ordering in test mode without RFID or PIN', async () => {
+    // 1. Enable test mode
+    await request(app)
+      .post('/api/settings')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ testModeEnabled: true });
+
+    // 2. Place order without RFID/PIN
+    const res = await request(app)
+      .post('/api/v1/order')
+      .send({ items: [{ id: 1 }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(['Test Mode User', 'Test Administrator']).toContain(res.body.order.ownerName);
+
+    // 3. Disable test mode
+    await request(app)
+      .post('/api/settings')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ testModeEnabled: false });
+  });
+
+  describe('POST /api/cards PIN validation', () => {
+    it('should return 400 when adding card with non-6 digit PIN', async () => {
+      const res = await request(app)
+        .post('/api/cards')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ rfid: 'test-pin-1', ownerName: 'Test PIN 1', pin: '12345' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('PIN must be exactly 6 digits');
+    });
+
+    it('should return 400 when adding card with non-numeric PIN', async () => {
+      const res = await request(app)
+        .post('/api/cards')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ rfid: 'test-pin-2', ownerName: 'Test PIN 2', pin: '12345a' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('PIN must contain only digits');
+    });
+
+    it('should allow adding card with valid 6-digit numeric PIN', async () => {
+      const res = await request(app)
+        .post('/api/cards')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ rfid: 'test-pin-3', ownerName: 'Test PIN 3', pin: '123456' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+  });
 });

@@ -49,7 +49,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
     isScanning ||
     selectedItems.length === 0 ||
     (!testModeEnabled && !rfid) ||
-    !computedKioskOpen;
+    (!computedKioskOpen && !testModeEnabled);
 
   return (
     <AnimatePresence>

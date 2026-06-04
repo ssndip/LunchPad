@@ -60,7 +60,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
       !selectedItems.length ||
       (!rfid && !testModeEnabled && !useMobileLayout) ||
       isScanning ||
-      !computedKioskOpen;
+      (!computedKioskOpen && !testModeEnabled);
     const itemCount = selectedItems.reduce((acc, i) => acc + i.quantity, 0);
 
     // Phone & Portrait Tablet Sticky Bottom Layout

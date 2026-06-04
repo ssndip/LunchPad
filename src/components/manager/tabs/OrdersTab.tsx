@@ -35,24 +35,32 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   const handleDistributeFee = async (date: string, fee: number) => {
     if (!token) return;
     
+    const count = summaries.find(s => s.date === date)?.uniqueUserCount || 0;
+    const confirmTitle = t('orders.distribute_fee') || 'Distribute Fee';
+    const confirmMessage = t('orders.distribute_confirm', { fee: fee.toString(), count: count.toString() }) ||
+      `Distribute ${fee.toString()}€ fee among ${count.toString()} users?`;
+
     // Feature 10: Custom confirmation modal
     confirm({
-      title: t('orders.distribute_fee'),
-      message: t('orders.distribute_confirm').replace('{{fee}}', fee.toString()).replace('{{count}}', (summaries.find(s => s.date === date)?.uniqueUserCount || 0).toString()),
+      title: confirmTitle,
+      message: confirmMessage,
       onConfirm: async () => {
         setDistributing(date);
         try {
           const res = await api.distributeFee(token, date, fee);
+          const successMessage = t('orders.distribute_success', { split: res.splitFee, count: res.userCount }) ||
+            `Success! Split ${res.splitFee}€ to ${res.userCount} users.`;
+
           confirm({
-            title: t('modals.confirm'),
-            message: t('orders.distribute_success').replace('{{split}}', res.splitFee).replace('{{count}}', res.userCount),
+            title: t('modals.confirm') || 'Confirm',
+            message: successMessage,
             confirmText: 'OK',
             onConfirm: () => {}
           });
         } catch (err: any) {
           confirm({
-            title: t('menu.Error'),
-            message: err.message,
+            title: t('menu.Error') || 'Error',
+            message: err.message || 'An error occurred',
             isDestructive: true,
             confirmText: 'OK',
             onConfirm: () => {}
@@ -173,7 +181,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                   ) : (
                                     <Truck className="w-3.5 h-3.5" />
                                   )}
-                                  {summary.feeDistributed ? `${t('orders.fee_distributed')} (€${Number(summary.distributedAmount).toFixed(2)})` : t('orders.distribute_fee')}
+                                  {summary.feeDistributed ? `${t('orders.fee_distributed') || 'Fee Distributed'} (€${Number(summary.distributedAmount || 0).toFixed(2)})` : t('orders.distribute_fee') || 'Distribute Fee'}
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onCopySummary(summary.date, Number(summary.totalSales) || 0); }}
