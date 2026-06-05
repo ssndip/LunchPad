@@ -79,15 +79,31 @@ function getDateForDay(dayName: string, refDate: Date): string {
   const cleanDay = dayName.toUpperCase();
   let dayIndex = BULGARIAN_DAYS.indexOf(cleanDay);
   if (dayIndex === -1) dayIndex = ENGLISH_DAYS.indexOf(cleanDay);
-  if (dayIndex === -1) return refDate.toISOString().split('T')[0];
+  if (dayIndex === -1) {
+    try {
+      return refDate.toISOString().split('T')[0];
+    } catch {
+      return new Date().toISOString().split('T')[0];
+    }
+  }
 
-  const result = new Date(refDate);
+  let baseDate = new Date(refDate);
+  if (isNaN(baseDate.getTime())) {
+    baseDate = new Date();
+    baseDate.setHours(0, 0, 0, 0);
+  }
+
+  const result = new Date(baseDate);
   // Find the first Monday on or before the reference date
-  const currentDay = refDate.getDay(); // 0 is Sunday, 1 is Monday
+  const currentDay = baseDate.getDay(); // 0 is Sunday, 1 is Monday
   const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-  result.setDate(refDate.getDate() + diffToMonday + dayIndex);
+  result.setDate(baseDate.getDate() + diffToMonday + dayIndex);
   
-  return result.toISOString().split('T')[0];
+  try {
+    return result.toISOString().split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
 }
 
 export function parseMenuText(rawText: string, customCategories: { keywords: string[] }[] = []): ParsedMenu {

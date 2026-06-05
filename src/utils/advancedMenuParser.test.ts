@@ -174,6 +174,24 @@ BBQ
   assert('Кебапче name (no weight)', bbq?.items[0]?.name, 'Кебапче');
 }
 
+// ─── Menu Format 4: Malformed Date Resilience ────────────────────────────────
+console.log('\n📋 Format 4: Malformed Date Resilience');
+{
+  const menu = `Меню за 99.99.9999
+Понеделник
+Супи:
+- Пилешка супа 1.80€`;
+
+  try {
+    const r = parseMenuText(menu);
+    assert('Parser did not crash on malformed date', typeof r === 'object', true);
+    assert('Soups category exists', r.categories.length > 0, true);
+    assert('Item has a valid ISO date fallback', typeof r.categories[0].items[0].date === 'string', true);
+  } catch (e: any) {
+    assert('Parser crashed with error: ' + e.message, true, false);
+  }
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

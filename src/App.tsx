@@ -633,14 +633,32 @@ export default function App() {
               confirm={setConfirmConfig}
               onImportLanguage={async (code, name, data) => {
                 if (s.token) {
-                  await api.importLanguage(s.token, code, name, data);
-                  fetchLanguages();
+                  try {
+                    await api.importLanguage(s.token, code, name, data);
+                    fetchLanguages();
+                  } catch (err: any) {
+                    setConfirmConfig({
+                      title: t('menu.Error'),
+                      message: err.message || 'Failed to import language.',
+                      confirmText: t('menu.OK'),
+                      onConfirm: () => {}
+                    });
+                  }
                 }
               }}
               onDeleteLanguage={async (code) => {
                 if (s.token) {
-                  await api.deleteLanguage(s.token, code);
-                  fetchLanguages();
+                  try {
+                    await api.deleteLanguage(s.token, code);
+                    fetchLanguages();
+                  } catch (err: any) {
+                    setConfirmConfig({
+                      title: t('menu.Error'),
+                      message: err.message || 'Failed to delete language.',
+                      confirmText: t('menu.OK'),
+                      onConfirm: () => {}
+                    });
+                  }
                 }
               }}
               onInstallApp={() => {

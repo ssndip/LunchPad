@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { resetAllBalances } from './cardController';
+import { resetAllBalances, updateSingleCard, addOrUpdateCard } from './cardController';
 import { db, initDb } from '../db';
 import * as broadcastModule from '../broadcast';
 
@@ -9,14 +9,14 @@ vi.mock('../broadcast', () => ({
 }));
 
 describe('cardController', () => {
+  beforeAll(() => {
+    initDb();
+  });
+
   describe('resetAllBalances', () => {
     let mockReq: Partial<Request>;
     let mockRes: Partial<Response>;
     let mockNext: NextFunction;
-
-    beforeAll(() => {
-      initDb();
-    });
 
     beforeEach(() => {
       mockReq = {};
@@ -80,6 +80,126 @@ describe('cardController', () => {
       expect(mockNext).toHaveBeenCalledWith(error);
       expect(mockRes.json).not.toHaveBeenCalled();
       expect(broadcastModule.broadcast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSingleCard & addOrUpdateCard PIN handling', () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      mockRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn()
+      };
+      mockNext = vi.fn();
+      db.exec("DELETE FROM cards");
+    });
+
+    it('should allow adding card with a valid 6-digit PIN and hash it', () => {
+      mockReq = {
+        body: {
+          rfid: '12345',
+          ownerName: 'Test Owner',
+          balance: 10,
+          isAdmin: false,
+          pin: '123456'
+        }
+      };
+
+      addOrUpdateCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+
+      const card = db.prepare("SELECT * FROM cards WHERE rfid = '12345'").get() as any;
+      expect(card).toBeDefined();
+      expect(card.pin).toHaveLength(64); // SHA-256 is 64 characters long
+      expect(card.pin).not.toBe('123456');
+    });
+
+    it('should reject invalid PIN formats during card addition', () => {
+      mockReq = {
+        body: {
+          rfid: '12345',
+          ownerName: 'Test Owner',
+          balance: 10,
+          isAdmin: false,
+          pin: 'abc' // not digits, too short
+        }
+      };
+
+      addOrUpdateCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'PIN must be exactly 6 digits' })
+      );
+    });
+
+    it('should allow updating card and preserve pre-hashed PIN', () => {
+      const hashedPin = 'a'.repeat(64); // fake 64-char hash
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, isAdmin, pin)
+        VALUES ('55555', 'Initial Name', 0, 0, ?)
+      `).run(hashedPin);
+
+      mockReq = {
+        params: { rfid: '55555' },
+        body: {
+          ownerName: 'Updated Name',
+          balance: 15.00,
+          isAdmin: true,
+          pin: hashedPin // frontend sending back unchanged pre-hashed PIN
+        }
+      };
+
+      updateSingleCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          card: expect.objectContaining({
+            rfid: '55555',
+            ownerName: 'Updated Name',
+            balance: 15.00,
+            isAdmin: true,
+            pin: hashedPin
+          })
+        })
+      );
+
+      const card = db.prepare("SELECT * FROM cards WHERE rfid = '55555'").get() as any;
+      expect(card.pin).toBe(hashedPin);
+    });
+
+    it('should allow updating card with a new 6-digit PIN and hash it', () => {
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, isAdmin, pin)
+        VALUES ('55555', 'Initial Name', 0, 0, NULL)
+      `).run();
+
+      mockReq = {
+        params: { rfid: '55555' },
+        body: {
+          ownerName: 'Initial Name',
+          balance: 0,
+          isAdmin: false,
+          pin: '987654' // changing to new 6-digit PIN
+        }
+      };
+
+      updateSingleCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+
+      const card = db.prepare("SELECT * FROM cards WHERE rfid = '55555'").get() as any;
+      expect(card.pin).toHaveLength(64);
+      expect(card.pin).not.toBe('987654');
     });
   });
 });

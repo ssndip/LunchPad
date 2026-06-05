@@ -26,8 +26,11 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     }
     if (pin !== undefined && pin !== null) {
       if (typeof pin !== 'string') return res.status(400).json({ error: "Invalid PIN format" });
-      if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
-      if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
+      const isAlreadyHashed = pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(pin);
+      if (!isAlreadyHashed) {
+        if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
+        if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
+      }
     }
     const numBalance = balance !== undefined && balance !== null ? Number(balance) : 0;
     if (isNaN(numBalance)) {
@@ -45,7 +48,10 @@ export const addOrUpdateCard = (req: Request, res: Response, next: NextFunction)
     // PIN Uniqueness Check
     let hashedPin = pin || null;
     if (pin) {
-      hashedPin = hashPin(pin);
+      const isAlreadyHashed = pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(pin);
+      if (!isAlreadyHashed) {
+        hashedPin = hashPin(pin);
+      }
       const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(hashedPin, cleanRfid) as any;
       if (existing) {
         return res.status(409).json({ error: "PIN is already assigned to another card." });
@@ -79,8 +85,11 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
       }
       if (c.pin !== undefined && c.pin !== null) {
          if (typeof c.pin !== 'string') return res.status(400).json({ error: "Invalid PIN format in batch" });
-         if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in batch" });
-         if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in batch" });
+         const isAlreadyHashed = c.pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(c.pin);
+         if (!isAlreadyHashed) {
+           if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in batch" });
+           if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in batch" });
+         }
       }
     }
     const now = new Date().toISOString();
@@ -91,7 +100,11 @@ export const batchAddCards = (req: Request, res: Response, next: NextFunction) =
       `);
       cards.forEach((c: any) => {
         const cleanRfid = cleanRfidUtil(c.rfid);
-        const hashedPin = c.pin ? hashPin(c.pin) : null;
+        let hashedPin = null;
+        if (c.pin) {
+          const isAlreadyHashed = c.pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(c.pin);
+          hashedPin = isAlreadyHashed ? c.pin : hashPin(c.pin);
+        }
         insert.run(cleanRfid, c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, hashedPin);
       });
     })();
@@ -129,8 +142,11 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
       }
       if (c.pin !== undefined && c.pin !== null) {
          if (typeof c.pin !== 'string') return res.status(400).json({ error: "Invalid PIN format in update" });
-         if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in update" });
-         if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in update" });
+         const isAlreadyHashed = c.pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(c.pin);
+         if (!isAlreadyHashed) {
+           if (c.pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits in update" });
+           if (!/^\d{6}$/.test(c.pin)) return res.status(400).json({ error: "PIN must contain only digits in update" });
+         }
       }
     }
     db.transaction(() => {
@@ -139,7 +155,11 @@ export const updateAllCards = (req: Request, res: Response, next: NextFunction) 
       const now = new Date().toISOString();
       cards.forEach((c: any) => {
         const cleanRfid = cleanRfidUtil(c.rfid);
-        const hashedPin = c.pin ? hashPin(c.pin) : null;
+        let hashedPin = null;
+        if (c.pin) {
+          const isAlreadyHashed = c.pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(c.pin);
+          hashedPin = isAlreadyHashed ? c.pin : hashPin(c.pin);
+        }
         insert.run(cleanRfid, c.ownerName, c.balance || 0, now, c.isAdmin ? 1 : 0, hashedPin);
       });
     })();
@@ -187,9 +207,12 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
     let hashedPin = pin || null;
     if (pin) {
       if (typeof pin !== 'string') return res.status(400).json({ error: "Invalid PIN format" });
-      if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
-      if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
-      hashedPin = hashPin(pin);
+      const isAlreadyHashed = pin.length === 64 && /^[0-9a-fA-F]{64}$/.test(pin);
+      if (!isAlreadyHashed) {
+        if (pin.length !== 6) return res.status(400).json({ error: "PIN must be exactly 6 digits" });
+        if (!/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must contain only digits" });
+        hashedPin = hashPin(pin);
+      }
       const existing = db.prepare("SELECT rfid FROM cards WHERE pin = ? AND LOWER(rfid) != ?").get(hashedPin, cleanRfid) as any;
       if (existing) {
         return res.status(409).json({ error: "PIN is already assigned to another card." });
