@@ -133,26 +133,33 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
 
 export const fetchMenuBackups = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const backups = db.prepare("SELECT id, timestamp, menuDate, menuVersion, length(menuData) as rawSize FROM menu_backups ORDER BY timestamp DESC").all() as any[];
-    res.json(backups.map(b => {
-      let itemCount = 0;
-      try {
-        const fullBackup = db.prepare("SELECT menuData FROM menu_backups WHERE id = ?").get(b.id) as { menuData: string } | undefined;
-        if (fullBackup) {
-          const parsed = JSON.parse(fullBackup.menuData);
-          itemCount = Array.isArray(parsed) ? parsed.length : 0;
-        }
-      } catch (e) {
-        // Safe fallback
-      }
-      return {
-        id: b.id,
-        timestamp: b.timestamp,
-        menuDate: b.menuDate,
-        menuVersion: b.menuVersion,
-        itemCount
-      };
-    }));
+    // ⚡ Bolt Optimization: Offload JSON parsing to SQLite
+    // Instead of bringing large JSON payloads into Node.js and parsing them sequentially
+    // just to count the array length, we use SQLite's native JSON1 extension functions.
+    // This reduces Node's CPU overhead and garbage collection pressure, especially with
+    // many large backup payloads.
+    const backups = db.prepare(`
+      SELECT
+        id,
+        timestamp,
+        menuDate,
+        menuVersion,
+        length(menuData) as rawSize,
+        CASE
+          WHEN json_valid(menuData) AND json_type(menuData) = 'array' THEN json_array_length(menuData)
+          ELSE 0
+        END as itemCount
+      FROM menu_backups
+      ORDER BY timestamp DESC
+    `).all() as any[];
+
+    res.json(backups.map(b => ({
+      id: b.id,
+      timestamp: b.timestamp,
+      menuDate: b.menuDate,
+      menuVersion: b.menuVersion,
+      itemCount: b.itemCount
+    })));
   } catch (err) {
     next(err);
   }
