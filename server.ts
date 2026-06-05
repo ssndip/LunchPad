@@ -160,7 +160,8 @@ export async function startServer() {
       kioskCloseTime: settings.kioskCloseTime,
       kioskCloseDay: settings.kioskCloseDay,
       deliveryFee: settings.deliveryFee || 0,
-      packagingFee: settings.packagingFee || 0.1
+      packagingFee: settings.packagingFee || 0.1,
+      publicAccessRequired: settings.publicAccessRequired
     });
   });
 
@@ -176,6 +177,7 @@ export async function startServer() {
 
   // --- WebSocket ---
   wss.on("connection", (ws, req) => {
+    (ws as any).isAlive = true;
     const origin = req.headers.origin;
     
     // Extract token from query string (e.g. ws://host?token=xxx)
@@ -234,7 +236,8 @@ export async function startServer() {
       kioskAutoTiming: settings.kioskAutoTiming,
       kioskOpenTime: settings.kioskOpenTime,
       kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay
+      kioskCloseDay: settings.kioskCloseDay,
+      publicAccessRequired: settings.publicAccessRequired
     } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {

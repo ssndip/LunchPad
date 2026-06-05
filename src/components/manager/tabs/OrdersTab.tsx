@@ -30,6 +30,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   const { t } = useTranslation();
   const token = useStore(s => s.token);
   const globalDeliveryFee = useStore(s => s.deliveryFee);
+  const setSummaries = useStore(s => s.setSummaries);
   const [dailyFees, setDailyFees] = React.useState<Record<string, string>>({});
   const [distributing, setDistributing] = React.useState<string | null>(null);
 
@@ -49,6 +50,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         setDistributing(date);
         try {
           const res = await api.distributeFee(token, date, fee);
+          const updatedSummaries = await api.fetchSummaries(token);
+          setSummaries(updatedSummaries);
           const successMessage = t('orders.distribute_success', { split: res.splitFee, count: res.userCount }) ||
             `Success! Split ${res.splitFee}€ to ${res.userCount} users.`;
 
@@ -163,7 +166,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                                 <button
                                   onClick={(e) => { 
                                     e.stopPropagation(); 
-                                    const fee = parseFloat(dailyFees[summary.date] || globalDeliveryFee.toString());
+                                    const fee = parseFloat(dailyFees[summary.date] || String(globalDeliveryFee ?? 0));
                                     handleDistributeFee(summary.date, fee); 
                                   }}
                                   disabled={!!distributing || !!summary.feeDistributed}

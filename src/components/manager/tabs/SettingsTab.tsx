@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard, ChevronDown, X, Check, Globe, Sparkles } from 'lucide-react';
+import { Settings, Users, Plus, Zap, Clock, AlertCircle, CheckCircle2, Loader2, Calendar, Smartphone, Download, Info, Share, CreditCard, ChevronDown, X, Check, Globe, Sparkles, Lock } from 'lucide-react';
 import { Language } from '../../../translations';
 import { SystemClock } from '../../shared/SystemClock';
 import { usePWA } from '../../../hooks/usePWA';
@@ -34,6 +34,8 @@ interface SettingsTabProps {
   availableLanguages: { code: string, name: string }[];
   onImportLanguage: (code: string, name: string, data: any) => Promise<void>;
   onDeleteLanguage: (code: string) => Promise<void>;
+  publicAccessRequired: boolean;
+  publicAccessCode: string;
   onUpdateSettings: (
     adminWhitelistEnabled: boolean,
     orderBtn: boolean,
@@ -53,7 +55,9 @@ interface SettingsTabProps {
     kioskAutoTiming?: boolean,
     kioskOpenTime?: string,
     kioskCloseTime?: string,
-    kioskCloseDay?: number
+    kioskCloseDay?: number,
+    publicAccessRequired?: boolean,
+    publicAccessCode?: string
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -69,6 +73,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   availableLanguages, onImportLanguage, onDeleteLanguage,
   onUpdateSettings, onUpdatePin, onInstallApp,
   confirm, customCategories = [],
+  publicAccessRequired,
+  publicAccessCode,
 }) => {
   const { t, lang } = useTranslation();
 
@@ -85,6 +91,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [localKioskOpenTime, setLocalKioskOpenTime] = React.useState(kioskOpenTime);
   const [localKioskCloseTime, setLocalKioskCloseTime] = React.useState(kioskCloseTime);
   const [localKioskCloseDay, setLocalKioskCloseDay] = React.useState(kioskCloseDay);
+  const [localPublicAccessCode, setLocalPublicAccessCode] = React.useState(publicAccessCode);
   const [showAiKey, setShowAiKey] = React.useState(false);
 
   const [hapticIntensity, setHapticIntensity] = React.useState(() => {
@@ -105,7 +112,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setLocalKioskOpenTime(kioskOpenTime);
     setLocalKioskCloseTime(kioskCloseTime);
     setLocalKioskCloseDay(kioskCloseDay);
-  }, [announcement, aiApiKey, aiModel, aiEndpoint, kioskOpenTime, kioskCloseTime, kioskCloseDay]);
+    setLocalPublicAccessCode(publicAccessCode);
+  }, [announcement, aiApiKey, aiModel, aiEndpoint, kioskOpenTime, kioskCloseTime, kioskCloseDay, publicAccessCode]);
   
   React.useEffect(() => {
     setLocalWhitelist(adminWhitelist);
@@ -458,6 +466,97 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               label="Toggle Pre-identification" 
               color="bg-neutral-900" 
             />
+          </div>
+        </div>
+
+        {/* Public Access Protection */}
+        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                  <Lock className="w-6 h-6 text-neutral-900" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-neutral-900">{t('settings.public_access_lock') || 'Public Access Lock'}</h3>
+                  <p className="text-sm text-neutral-500 italic">{t('settings.public_access_lock_desc') || 'Require a PIN code to access the kiosk interface'}</p>
+                </div>
+              </div>
+              <Toggle 
+                checked={publicAccessRequired} 
+                onChange={() => onUpdateSettings(
+                  adminWhitelistEnabled, 
+                  orderButtonEnabled, 
+                  testModeEnabled, 
+                  kioskModeEnabled, 
+                  allowPWAInstall, 
+                  lang, 
+                  bgnEnabled, 
+                  adminWhitelist, 
+                  announcement, 
+                  aiProvider, 
+                  aiApiKey, 
+                  preIdentificationEnabled, 
+                  customCategories, 
+                  aiModel, 
+                  aiEndpoint,
+                  kioskAutoTiming,
+                  kioskOpenTime,
+                  kioskCloseTime,
+                  kioskCloseDay,
+                  !publicAccessRequired
+                )} 
+                label="Toggle Public Access Lock" 
+                color="bg-neutral-900" 
+              />
+            </div>
+            {publicAccessRequired && (
+              <div className="border-t border-neutral-100 pt-6">
+                <div className="max-w-xs">
+                  <label htmlFor="publicAccessCode" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">
+                    {t('settings.public_access_code') || 'Public Access PIN Code'}
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      id="publicAccessCode"
+                      type="password"
+                      value={localPublicAccessCode}
+                      onChange={(e) => setLocalPublicAccessCode(e.target.value)}
+                      placeholder="e.g. 1234"
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 text-sm font-semibold"
+                    />
+                    <button
+                      onClick={() => onUpdateSettings(
+                        adminWhitelistEnabled,
+                        orderButtonEnabled,
+                        testModeEnabled,
+                        kioskModeEnabled,
+                        allowPWAInstall,
+                        lang,
+                        bgnEnabled,
+                        adminWhitelist,
+                        announcement,
+                        aiProvider,
+                        aiApiKey,
+                        preIdentificationEnabled,
+                        customCategories,
+                        aiModel,
+                        aiEndpoint,
+                        kioskAutoTiming,
+                        kioskOpenTime,
+                        kioskCloseTime,
+                        kioskCloseDay,
+                        publicAccessRequired,
+                        localPublicAccessCode
+                      )}
+                      className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all shadow-sm"
+                    >
+                      {t('settings.save_code') || 'Save'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

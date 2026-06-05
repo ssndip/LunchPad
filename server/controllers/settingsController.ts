@@ -23,7 +23,9 @@ import {
   setKioskAutoTimingConfig,
   setKioskOpenTimeConfig,
   setKioskCloseTimeConfig,
-  setKioskCloseDayConfig
+  setKioskCloseDayConfig,
+  setPublicAccessRequiredConfig,
+  setPublicAccessCodeConfig
 } from "../config";
 import { kioskOpen } from "./statusController";
 
@@ -49,7 +51,9 @@ export const fetchSettings = (req: Request, res: Response) => {
     kioskAutoTiming: settings.kioskAutoTiming,
     kioskOpenTime: settings.kioskOpenTime,
     kioskCloseTime: settings.kioskCloseTime,
-    kioskCloseDay: settings.kioskCloseDay
+    kioskCloseDay: settings.kioskCloseDay,
+    publicAccessRequired: settings.publicAccessRequired,
+    publicAccessCode: settings.publicAccessCode
   });
 };
 
@@ -60,7 +64,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
       aiProvider, aiApiKey, aiModel, aiEndpoint, preIdentificationEnabled, customCategories,
-      kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay
+      kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay,
+      publicAccessRequired, publicAccessCode
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -216,6 +221,22 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       setKioskCloseDayConfig(kioskCloseDay);
       broadcast({ type: "SETTINGS_UPDATE", settings: { kioskCloseDay } as any });
     }
+    
+    if (publicAccessRequired !== undefined) {
+      if (typeof publicAccessRequired !== 'boolean') return res.status(400).json({ error: "Invalid value for publicAccessRequired" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("public_access_required", publicAccessRequired ? "1" : "0");
+      setPublicAccessRequiredConfig(publicAccessRequired);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { publicAccessRequired } as any });
+    }
+
+    if (publicAccessCode !== undefined) {
+      if (typeof publicAccessCode !== 'string') return res.status(400).json({ error: "Invalid value for publicAccessCode" });
+      if (publicAccessCode.length > 0 && !/^\d{4,6}$/.test(publicAccessCode)) {
+        return res.status(400).json({ error: "Public access code must be between 4 and 6 digits and contain only numbers" });
+      }
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("public_access_code", publicAccessCode);
+      setPublicAccessCodeConfig(publicAccessCode);
+    }
 
     res.json({ 
       success: true, 
@@ -239,7 +260,9 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       kioskAutoTiming: settings.kioskAutoTiming,
       kioskOpenTime: settings.kioskOpenTime,
       kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay
+      kioskCloseDay: settings.kioskCloseDay,
+      publicAccessRequired: settings.publicAccessRequired,
+      publicAccessCode: settings.publicAccessCode
     });
   } catch (err: any) {
     next(err);

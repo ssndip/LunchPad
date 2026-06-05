@@ -33,6 +33,7 @@ export function useSyncState() {
   const setAiModel = useStore(s => s.setAiModel);
   const setAiEndpoint = useStore(s => s.setAiEndpoint);
   const setPreIdentificationEnabled = useStore(s => s.setPreIdentificationEnabled);
+  const setPublicAccessRequired = useStore(s => s.setPublicAccessRequired);
   const setKioskAutoTiming = useStore(s => s.setKioskAutoTiming);
   const setKioskOpenTime = useStore(s => s.setKioskOpenTime);
   const setKioskCloseTime = useStore(s => s.setKioskCloseTime);
@@ -90,6 +91,7 @@ export function useSyncState() {
         if (data.aiModel !== undefined) setAiModel(data.aiModel);
         if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
         if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+        if (data.publicAccessRequired !== undefined) setPublicAccessRequired(data.publicAccessRequired);
         if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
         if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
         if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
@@ -128,6 +130,7 @@ export function useSyncState() {
       if (data.aiModel !== undefined) setAiModel(data.aiModel);
       if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
       if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+      if (data.publicAccessRequired !== undefined) setPublicAccessRequired(data.publicAccessRequired);
       if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
       if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
       if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
@@ -159,6 +162,7 @@ export function useSyncState() {
       if (data.aiModel !== undefined) setAiModel(data.aiModel);
       if (data.aiEndpoint !== undefined) setAiEndpoint(data.aiEndpoint);
       if (data.preIdentificationEnabled !== undefined) setPreIdentificationEnabled(data.preIdentificationEnabled);
+      if (data.publicAccessRequired !== undefined) setPublicAccessRequired(data.publicAccessRequired);
       if (data.kioskAutoTiming !== undefined) setKioskAutoTiming(data.kioskAutoTiming);
       if (data.kioskOpenTime !== undefined) setKioskOpenTime(data.kioskOpenTime);
       if (data.kioskCloseTime !== undefined) setKioskCloseTime(data.kioskCloseTime);
@@ -220,6 +224,8 @@ export function useSyncState() {
             aiModel: settings.aiModel !== undefined ? settings.aiModel : useStore.getState().aiModel,
             aiEndpoint: settings.aiEndpoint !== undefined ? settings.aiEndpoint : useStore.getState().aiEndpoint,
             preIdentificationEnabled: settings.preIdentificationEnabled !== undefined ? settings.preIdentificationEnabled : useStore.getState().preIdentificationEnabled,
+            publicAccessRequired: settings.publicAccessRequired !== undefined ? settings.publicAccessRequired : useStore.getState().publicAccessRequired,
+            publicAccessCode: settings.publicAccessCode !== undefined ? settings.publicAccessCode : useStore.getState().publicAccessCode,
             kioskAutoTiming: settings.kioskAutoTiming !== undefined ? settings.kioskAutoTiming : useStore.getState().kioskAutoTiming,
             kioskOpenTime: settings.kioskOpenTime || useStore.getState().kioskOpenTime,
             kioskCloseTime: settings.kioskCloseTime || useStore.getState().kioskCloseTime,

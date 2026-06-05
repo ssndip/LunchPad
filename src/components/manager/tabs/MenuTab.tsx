@@ -172,54 +172,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     }
   };
 
-  /**
-   * Internal Checkbox Selector for Side Dishes
-   */
-  const SideDishSelector: React.FC<{
-    selected: string[];
-    available: MenuItem[];
-    onChange: (names: string[]) => void;
-  }> = ({ selected, available, onChange }) => {
-    const handleToggle = (name: string) => {
-      if (selected.includes(name)) {
-        onChange(selected.filter(s => s !== name));
-      } else {
-        onChange([...selected, name]);
-      }
-    };
 
-    if (available.length === 0) {
-      return <p className="text-[10px] text-red-400 italic">{t('menu.no_sides_found')}</p>;
-    }
-
-    return (
-      <div className="flex flex-col gap-1.5 mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 max-h-40 overflow-y-auto custom-scrollbar">
-        <p className="text-[10px] font-bold text-neutral-400 mb-1 uppercase tracking-tight">{t('menu.allowed_sides')}</p>
-        {available.map(item => (
-          <button
-            key={item.id}
-            onClick={() => handleToggle(item.name)}
-            className="flex items-center gap-2 text-[10px] text-left hover:bg-white p-1 rounded-lg transition-colors group"
-          >
-            {selected.includes(item.name) ? (
-              <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
-            ) : (
-              <Square className="w-3.5 h-3.5 text-neutral-300 group-hover:block hidden" />
-            )}
-            {!selected.includes(item.name) && <Square className="w-3.5 h-3.5 text-neutral-200 block group-hover:hidden" />}
-            <span className={selected.includes(item.name) ? 'font-bold text-neutral-900' : 'text-neutral-500'}>
-              {item.name}
-            </span>
-          </button>
-        ))}
-        {selected.length === 0 && (
-          <p className="text-[9px] text-neutral-400 italic mt-1 border-t border-neutral-100 pt-1">
-            * No specific sides selected: All sides allowed by default
-          </p>
-        )}
-      </div>
-    );
-  };
 
   const handleParse = () => {
     if (!pasteText.trim()) return;
@@ -473,84 +426,17 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {editingMenu.map((item) => (
-                <tr key={item.id} className="hover:bg-neutral-50 transition-colors">
-                  <td className="p-5">
-                    <select
-                      value={item.category ?? ''}
-                      aria-label={`Category for ${item.name}`}
-                      onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
-                      className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
-                    >
-                      {customCategories.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {getCategoryLabel(c.id)}
-                        </option>
-                      ))}
-                      <option value="other">{t('categories.other') || 'Other'}</option>
-                    </select>
-                  </td>
-                  <td className="p-5">
-                    <input
-                      type="text"
-                      value={item.name ?? ''}
-                      aria-label={`Name for ${item.name}`}
-                      onChange={(e) => onUpdateItem(item.id, 'name', e.target.value)}
-                      className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 focus:outline-none"
-                    />
-                  </td>
-                  <td className="p-5">
-                    <div className="flex items-center gap-1">
-                      <span className="text-neutral-400">€</span>
-                      <input
-                        type="number"
-                        value={item.price ?? 0}
-                        aria-label={`Price for ${item.name}`}
-                        onChange={(e) => onUpdateItem(item.id, 'price', parseFloat(e.target.value))}
-                        className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
-                      />
-                    </div>
-                  </td>
-                  <td className="p-5">
-                    <div className="flex flex-col">
-                      <button
-                        onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
-                        className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
-                          item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
-                        }`}
-                        title={t('menu.included_side') || 'Included Side'}
-                      >
-                        <Layers className="w-5 h-5" />
-                      </button>
-                      
-                      {item.hasIncludedSide && (
-                        <SideDishSelector
-                          selected={item.sideChoices || []}
-                          available={editingMenu.filter(m => isSideDishCategoryId(m.category))}
-                          onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
-                        />
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-5">
-                    <button
-                      onClick={() => onUpdateItem(item.id, 'available', !item.available)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
-                        item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {item.available ? t('menu.active') : t('menu.inactive')}
-                    </button>
-                  </td>
-                  <td className="p-5">
-                    <button
-                      onClick={() => onRemoveItem(item.id)}
-                      className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
+                <MenuRow
+                  key={item.id}
+                  item={item}
+                  customCategories={customCategories}
+                  getCategoryLabel={getCategoryLabel}
+                  onUpdateItem={onUpdateItem}
+                  onRemoveItem={onRemoveItem}
+                  isSideDishCategoryId={isSideDishCategoryId}
+                  editingMenu={editingMenu}
+                  t={t}
+                />
               ))}
               {editingMenu.length === 0 && (
                 <tr>
@@ -991,5 +877,193 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         )}
       </AnimatePresence>
     </>
+  );
+};
+
+interface MenuRowProps {
+  item: MenuItem;
+  customCategories: any[];
+  getCategoryLabel: (cat: string) => string;
+  onUpdateItem: (id: number, field: keyof MenuItem, value: unknown) => void;
+  onRemoveItem: (id: number) => void;
+  isSideDishCategoryId: (cat: string) => boolean;
+  editingMenu: MenuItem[];
+  t: any;
+}
+
+const MenuRow: React.FC<MenuRowProps> = ({
+  item,
+  customCategories,
+  getCategoryLabel,
+  onUpdateItem,
+  onRemoveItem,
+  isSideDishCategoryId,
+  editingMenu,
+  t
+}) => {
+  const [localName, setLocalName] = useState(item.name ?? '');
+  const [localPrice, setLocalPrice] = useState(item.price ?? 0);
+
+  // Sync state if item changes from props (e.g. from websocket updates)
+  React.useEffect(() => {
+    setLocalName(item.name ?? '');
+  }, [item.name]);
+
+  React.useEffect(() => {
+    setLocalPrice(item.price ?? 0);
+  }, [item.price]);
+
+  const handleNameBlur = () => {
+    if (localName !== item.name) {
+      onUpdateItem(item.id, 'name', localName);
+    }
+  };
+
+  const handlePriceBlur = () => {
+    if (localPrice !== item.price) {
+      onUpdateItem(item.id, 'price', localPrice);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <tr className="hover:bg-neutral-50 transition-colors">
+      <td className="p-5">
+        <select
+          value={item.category ?? ''}
+          aria-label={`Category for ${localName}`}
+          onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
+          className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
+        >
+          {customCategories.map(c => (
+            <option key={c.id} value={c.id}>
+              {getCategoryLabel(c.id)}
+            </option>
+          ))}
+          <option value="other">{t('categories.other') || 'Other'}</option>
+        </select>
+      </td>
+      <td className="p-5">
+        <input
+          type="text"
+          value={localName}
+          aria-label={`Name for ${localName}`}
+          onChange={(e) => setLocalName(e.target.value)}
+          onBlur={handleNameBlur}
+          onKeyDown={handleKeyDown}
+          className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 focus:outline-none"
+        />
+      </td>
+      <td className="p-5">
+        <div className="flex items-center gap-1">
+          <span className="text-neutral-400">€</span>
+          <input
+            type="number"
+            value={localPrice === 0 ? '' : localPrice}
+            aria-label={`Price for ${localName}`}
+            onChange={(e) => {
+              const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+              setLocalPrice(isNaN(val) ? 0 : val);
+            }}
+            onBlur={handlePriceBlur}
+            onKeyDown={handleKeyDown}
+            className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
+          />
+        </div>
+      </td>
+      <td className="p-5">
+        <div className="flex flex-col">
+          <button
+            onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+              item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
+            }`}
+            title={t('menu.included_side') || 'Included Side'}
+          >
+            <Layers className="w-5 h-5" />
+          </button>
+          
+          {item.hasIncludedSide && (
+            <SideDishSelector
+              selected={item.sideChoices || []}
+              available={editingMenu.filter(m => isSideDishCategoryId(m.category))}
+              onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
+              t={t}
+            />
+          )}
+        </div>
+      </td>
+      <td className="p-5">
+        <button
+          onClick={() => onUpdateItem(item.id, 'available', !item.available)}
+          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
+            item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}
+        >
+          {item.available ? t('menu.active') : t('menu.inactive')}
+        </button>
+      </td>
+      <td className="p-5">
+        <button
+          onClick={() => onRemoveItem(item.id)}
+          className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+          aria-label={`Remove ${localName}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>
+  );
+};
+
+const SideDishSelector: React.FC<{
+  selected: string[];
+  available: MenuItem[];
+  onChange: (names: string[]) => void;
+  t: any;
+}> = ({ selected, available, onChange, t }) => {
+  const handleToggle = (name: string) => {
+    if (selected.includes(name)) {
+      onChange(selected.filter(s => s !== name));
+    } else {
+      onChange([...selected, name]);
+    }
+  };
+
+  if (available.length === 0) {
+    return <p className="text-[10px] text-red-400 italic">{t('menu.no_sides_found')}</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 mt-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100 max-h-40 overflow-y-auto custom-scrollbar">
+      <p className="text-[10px] font-bold text-neutral-400 mb-1 uppercase tracking-tight">{t('menu.allowed_sides')}</p>
+      {available.map(item => (
+        <button
+          key={item.id}
+          onClick={() => handleToggle(item.name)}
+          className="flex items-center gap-2 text-[10px] text-left hover:bg-white p-1 rounded-lg transition-colors group"
+        >
+          {selected.includes(item.name) ? (
+            <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
+          ) : (
+            <Square className="w-3.5 h-3.5 text-neutral-300 group-hover:block hidden" />
+          )}
+          {!selected.includes(item.name) && <Square className="w-3.5 h-3.5 text-neutral-200 block group-hover:hidden" />}
+          <span className={selected.includes(item.name) ? 'font-bold text-neutral-900' : 'text-neutral-500'}>
+            {item.name}
+          </span>
+        </button>
+      ))}
+      {selected.length === 0 && (
+        <p className="text-[9px] text-neutral-400 italic mt-1 border-t border-neutral-100 pt-1">
+          * No specific sides selected: All sides allowed by default
+        </p>
+      )}
+    </div>
   );
 };
