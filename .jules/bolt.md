@@ -10,3 +10,7 @@
 ## 2026-04-25 - Prevent Memory Leaks when Caching Dynamic Regexes
 **Learning:** Caching `RegExp` compilations to avoid CPU overhead in parsing loops is highly effective. However, when the regex source strings (`rule.find`) come from dynamic or user-supplied inputs, using an unbounded `Map` for the cache creates a significant memory leak. Additionally, using raw strings as cache keys without prefixing the compilation strategy (e.g. `isRegex: boolean`) can cause cache key collisions, resulting in incorrect regex applications.
 **Action:** Always use a bounded cache (e.g., a FIFO cache by deleting `Map.keys().next().value` when `size >= maxSize`, or an LRU cache) when caching data derived from dynamic inputs. Ensure cache keys explicitly incorporate all variables that dictate the final cached object (e.g., `` `${isRegex}:${pattern}` ``) to prevent collisions.
+
+## 2024-05-18 - Avoiding JSON.parse N+1 queries in SQLite
+**Learning:** Fetching derived data (e.g. array length) from JSON strings in the database by returning the strings to Node.js and calling `JSON.parse()` within a loop causes significant performance regressions. It introduces an N+1 query pattern and blocks V8/CPU heavily on large strings.
+**Action:** When working with JSON strings stored in `better-sqlite3`, natively utilize the built-in JSON1 extension (e.g. `CASE WHEN json_valid(data) AND json_type(data) = 'array' THEN json_array_length(data) ELSE 0 END`). Let the database handle counting and type checking.
