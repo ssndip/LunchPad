@@ -273,7 +273,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                                 key={l.code}
                                 className={`flex items-center justify-between p-2 rounded-xl transition-all ${pendingLanguage === l.code ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-50 text-neutral-600'}`}
                               >
-                                <button title={l.name}
+                                <button title={l.name} aria-label={l.name}
                                   onClick={() => {
                                     setPendingLanguage(l.code);
                                     setIsDropdownOpen(false);
@@ -285,7 +285,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                                 <div className="flex items-center gap-1">
                                   {pendingLanguage === l.code && <Check className="w-4 h-4 mr-2" />}
                                   {l.code !== 'en' && (
-                                    <button title={`Delete ${l.name}`}
+                                    <button title={`Delete ${l.name}`} aria-label={`Delete ${l.name}`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (confirm) {
@@ -330,7 +330,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
 
           <div className="pt-6 border-t border-neutral-100 flex flex-col sm:flex-row gap-3">
-            <button title="Export Data"
+            <button title={t('settings.export_data') || 'Export Data'} aria-label={t('settings.export_data') || 'Export Data'}
               onClick={handleExportTemplate}
               className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all text-xs"
             >
@@ -730,7 +730,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   placeholder="e.g. 127.0.0.1, localhost, 192.168.1.0/24"
                   className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
                 />
-                <button title="Update Whitelist"
+                <button title={t('settings.update_whitelist') || 'Update Whitelist'} aria-label={t('settings.update_whitelist') || 'Update Whitelist'}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, localWhitelist)}
                   disabled={localWhitelist === adminWhitelist}
                   className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30 whitespace-nowrap"
@@ -797,7 +797,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div className="flex justify-end gap-3">
               {localAnnouncement && (
-                <button title="Clear Announcement"
+                <button title={t('settings.clear_announcement') || 'Clear Announcement'} aria-label={t('settings.clear_announcement') || 'Clear Announcement'}
                   onClick={() => {
                     setLocalAnnouncement('');
                     onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, '');
@@ -807,7 +807,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   Clear
                 </button>
               )}
-              <button title="Update Announcement"
+              <button title={t('settings.update_announcement') || 'Update Announcement'} aria-label={t('settings.update_announcement') || 'Update Announcement'}
                 onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, localAnnouncement)}
                 disabled={localAnnouncement === announcement}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
@@ -834,7 +834,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.ai_provider')}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {['openai', 'anthropic', 'gemini', 'ollama'].map(p => (
-                    <button title="Select AI Provider"
+                    <button title={t('settings.select_ai_provider') || 'Select AI Provider'} aria-label={t('settings.select_ai_provider') || 'Select AI Provider'}
                       key={p}
                       onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, p, aiApiKey, preIdentificationEnabled, customCategories, aiModel, aiEndpoint)}
                       className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${aiProvider === p ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-neutral-100 text-neutral-400 hover:border-indigo-200 hover:text-indigo-600'}`}
@@ -1052,7 +1052,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button title="Export System Backup"
+              <button title={t('settings.export_backup') || 'Export System Backup'} aria-label={t('settings.export_backup') || 'Export System Backup'}
                 onClick={async () => {
                   try {
                     const token = sessionStorage.getItem('token') || '';
@@ -1075,7 +1075,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Export Backup
               </button>
 
-              <button title="Import System Backup"
+              <button title={t('settings.import_backup') || 'Import System Backup'} aria-label={t('settings.import_backup') || 'Import System Backup'}
                 onClick={() => {
                   if (confirm) {
                     confirm({
@@ -1232,7 +1232,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
             >
               {t('modals.cancel')}
             </button>
-            <button title="Import Language"
+            <button title={t('settings.import_language') || 'Import Language'} aria-label={t('settings.import_language') || 'Import Language'}
               type="submit"
               disabled={!code || !name || isImporting}
               className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 text-sm disabled:opacity-30 flex items-center justify-center gap-2"

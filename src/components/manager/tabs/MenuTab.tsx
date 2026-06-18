@@ -549,7 +549,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                value={selectedProfileId}
                                onChange={e => setSelectedProfileId(e.target.value)}
                                className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
-                               title="Parser Profile"
+                               title={t('menu.parser_profile') || 'Parser Profile'} aria-label={t('menu.parser_profile') || 'Parser Profile'}
                              >
                                <option value="none">{t('parser.active_profile') || 'Active Profile'}</option>
                                {profiles.map(p => (
@@ -565,7 +565,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                               value={selectedPresetId}
                               onChange={e => setSelectedPresetId(e.target.value)}
                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
-                              title="Format Preset"
+                              title={t('menu.format_preset') || 'Format Preset'} aria-label={t('menu.format_preset') || 'Format Preset'}
                             >
                               <option value="none">{t('parser.no_preset')}</option>
                               {presets.map(p => (
@@ -722,7 +722,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         onClick={() => moveParsedItem(idx, 'up')}
                                         disabled={idx === 0}
                                         className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                        title="Move Up"
+                                        title={t('menu.move_up') || 'Move Up'} aria-label={t('menu.move_up') || 'Move Up'}
                                       >
                                         <ArrowUp className="w-3.5 h-3.5" />
                                       </button>
@@ -730,7 +730,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         onClick={() => moveParsedItem(idx, 'down')}
                                         disabled={idx === parsed.items.length - 1}
                                         className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                        title="Move Down"
+                                        title={t('menu.move_down') || 'Move Down'} aria-label={t('menu.move_down') || 'Move Down'}
                                       >
                                         <ArrowDown className="w-3.5 h-3.5" />
                                       </button>

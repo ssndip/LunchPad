@@ -403,7 +403,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                               </>
                             ) : (
                               <>
-                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.view_statistics') || 'View Statistics'} aria-label={t('cards.view_statistics') || 'View Statistics'}>
                                   <BarChart2 className="w-4 h-4" />
                                 </button>
                                 <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
