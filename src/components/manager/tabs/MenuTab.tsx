@@ -980,10 +980,11 @@ const MenuRow: React.FC<MenuRowProps> = ({
         <div className="flex flex-col">
           <button
             onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 ${
               item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
             }`}
             title={t('menu.included_side') || 'Included Side'}
+            aria-label={`${t('menu.included_side') || 'Included Side'} for ${localName}`}
           >
             <Layers className="w-5 h-5" />
           </button>
@@ -1011,8 +1012,9 @@ const MenuRow: React.FC<MenuRowProps> = ({
       <td className="p-5">
         <button
           onClick={() => onRemoveItem(item.id)}
-          className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
-          aria-label={`Remove ${localName}`}
+          className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
+          aria-label={`${t('modals.remove')} for ${localName}`}
+          title={t('modals.remove')}
         >
           <Trash2 className="w-4 h-4" />
         </button>

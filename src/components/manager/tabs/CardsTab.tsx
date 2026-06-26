@@ -360,8 +360,8 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                           <button
                             onClick={() => isEditing ? setEditValues({ ...values, isAdmin: !values.isAdmin }) : startEditing({ ...card, isAdmin: !card.isAdmin })}
                             role="switch" aria-checked={values.isAdmin}
-                            className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
-                            aria-label="Toggle Admin"
+                            className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                            aria-label={`Toggle Admin for ${card.ownerName || card.rfid}`}
                           >
                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${values.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
                           </button>
@@ -403,16 +403,16 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                               </>
                             ) : (
                               <>
-                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" title="View Statistics" aria-label={`View Statistics for ${card.ownerName || card.rfid}`}>
                                   <BarChart2 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
+                                <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" title={t('modals.edit')} aria-label={`${t('modals.edit')} for ${card.ownerName || card.rfid}`}>
                                   <Pencil className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
+                                <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" title={t('cards.clear_balance_tooltip')} aria-label={`${t('cards.clear_balance_tooltip')} for ${card.ownerName || card.rfid}`}>
                                   <RotateCcw className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => onRemoveCard(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
+                                <button onClick={() => onRemoveCard(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" title={t('cards.delete_card')} aria-label={`${t('cards.delete_card')} for ${card.ownerName || card.rfid}`}>
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </>
