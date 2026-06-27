@@ -1,12 +1,3 @@
-## 2025-02-12 - Prevent RegExp Recompilation Inside Parsing Loops
-**Learning:** Calling `new RegExp()` repeatedly inside inner loops of text parsing engines creates significant CPU overhead due to continuous regex compilation. Additionally, `MenuParserEngine` was recompiling patterns globally configured per-instance.
-**Action:** Always precompile and cache `RegExp` instances as class properties or within module scope when configurations or patterns are static for the lifecycle of the object. When using global (`/g`) flags, ensure they are used safely (e.g. within `String.replace`) to avoid `lastIndex` pollution across iterations.
-## 2025-02-12 - Prevent Full Table Scans with Expression Indexes
-**Learning:** Querying indexed columns using functions like `LOWER()` in `WHERE` clauses (e.g. `WHERE LOWER(rfid) = ?`) bypasses standard B-Tree indexes, resulting in O(N) full table scans. This scales poorly for unbounded tables like historical orders.
-**Action:** Use expression-based indexes (e.g., `CREATE INDEX ON table(LOWER(column))`) or normalize data on insertion to prevent full table scans and allow O(1) index lookups.
-## 2026-04-22 - Prevent Ineffective Memoization in React
-**Learning:** Wrapping child components in `React.memo()` without simultaneously wrapping the callback functions passed as props from their parent in `React.useCallback()` completely breaks the memoization. The parent component will recreate the functions on every render, causing the shallow comparison in the child to fail, rendering the optimization completely ineffective and leaving the app vulnerable to "stale UI" bugs.
-**Action:** Always ensure that any callback function passed down to a memoized child component is wrapped in `React.useCallback()` with an accurate dependency array.
-## 2026-04-25 - Prevent Memory Leaks when Caching Dynamic Regexes
-**Learning:** Caching `RegExp` compilations to avoid CPU overhead in parsing loops is highly effective. However, when the regex source strings (`rule.find`) come from dynamic or user-supplied inputs, using an unbounded `Map` for the cache creates a significant memory leak. Additionally, using raw strings as cache keys without prefixing the compilation strategy (e.g. `isRegex: boolean`) can cause cache key collisions, resulting in incorrect regex applications.
-**Action:** Always use a bounded cache (e.g., a FIFO cache by deleting `Map.keys().next().value` when `size >= maxSize`, or an LRU cache) when caching data derived from dynamic inputs. Ensure cache keys explicitly incorporate all variables that dictate the final cached object (e.g., `` `${isRegex}:${pattern}` ``) to prevent collisions.
+## 2025-03-09 - N+1 database queries on JSON string payloads
+**Learning:** Returning parsed JSON string values dynamically from SQLite via node-sqlite or better-sqlite3 mapping in Javascript is prone to extreme performance penalties when scaling (large memory payload and parse penalties per row).
+**Action:** Use native SQL JSON functions such as `json_array_length()` directly in queries to extract properties from stored JSON instead of using application space to parse them.
