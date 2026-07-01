@@ -43,7 +43,7 @@ export const fetchSettings = (req: Request, res: Response) => {
     adminWhitelist: settings.adminWhitelist,
     announcement: settings.announcement,
     aiProvider: settings.aiProvider,
-    aiApiKey: settings.aiApiKey,
+    aiApiKey: settings.aiApiKey ? "********" : "",
     aiModel: settings.aiModel,
     aiEndpoint: settings.aiEndpoint,
     preIdentificationEnabled: settings.preIdentificationEnabled,
@@ -168,9 +168,11 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
 
     if (aiApiKey !== undefined) {
       if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
-      setAiApiKeyConfig(aiApiKey);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { aiApiKey } as any });
+      if (aiApiKey !== "********") {
+        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
+        setAiApiKeyConfig(aiApiKey);
+      }
+      broadcast({ type: "SETTINGS_UPDATE", settings: { aiApiKey: settings.aiApiKey ? "********" : "" } as any });
     }
 
     if (aiModel !== undefined) {
@@ -252,7 +254,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       adminWhitelist: settings.adminWhitelist,
       announcement: settings.announcement,
       aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
+      aiApiKey: settings.aiApiKey ? "********" : "",
       aiModel: settings.aiModel,
       aiEndpoint: settings.aiEndpoint,
       preIdentificationEnabled: settings.preIdentificationEnabled,
