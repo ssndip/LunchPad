@@ -90,6 +90,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {config.isPrompt && (
               <div className="mb-8">
                 <input
+                  aria-label={config.title}
                   type="text"
                   autoFocus
                   value={inputValue}
