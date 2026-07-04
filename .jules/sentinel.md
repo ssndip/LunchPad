@@ -10,3 +10,8 @@
 **Vulnerability:** The application was leaking the `aiApiKey` from the database settings to any public client via the unauthenticated `GET /api/init` bootstrapping endpoint, as it blindly returned all settings.
 **Learning:** Sending the entire `settings` object (or an unchecked subset) to unauthenticated public bootstrap endpoints guarantees that newly added sensitive administrative settings will eventually be leaked to the public internet unless they are explicitly filtered out.
 **Prevention:** Always implement a strict allow-list for public configuration endpoints. Never spread or pass unchecked backend configuration dictionaries to the frontend. Review the properties mapped onto public init structures when new settings are added.
+
+## 2024-05-18 - Protect Public Kiosk Profile Endpoint against IDOR Brute-force
+**Vulnerability:** The public `GET /api/cards/:rfid/profile` endpoint was vulnerable to IDOR brute-force, allowing attackers to systematically fetch user profiles because it required no authentication and had no rate-limiting.
+**Learning:** Endpoints that bypass normal authentication logic for hardware integration reasons (like Kiosk RFID possession) are particularly vulnerable and require additional defensive layers, such as rate limiting for non-whitelisted IPs.
+**Prevention:** Apply rate limiting (`express-rate-limit`) to sensitive public endpoints and exempt known or local IPs if needed.

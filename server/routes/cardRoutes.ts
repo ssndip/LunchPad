@@ -11,6 +11,7 @@ import {
   updateSingleCard
 } from "../controllers/cardController";
 import { requireAdmin } from "../middleware/auth";
+import { profileRateLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.post("/update", requireAdmin, updateAllCards);
 router.post("/reset-all", requireAdmin, resetAllBalances);
 router.post("/:rfid/update", requireAdmin, updateSingleCard);
 router.post("/:rfid/reset", requireAdmin, resetSingleBalance);
-router.get("/:rfid/profile", getCardProfile);
+router.get("/:rfid/profile", profileRateLimiter, getCardProfile);
 router.delete("/:rfid", requireAdmin, deleteCard);
 
 export default router;
