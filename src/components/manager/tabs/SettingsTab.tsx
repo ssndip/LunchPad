@@ -174,11 +174,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     };
 
     return checked ? (
-      <button {...commonProps} title={label} aria-label={label} aria-pressed="true">
+      <button {...commonProps} role="switch" title={label} aria-label={label} aria-checked="true">
         <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-9" />
       </button>
     ) : (
-      <button {...commonProps} title={label} aria-label={label} aria-pressed="false">
+      <button {...commonProps} role="switch" title={label} aria-label={label} aria-checked="false">
         <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-1" />
       </button>
     );
@@ -209,9 +209,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               {bgnEnabled ? (
                 <button title={t('settings.enable_bgn')}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                  aria-pressed="true"
+                  role="switch"
+                  aria-checked="true"
                   aria-label={t('settings.enable_bgn')}
-                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-900 shadow-lg shadow-neutral-200"
+                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 bg-neutral-900 shadow-lg shadow-neutral-200"
                 >
                   <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-[1.65rem]">
                     <div className="w-1 h-1 bg-neutral-900 rounded-full" />
@@ -220,9 +221,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               ) : (
                 <button title={t('settings.enable_bgn')}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
-                  aria-pressed="false"
+                  role="switch"
+                  aria-checked="false"
                   aria-label={t('settings.enable_bgn')}
-                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-200"
+                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 bg-neutral-200"
                 >
                   <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-1" />
                 </button>
