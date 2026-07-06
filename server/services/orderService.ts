@@ -46,9 +46,17 @@ export const calculateItemPrice = (item: any) => {
 
 export const validateAndEnrichItems = (requestedItems: RequestedItem[]) => {
   const enrichedItems: EnrichedItem[] = [];
+  const itemCache = new Map<number, any>();
 
   for (const ri of requestedItems) {
-    const baseItem = getMenuItemById(db, ri.id);
+    let baseItem = itemCache.get(ri.id);
+    if (!baseItem) {
+      baseItem = getMenuItemById(db, ri.id);
+      if (baseItem) {
+        itemCache.set(ri.id, baseItem);
+      }
+    }
+
     if (!baseItem) continue;
 
     // Side-Dish Validation
