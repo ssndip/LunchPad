@@ -64,4 +64,11 @@ describe('MenuParserEngine', () => {
     expect(result.unmatchedLines).toContain("Random line");
     expect(result.items.length).toBe(1);
   });
+
+  it('should parse Cyrillic menu date using Group 2 regex without year suffix', () => {
+    const text = "Меню за 09.04\n\nСупи:\n- Пилешка супа 1.80€";
+    const result = engine.parse(text);
+    expect(result.date).toBe('09.04');
+    expect(result.items.length).toBe(1);
+  });
 });

@@ -102,7 +102,7 @@ export class MenuParserEngine {
       if (!result.date) {
         const dateMatch = line.match(this.dateRegex);
         if (dateMatch) {
-          result.date = dateMatch[1];
+          result.date = dateMatch[1] || dateMatch[2];
           continue;
         }
       }

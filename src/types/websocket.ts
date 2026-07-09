@@ -30,7 +30,7 @@ export interface InitialStateMessage extends BaseWsMessage {
   menu: MenuItem[];
   orders: any[];
   kioskOpen: boolean;
-  cards: any[];
+  cards?: any[];
   deliveryFee: number;
   packagingFee: number;
   menuVersion: number;

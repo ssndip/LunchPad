@@ -80,8 +80,7 @@ describe('orderController', () => {
         type: 'INITIAL_STATE',
         menu: mockMenu,
         orders: [],
-        kioskOpen: true,
-        cards: []
+        kioskOpen: true
       }));
 
       // Verify response

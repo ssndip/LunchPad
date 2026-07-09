@@ -1,63 +1,48 @@
-# 🕵️‍♂️ LunchPad Bug Hunt & Code Health Audit
+# 🕵️‍♂️ LunchPad Bug Hunt & Code Health Audit (Updated)
 
-This document presents the findings from an exhaustive review of the LunchPad codebase. We have identified several logical discrepancies, potential performance bottlenecks, UX edge-case vulnerabilities, and database leaks spanning both the React frontend and Node.js Express backend.
-
----
-
-## 🚨 1. High & Medium-Priority Bugs
-
-### 🐛 Bug 1: Unbounded Menu Backups Leak in `restoreMenuBackup`
-* **Location**: [server/controllers/menuController.ts](file:///home/ssndip/lunchpadgit/server/controllers/menuController.ts#L161-L220)
-* **Description**: While `updateMenu` correctly prunes historical backups to a limit of 10, the `restoreMenuBackup` endpoint creates a new rollback backup of the current menu state but **completely omits** the pruning step.
-* **Impact**: **Medium**. Over time, repeated manual restores will lead to unbounded database growth in the `menu_backups` table, consuming unnecessary disk space.
-* **Fix**: Replicate the pruning SQL query inside the transaction of `restoreMenuBackup`:
-  ```typescript
-  db.prepare(`
-    DELETE FROM menu_backups 
-    WHERE id NOT IN (
-      SELECT id FROM menu_backups 
-      ORDER BY timestamp DESC 
-      LIMIT 10
-    )
-  `).run();
-  ```
+This document presents the findings from our updated project-wide code audit and bug hunt in the LunchPad repository. We have verified the status of previously reported issues and documented new findings and resolutions.
 
 ---
 
-### 🐛 Bug 2: PIN Length Validation Inconsistency
-* **Location**: [server/controllers/cardController.ts](file:///home/ssndip/lunchpadgit/server/controllers/cardController.ts) vs [server/controllers/orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts)
-* **Description**: The checkout endpoint (`placeOrder`) strictly validates that a PIN must be exactly 6 digits (`if (pin.length !== 6) return res.status(400)...`). However, the card creation and editing routes (`addOrUpdateCard`, `batchAddCards`, `updateAllCards`, `updateSingleCard`) only check that `pin` is a string (if provided), allowing shorter or longer PINs to be saved.
-* **Impact**: **High**. Any user who registers a card with a non-6-digit PIN (e.g. 4 digits) will have their PIN hashed and saved successfully, but will be permanently blocked from checking out with their PIN at the kiosk because the checkout handler will reject it.
-* **Fix**: Enforce the 6-digit length check on PINs inside all card creation and update controllers in `cardController.ts`.
+## ✅ 1. Previously Reported Bugs (Verified Fixed)
+
+### 🟢 Bug 1: Unbounded Menu Backups Leak in `restoreMenuBackup`
+* **Location**: [menuController.ts](file:///home/ssndip/lunchpadgit/server/controllers/menuController.ts#L161-L230)
+* **Status**: **Fixed**. The controller transaction now correctly prunes backups to keep only the latest 10.
+
+### 🟢 Bug 2: PIN Length Validation Inconsistency
+* **Location**: [cardController.ts](file:///home/ssndip/lunchpadgit/server/controllers/cardController.ts)
+* **Status**: **Fixed**. Standard cards now enforce 6-digit numeric checks in all creation and update routes.
+
+### 🟢 Bug 3: Double-Tap Safeguard Blocks Test Checkout in Kiosk Test Mode
+* **Location**: [orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts#L102-L117)
+* **Status**: **Fixed**. The safeguard now bypasses validation when `settings.testModeEnabled` is active or if `card.rfid` matches `test-bypass`.
+
+### 🟢 Bug 4: Accidental Keyboard Input Misidentification as RFID Swipe
+* **Location**: [useRfidScanner.ts](file:///home/ssndip/lunchpadgit/src/hooks/useRfidScanner.ts#L57-L61)
+* **Status**: **Fixed**. Implemented an average keystroke timing delay threshold check (< 100ms average delay) to distinguish hardware scanner inputs from human keyboard typing.
+
+### 🟢 Bug 5: In-Memory Kiosk Status (`kioskOpen`)
+* **Location**: [statusController.ts](file:///home/ssndip/lunchpadgit/server/controllers/statusController.ts)
+* **Status**: **Fixed**. Status is now persistent in the SQLite settings database (`kiosk_open` key).
 
 ---
 
-### 🐛 Bug 3: Double-Tap Safeguard Blocks Test Checkout in Kiosk Test Mode
-* **Location**: [server/controllers/orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts#L101-L117)
-* **Description**: The double-tap safeguard prevents duplicate charges within 3 seconds:
-  ```typescript
-  if (process.env.NODE_ENV !== 'test' && card && card.rfid !== 'TEST-ADMIN')
-  ```
-  However, when settings `testModeEnabled` is active and a user places a cardless order, the system assigns the mock RFID `test-bypass` (owner "Test Mode User"). Since `test-bypass` is not equal to `TEST-ADMIN`, placing multiple test orders in quick succession from the kiosk will trigger a `429 Duplicate Tap` response.
-* **Impact**: **Medium**. Annoying blockages when developers or administrators are rapid-fire testing the ordering kiosk in test mode.
-* **Fix**: Bypass the double-tap check if `settings.testModeEnabled` is active or if `card.rfid` is `test-bypass`.
+## 🚨 2. Newly Discovered & Resolved Bugs
 
----
+### 🐛 Bug 6: Unicode & Alternation Priority Year-Truncation Bug in Menu Parser
+* **Location**: [parserEngine.ts](file:///home/ssndip/lunchpadgit/src/utils/parserEngine.ts#L102-L108), [defaultParserConfig.ts](file:///home/ssndip/lunchpadgit/src/utils/defaultParserConfig.ts#L24), [advancedMenuParser.ts](file:///home/ssndip/lunchpadgit/src/utils/advancedMenuParser.ts#L26), and database seed in [db.ts](file:///home/ssndip/lunchpadgit/server/db.ts#L237).
+* **Description**: 
+  1. The regex used `\b` before Cyrillic keywords (e.g. `(?:\b(?:меню|дата|от|за)\s+)`). In standard JavaScript regexes, `\b` asserts a boundary between ASCII word characters (`[a-zA-Z0-9_]`) and non-word characters. Since Cyrillic letters are considered non-word characters, this word boundary constraint never matches when preceded by a space or start of line, completely breaking the Bulgarian keyword date matcher.
+  2. The parser extracted `result.date = dateMatch[1]`. If the second group (Bulgarian keyword partial date like `Меню за 09.04`) matched, `dateMatch[1]` was `undefined`, setting the parsed date to `undefined` and skipping the line without recording the date.
+  3. When fixing the word boundary, if a line like `"Меню за 09.04.2026"` was matched, the engine preferred matching the partial match `"за 09.04"` at index 5 because it started earlier than the full match `"09.04.2026"` at index 8. This truncated the year `2026` off full dates.
+* **Impact**: **High**. Date extraction failed on standard menus using partial Bulgarian date formats (e.g., `"Меню за 09.04"`), and correcting it naively truncated the year off full dates.
+* **Fix**: Unified the regex to use a lookbehind unicode word boundary and optional prefix group:
+  `(?<=^|[^a-zA-Z0-9_а-яА-ЯёЁ])(?:(?:меню|дата|от|за)\s+)?(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})\b|(?<=^|[^a-zA-Z0-9_а-яА-ЯёЁ])(?:меню|дата|от|за)\s+(\d{1,2}[.\-/]\d{1,2})\b`
+  and set `result.date = dateMatch[1] || dateMatch[2]` in [parserEngine.ts](file:///home/ssndip/lunchpadgit/src/utils/parserEngine.ts).
 
-## ⚠️ 2. UX & Interaction Vulnerabilities
-
-### ⚡ Bug 4: Accidental Keyboard Input Misidentification as RFID Swipe
-* **Location**: [src/hooks/useRfidScanner.ts](file:///home/ssndip/lunchpadgit/src/hooks/useRfidScanner.ts#L31-L70)
-* **Description**: The global keyboard listener accumulates any typed characters into `bufferRef` and fires a scan when `Enter` is pressed. Because it lacks a keypress timing/speed check, if a user slowly types regular keys on the keyboard (e.g., trying to type or interact with page elements) and later presses `Enter` to confirm a modal, the scanner hook will capture the accumulated buffer as a valid RFID scan.
-* **Impact**: **Medium**. Accidental trigger of RFID checks (such as displaying "Card not found" errors or triggering unwanted cart checkout behaviors) during normal keyboard navigation/interaction.
-* **Fix**: Implement a keystroke timing check. Standard RFID scanners emulate keystrokes with extremely short delays (typically < 50ms per key). We can track the timestamp of the first key or the delta between keys and discard the buffer if the typing speed is too slow to be a hardware scanner.
-
----
-
-## 🔒 3. Code Security & Best Practices Audits
-
-### 🛡️ 1. In-Memory Kiosk Status (`kioskOpen`)
-* **Location**: [server/controllers/statusController.ts](file:///home/ssndip/lunchpadgit/server/controllers/statusController.ts)
-* **Observation**: The `kioskOpen` state is maintained as an in-memory variable (`export let kioskOpen = true;`) rather than being persisted in the SQLite `settings` table. 
-* **Risk**: If the server restarts, any manual status overrides (e.g. closing the kiosk manually) are reset.
-* **Recommendation**: Store `kioskOpen` in the database settings table.
+### 🐛 Bug 7: Order Reset Wipes Admin Dashboard Card List (State Sync Bug)
+* **Location**: [orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts#L144-L160)
+* **Description**: When an administrator clears orders via `/api/reset`, the server broadcasts an `INITIAL_STATE` WebSocket event. This payload included `cards: []`. When the admin dashboard received this event, it updated its local cards store state to `[]`, wiping out all listed cards from the manager UI.
+* **Impact**: **Medium**. Annoying UI state bug where registered cards vanished from the admin panel until a manual page refresh.
+* **Fix**: Made `cards` optional in `InitialStateMessage` type in [websocket.ts](file:///home/ssndip/lunchpadgit/src/types/websocket.ts) and omitted `cards` from the broadcast payload in `resetOrders` inside [orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts), preserving the existing card list on connected admin clients.

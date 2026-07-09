@@ -146,7 +146,6 @@ export const resetOrders = (req: Request, res: Response, next: NextFunction) => 
       menu: getMenu(db), 
       orders: [], 
       kioskOpen, 
-      cards: [],
       deliveryFee: settings.deliveryFee,
       packagingFee: settings.packagingFee,
       menuVersion: settings.menuVersion,
