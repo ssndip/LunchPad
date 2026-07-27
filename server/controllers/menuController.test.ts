@@ -76,6 +76,29 @@ describe('menuController - fetchMenuBackups', () => {
     expect(mockNext).not.toHaveBeenCalled();
   });
 
+  it('should return 0 as itemCount for backups with malformed JSON without throwing an error', () => {
+    const timestamp = new Date().toISOString();
+    const malformedJson = '{ invalid json ';
+
+    db.prepare(`
+      INSERT INTO menu_backups (timestamp, menuDate, menuData, menuVersion)
+      VALUES (?, ?, ?, ?)
+    `).run(timestamp, '2026-07-27', malformedJson, 1);
+
+    fetchMenuBackups(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.json).toHaveBeenCalledWith([
+      {
+        id: expect.any(Number),
+        timestamp: timestamp,
+        menuDate: '2026-07-27',
+        menuVersion: 1,
+        itemCount: 0
+      }
+    ]);
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
   it('should call next with error when db query fails', () => {
     const error = new Error('Database error');
     const spy = vi.spyOn(db, 'prepare').mockImplementationOnce(() => {

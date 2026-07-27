@@ -134,7 +134,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
 export const fetchMenuBackups = (req: Request, res: Response, next: NextFunction) => {
   try {
     const backups = db.prepare(`
-      SELECT id, timestamp, menuDate, menuVersion, json_array_length(menuData) as itemCount 
+      SELECT id, timestamp, menuDate, menuVersion, CASE WHEN json_valid(menuData) THEN json_array_length(menuData) ELSE 0 END as itemCount 
       FROM menu_backups 
       ORDER BY timestamp DESC
     `).all() as any[];
