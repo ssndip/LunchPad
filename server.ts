@@ -61,7 +61,18 @@ export async function startServer() {
   const PORT = process.env.PORT || 3400;
 
   // CORS Middleware
-  app.use(cors());
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow if no origin (e.g. mobile apps, curl)
+      if (!origin) return callback(null, true);
+      // Allow if globalAccess is true
+      if (settings.globalAccess) return callback(null, true);
+      // Allow if local origin
+      if (isLocalOrigin(origin)) return callback(null, true);
+      
+      callback(new Error('Not allowed by CORS'));
+    }
+  }));
 
   app.use(helmet({
     contentSecurityPolicy: false, // Allow Vite dev server
@@ -161,7 +172,8 @@ export async function startServer() {
       kioskCloseDay: settings.kioskCloseDay,
       deliveryFee: settings.deliveryFee || 0,
       packagingFee: settings.packagingFee || 0.1,
-      publicAccessRequired: settings.publicAccessRequired
+      publicAccessRequired: settings.publicAccessRequired,
+      globalAccess: settings.globalAccess
     });
   });
 
@@ -201,13 +213,16 @@ export async function startServer() {
     // 1. Determine if connection is allowed:
     //    - Always allowed for Admin dashboard
     //    - Always allowed for Local Origins (WiFi/LAN)
-    //    - Allowed for kiosk/remote public clients
-    const isAllowed = true; 
+    //    - Allowed for kiosk/remote public clients if globalAccess is enabled
+    const isAllowed = isAdmin || settings.globalAccess || isLocal; 
+
+    if (!isAllowed) {
+      logger.ws(`Connection attempt blocked: origin=${origin}, globalAccess=${settings.globalAccess}, local=${isLocal}, admin=${isAdmin}`);
+      ws.close(4003, "Access Denied: Global Access is disabled.");
+      return;
+    }
 
     logger.ws(`Connection attempt: origin=${origin}, local=${isLocal}, admin=${isAdmin} -> ALLOWED`);
-
-    // All public connections are now allowed by default
-    // We keep the check structure if we need to block for other reasons later.
 
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
@@ -237,7 +252,8 @@ export async function startServer() {
       kioskOpenTime: settings.kioskOpenTime,
       kioskCloseTime: settings.kioskCloseTime,
       kioskCloseDay: settings.kioskCloseDay,
-      publicAccessRequired: settings.publicAccessRequired
+      publicAccessRequired: settings.publicAccessRequired,
+      globalAccess: settings.globalAccess
     } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {

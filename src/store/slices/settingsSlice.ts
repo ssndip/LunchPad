@@ -26,6 +26,7 @@ export interface SettingsSlice {
   aiModel: string;
   aiEndpoint: string;
   preIdentificationEnabled: boolean;
+  globalAccess: boolean;
 
   setAdminWhitelistEnabled: (v: boolean) => void;
   setOrderButtonEnabled: (v: boolean) => void;
@@ -50,6 +51,7 @@ export interface SettingsSlice {
   setAiModel: (v: string) => void;
   setAiEndpoint: (v: string) => void;
   setPreIdentificationEnabled: (v: boolean) => void;
+  setGlobalAccess: (v: boolean) => void;
   customCategories: import('../../types').CustomCategory[];
   setCustomCategories: (categories: import('../../types').CustomCategory[]) => void;
 }
@@ -81,6 +83,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   aiModel: '',
   aiEndpoint: '',
   preIdentificationEnabled: false,
+  globalAccess: false,
 
   setAdminWhitelistEnabled: (v) => set({ adminWhitelistEnabled: v }),
   setOrderButtonEnabled: (v) => set({ orderButtonEnabled: v }),
@@ -108,6 +111,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAiModel: (v) => set({ aiModel: v }),
   setAiEndpoint: (v) => set({ aiEndpoint: v }),
   setPreIdentificationEnabled: (v) => set({ preIdentificationEnabled: v }),
+  setGlobalAccess: (v) => set({ globalAccess: v }),
   customCategories: [],
   setCustomCategories: (customCategories) => set({ customCategories }),
 });

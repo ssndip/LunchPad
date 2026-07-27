@@ -25,7 +25,8 @@ import {
   setKioskCloseTimeConfig,
   setKioskCloseDayConfig,
   setPublicAccessRequiredConfig,
-  setPublicAccessCodeConfig
+  setPublicAccessCodeConfig,
+  setGlobalAccessConfig
 } from "../config";
 import { kioskOpen } from "./statusController";
 
@@ -53,7 +54,8 @@ export const fetchSettings = (req: Request, res: Response) => {
     kioskCloseTime: settings.kioskCloseTime,
     kioskCloseDay: settings.kioskCloseDay,
     publicAccessRequired: settings.publicAccessRequired,
-    publicAccessCode: settings.publicAccessCode
+    publicAccessCode: settings.publicAccessCode,
+    globalAccess: settings.globalAccess
   });
 };
 
@@ -65,7 +67,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       systemLanguage, bgnEnabled, adminWhitelist, announcement,
       aiProvider, aiApiKey, aiModel, aiEndpoint, preIdentificationEnabled, customCategories,
       kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay,
-      publicAccessRequired, publicAccessCode
+      publicAccessRequired, publicAccessCode, globalAccess
     } = req.body;
     
     if (adminWhitelistEnabled !== undefined) {
@@ -85,6 +87,13 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("pre_identification_enabled", preIdentificationEnabled ? "1" : "0");
       setPreIdentificationEnabledConfig(preIdentificationEnabled);
       broadcast({ type: "SETTINGS_UPDATE", settings: { preIdentificationEnabled } as any });
+    }
+
+    if (globalAccess !== undefined) {
+      if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("global_access", globalAccess ? "1" : "0");
+      setGlobalAccessConfig(globalAccess);
+      broadcast({ type: "SETTINGS_UPDATE", settings: { globalAccess } as any });
     }
 
     if (orderButtonEnabled !== undefined) {
@@ -262,7 +271,8 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       kioskCloseTime: settings.kioskCloseTime,
       kioskCloseDay: settings.kioskCloseDay,
       publicAccessRequired: settings.publicAccessRequired,
-      publicAccessCode: settings.publicAccessCode
+      publicAccessCode: settings.publicAccessCode,
+      globalAccess: settings.globalAccess
     });
   } catch (err: any) {
     next(err);

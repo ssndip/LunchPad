@@ -232,7 +232,7 @@ export default function App() {
     handleApplyMenu(updated);
   };
 
-  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean, customCategories?: import('./types').CustomCategory[], aiModel?: string, aiEndpoint?: string, kioskAutoTiming?: boolean, kioskOpenTime?: string, kioskCloseTime?: string, kioskCloseDay?: number, publicAccessReq?: boolean, publicAccessCode?: string) => {
+  const handleUpdateSettings = async (whitelistEnabled: boolean, orderBtn: boolean, test?: boolean, kiosk?: boolean, allowPwa?: boolean, systemLang?: string, bgn?: boolean, whitelist?: string, announcement?: string, aiProvider?: string, aiApiKey?: string, preIdent?: boolean, customCategories?: import('./types').CustomCategory[], aiModel?: string, aiEndpoint?: string, kioskAutoTiming?: boolean, kioskOpenTime?: string, kioskCloseTime?: string, kioskCloseDay?: number, publicAccessReq?: boolean, publicAccessCode?: string, globalAccess?: boolean) => {
     if (!s.token) return;
     try {
       const update = {
@@ -256,7 +256,8 @@ export default function App() {
         kioskCloseTime: kioskCloseTime ?? s.kioskCloseTime,
         kioskCloseDay: kioskCloseDay ?? s.kioskCloseDay,
         publicAccessRequired: publicAccessReq ?? s.publicAccessRequired,
-        publicAccessCode: publicAccessCode !== undefined ? publicAccessCode : s.publicAccessCode
+        publicAccessCode: publicAccessCode !== undefined ? publicAccessCode : s.publicAccessCode,
+        globalAccess: globalAccess ?? s.globalAccess
       };
       await api.updateSettings(s.token, update);
       s.setAdminWhitelistEnabled(whitelistEnabled);
@@ -279,6 +280,7 @@ export default function App() {
       if (kioskCloseDay !== undefined) s.setKioskCloseDay(kioskCloseDay);
       if (publicAccessReq !== undefined) s.setPublicAccessRequired(publicAccessReq);
       if (publicAccessCode !== undefined) s.setPublicAccessCode(publicAccessCode);
+      if (globalAccess !== undefined) s.setGlobalAccess(globalAccess);
       if (customCategories !== undefined) {
         s.setCustomCategories(customCategories);
       }
@@ -616,8 +618,9 @@ export default function App() {
               kioskCloseDay={s.kioskCloseDay}
               publicAccessRequired={s.publicAccessRequired}
               publicAccessCode={s.publicAccessCode}
-              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay, pubAccessReq, pubAccessCode) => {
-                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay, pubAccessReq, pubAccessCode);
+              globalAccess={s.globalAccess}
+              onUpdateSettings={(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay, pubAccessReq, pubAccessCode, glbAcc) => {
+                handleUpdateSettings(whitelistEnabled, ord, tst, kiosk, pwaSettings, systemLang, bgn, whitelist, ann, aiP, aiK, preI, customCats, aiM, aiE, kAuto, kOpen, kClose, kDay, pubAccessReq, pubAccessCode, glbAcc);
               }}
               kioskModeEnabled={s.kioskModeEnabled}
               allowPWAInstall={s.allowPWAInstall}

@@ -43,7 +43,8 @@ export const settings = {
   kioskOpenTime: "08:00",
   kioskCloseTime: "11:00",
   kioskCloseDay: 0,
-  customCategories: [] as any[]
+  customCategories: [] as any[],
+  globalAccess: false
 };
 
 // --- Setters ---
@@ -69,6 +70,7 @@ export const setKioskAutoTimingConfig = (val: boolean) => settings.kioskAutoTimi
 export const setKioskOpenTimeConfig = (val: string) => settings.kioskOpenTime = val;
 export const setKioskCloseTimeConfig = (val: string) => settings.kioskCloseTime = val;
 export const setKioskCloseDayConfig = (val: number) => settings.kioskCloseDay = val;
+export const setGlobalAccessConfig = (val: boolean) => settings.globalAccess = val;
 
 export const incrementMenuVersion = () => {
   settings.menuVersion += 1;
@@ -142,6 +144,14 @@ export const initSettings = () => {
     settings.orderButtonEnabled = true;
   } else {
     settings.orderButtonEnabled = orderButton.value === "1";
+  }
+
+  const globalAccessRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("global_access") as { value: string } | undefined;
+  if (!globalAccessRecord) {
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("global_access", "0");
+    settings.globalAccess = false;
+  } else {
+    settings.globalAccess = globalAccessRecord.value === "1";
   }
 
   const testMode = db.prepare("SELECT value FROM settings WHERE key = ?").get("test_mode_enabled") as { value: string } | undefined;

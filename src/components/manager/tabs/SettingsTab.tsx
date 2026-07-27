@@ -36,6 +36,7 @@ interface SettingsTabProps {
   onDeleteLanguage: (code: string) => Promise<void>;
   publicAccessRequired: boolean;
   publicAccessCode: string;
+  globalAccess: boolean;
   onUpdateSettings: (
     adminWhitelistEnabled: boolean,
     orderBtn: boolean,
@@ -57,7 +58,8 @@ interface SettingsTabProps {
     kioskCloseTime?: string,
     kioskCloseDay?: number,
     publicAccessRequired?: boolean,
-    publicAccessCode?: string
+    publicAccessCode?: string,
+    globalAccess?: boolean
   ) => void;
   onUpdatePin: () => void;
   onInstallApp?: () => void;
@@ -75,6 +77,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   confirm, customCategories = [],
   publicAccessRequired,
   publicAccessCode,
+  globalAccess,
 }) => {
   const { t, lang } = useTranslation();
 
@@ -467,6 +470,44 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               color="bg-neutral-900" 
             />
           </div>
+          <div className="flex items-center justify-between pt-6 border-t border-neutral-100 mt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><Globe className="w-6 h-6 text-neutral-900" /></div>
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900">{t('settings.global_access') || 'Global Network Access'}</h3>
+                <p className="text-sm text-neutral-500 italic">{t('settings.global_access_desc') || 'Allow access from external networks and mobile data. Disable to limit access strictly to the local network.'}</p>
+              </div>
+            </div>
+            <Toggle 
+              checked={globalAccess} 
+              onChange={() => onUpdateSettings(
+                adminWhitelistEnabled, 
+                orderButtonEnabled, 
+                testModeEnabled, 
+                kioskModeEnabled, 
+                allowPWAInstall, 
+                lang, 
+                bgnEnabled, 
+                adminWhitelist, 
+                announcement, 
+                aiProvider, 
+                aiApiKey, 
+                preIdentificationEnabled,
+                customCategories,
+                aiModel,
+                aiEndpoint,
+                kioskAutoTiming,
+                kioskOpenTime,
+                kioskCloseTime,
+                kioskCloseDay,
+                publicAccessRequired,
+                publicAccessCode,
+                !globalAccess
+              )} 
+              label="Toggle Global Access" 
+              color="bg-neutral-900" 
+            />
+          </div>
         </div>
 
         {/* Public Access Protection */}
@@ -504,7 +545,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   kioskOpenTime,
                   kioskCloseTime,
                   kioskCloseDay,
-                  !publicAccessRequired
+                  !publicAccessRequired,
+                  publicAccessCode,
+                  globalAccess
                 )} 
                 label="Toggle Public Access Lock" 
                 color="bg-neutral-900" 
@@ -547,7 +590,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                         kioskCloseTime,
                         kioskCloseDay,
                         publicAccessRequired,
-                        localPublicAccessCode
+                        localPublicAccessCode,
+                        globalAccess
                       )}
                       className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all shadow-sm"
                     >
