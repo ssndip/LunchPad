@@ -7,7 +7,13 @@ services:
     volumes:
       - ./data:/app/data
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - NODE_ENV=production
       - PORT=3400
       - APP_URL=https://ss.plcnet.org:3402
+      - JWT_SECRET=lunchpad-secret-key-change-me-in-production
+      - ADMIN_PIN=0000
+      - ENABLE_TEST_BYPASS=true
+      - DISABLE_ADMIN_WHITELIST=true # Set to true to bypass IP whitelist checks for remote admin login

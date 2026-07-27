@@ -1,0 +1,6 @@
+{
+  "python.venvFolders": [],
+  "python.venvPath": "",
+  "python.locator": "global",
+  "css.lint.unknownAtRules": "ignore"
+}

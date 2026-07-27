@@ -1,17 +1,146 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dynamic Scale Factor: 1.0 on mobile, shifts upwards gently on tablets/desktop */
+  --scale-factor: 1;
+  /* Base typography */
+  --fluid-base: clamp(14px, 2vw, 16px);
+  --fluid-lg: clamp(16px, 2.5vw, 18px);
+  --fluid-xl: clamp(18px, 3vw, 24px);
+  --fluid-2xl: clamp(24px, 4vw, 32px);
+  /* App sizing limits */
+  --app-max-width: 1440px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --scale-factor: 1.05;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --scale-factor: 1.1;
+  }
+}
+
+@layer base {
+  html {
+    font-size: var(--fluid-base);
+  }
+}
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.08); /* Minimalist look */
+    border-radius: 12px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.15);
   }
+
+  /* Invisible scrollbars that preserve functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;            /* Chrome, Safari and Opera */
+  }
+
+  /* Prevent body scrolling / rubber banding on tablets */
+  .fixed-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    /* Allow vertical overscroll for pull-to-refresh */
+    overscroll-behavior-y: auto;
+  }
+
+  /* No tap highlight on mobile for clean UI */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* --- Glassmorphism & Premium Utilities --- */
+  
+  .glass-morphism {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40;
+  }
+
+  .glass-morphism-dark {
+    @apply bg-neutral-900/80 backdrop-blur-xl border border-white/10;
+  }
+
+  .premium-shadow {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.04),
+      0 4px 6px -2px rgba(0, 0, 0, 0.01),
+      0 20px 25px -5px rgba(0, 0, 0, 0.03);
+  }
+
+  .premium-gradient-violet {
+    @apply bg-gradient-to-br from-violet-600 to-indigo-700;
+  }
+
+  .premium-gradient-neutral {
+    @apply bg-gradient-to-br from-neutral-900 to-neutral-700;
+  }
+
+  /* Micro-animations */
+  .hover-lift {
+    @apply transition-transform duration-150 hover:-translate-y-1 active:scale-[0.98];
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Smooth category active pill transition */
+  .active-pill-shadow {
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12);
+  }
+
+  .touch-target-expansion {
+    position: relative;
+  }
+  .touch-target-expansion::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    left: -10px;
+    right: -10px;
+    z-index: 10;
+  }
+}
+
+html, body, #root {
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-touch-callout: none; /* Disable long-press context menu on tablets */
+  /* Prevent scrolling at the root level to solidify app feel */
+  /* Allow vertical overscroll for pull-to-refresh functionality */
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
 }

@@ -1,0 +1,199 @@
+{
+  "date": "07.04.2026",
+  "categories": [
+    {
+      "categoryName": "Супи Цена",
+      "items": [
+        {
+          "name": "Пилешка супа",
+          "price": 1.8,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Шкембе",
+          "price": 1.8,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Таратор",
+          "price": 1.5,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        }
+      ]
+    },
+    {
+      "categoryName": "Основни ястия",
+      "items": [
+        {
+          "name": "Свинско с ориз",
+          "price": 3.2,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Леща",
+          "price": 2.7,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Запеканка с шунка",
+          "price": 3.2,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Гъби с ориз",
+          "price": 2.7,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Пиле с ориз",
+          "price": 3,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Спагети болонезе",
+          "price": 3.2,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Пиле с картофи",
+          "price": 3,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Свинско славянски гювеч",
+          "price": 3.2,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        },
+        {
+          "name": "Свински шницел с гарнитура",
+          "price": 3.4,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        }
+      ]
+    },
+    {
+      "categoryName": "Гарнитури",
+      "items": [
+        {
+          "name": "Шопска салата",
+          "price": 0.75,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Зелева салата",
+          "price": 0.75,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Млечна салата",
+          "price": 0.75,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Гъби с ориз",
+          "price": 0.75,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Пържени картофи",
+          "price": 0.75,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        }
+      ]
+    },
+    {
+      "categoryName": "Други",
+      "items": [
+        {
+          "name": "Четвъртинка хляб",
+          "price": 0.5,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        }
+      ]
+    },
+    {
+      "categoryName": "Скара",
+      "items": [
+        {
+          "name": "Кебапче",
+          "price": 1,
+          "weight": "100гр",
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Кюфте",
+          "price": 1,
+          "weight": "100гр",
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Татарско кюфте с гарнитура",
+          "price": 3.4,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        },
+        {
+          "name": "Сръбска плескавица с гарнитура",
+          "price": 3.4,
+          "weight": null,
+          "boxFee": 0.1,
+          "date": null
+        }
+      ]
+    },
+    {
+      "categoryName": "Десерти",
+      "items": [
+        {
+          "name": "Домашна бисквитена торта",
+          "price": 1.8,
+          "weight": null,
+          "boxFee": 0,
+          "date": null
+        }
+      ]
+    }
+  ],
+  "unmatchedLines": [
+    "Цената в евро се обменя в лева по курс 1.95"
+  ]
+}

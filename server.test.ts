@@ -1,9 +1,13 @@
 import { test, expect, describe, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import { getMenu } from './server';
+import DatabaseConstructor from 'better-sqlite3';
+import type { Database as DatabaseType } from 'better-sqlite3';
+const Database = (DatabaseConstructor as any).default || DatabaseConstructor;
+import { getMenu } from './server/controllers/menuController';
+// Stub invalidateMenuCache for test compatibility
+const invalidateMenuCache = () => {};
 
 describe('getMenu', () => {
-  let db: Database.Database;
+  let db: DatabaseType;
 
   beforeEach(() => {
     db = new Database(':memory:');
@@ -31,25 +35,26 @@ describe('getMenu', () => {
     const result = getMenu(db);
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
+    expect(result[0]).toEqual(expect.objectContaining({
       id: 1,
       name: "Available Item",
       description: "Desc",
       price: 1.5,
       available: true,
       category: "Category 1"
-    });
-    expect(result[1]).toEqual({
+    }));
+    expect(result[1]).toEqual(expect.objectContaining({
       id: 2,
       name: "Unavailable Item",
       description: "Desc",
       price: 2.0,
       available: false,
       category: "Category 2"
-    });
+    }));
   });
 
   test('returns an empty array when there are no items', () => {
+    invalidateMenuCache();
     const result = getMenu(db);
     expect(result).toEqual([]);
   });

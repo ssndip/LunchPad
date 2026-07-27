@@ -13,6 +13,9 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
+# Generate dynamic build version timestamp
+RUN VERSION=$(node -e "import fs from 'fs'; console.log(JSON.parse(fs.readFileSync('./package.json', 'utf8')).version);") && DATE=$(date +'%Y.%m.%d') && echo "export const APP_VERSION = 'v$VERSION ($DATE)';" > src/version.ts
+
 # Build the frontend
 RUN npm run build
 
@@ -28,9 +31,10 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy the built frontend and server files
+# Copy the built frontend and modular server files
 COPY --from=build-stage /app/dist ./dist
 COPY --from=build-stage /app/server.ts ./
+COPY --from=build-stage /app/server ./server
 COPY --from=build-stage /app/src/types.ts ./src/types.ts
 
 # Create a directory for the database and set permissions
