@@ -173,21 +173,33 @@ export const duplicateProfile = (req: Request, res: Response) => {
 
 export const exportAllProfiles = (req: Request, res: Response) => {
   try {
-    const profiles = db.prepare("SELECT * FROM parser_profiles").all() as ParserProfile[];
+    const profilesWithConfig = db.prepare(`
+      SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.isActive, 
+        v.configJson
+      FROM parser_profiles p
+      LEFT JOIN parser_versions v ON v.profileId = p.id
+        AND v.versionNumber = (
+          SELECT MAX(versionNumber) 
+          FROM parser_versions 
+          WHERE profileId = p.id
+        )
+    `).all() as any[];
+
     const bundle = {
       version: "1.0",
       type: "LUNCHPAD_PARSER_BUNDLE",
       exportedAt: new Date().toISOString(),
-      profiles: profiles.map(p => {
-        const latestVersion = db.prepare("SELECT * FROM parser_versions WHERE profileId = ? ORDER BY versionNumber DESC LIMIT 1").get(p.id) as ParserVersion;
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          isActive: p.isActive,
-          config: JSON.parse(latestVersion.configJson)
-        };
-      })
+      profiles: profilesWithConfig.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        isActive: p.isActive,
+        config: p.configJson ? JSON.parse(p.configJson) : {}
+      }))
     };
     res.json(bundle);
   } catch (err) {
