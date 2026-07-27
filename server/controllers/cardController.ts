@@ -198,6 +198,10 @@ export const updateSingleCard = (req: Request, res: Response, next: NextFunction
     const { ownerName, balance, isAdmin, pin } = req.body;
     const cleanRfid = cleanRfidUtil(rfid);
 
+    if (!ownerName || typeof ownerName !== 'string' || ownerName.length > 100) {
+      return res.status(400).json({ error: "Invalid or missing ownerName" });
+    }
+
     const numBalance = balance !== undefined && balance !== null ? Number(balance) : 0;
     if (isNaN(numBalance)) {
       return res.status(400).json({ error: "Balance must be a valid number" });

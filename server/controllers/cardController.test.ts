@@ -202,4 +202,69 @@ describe('cardController', () => {
       expect(card.pin).not.toBe('987654');
     });
   });
+
+  describe('updateSingleCard ownerName validation', () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      mockRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn()
+      };
+      mockNext = vi.fn();
+      db.exec("DELETE FROM cards");
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, isAdmin)
+        VALUES ('55555', 'Initial Name', 0, 0)
+      `).run();
+    });
+
+    it('should return 400 error when ownerName is missing or empty', () => {
+      mockReq = {
+        params: { rfid: '55555' },
+        body: {
+          ownerName: '',
+          balance: 10
+        }
+      };
+
+      updateSingleCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or missing ownerName' });
+    });
+
+    it('should return 400 error when ownerName is not a string', () => {
+      mockReq = {
+        params: { rfid: '55555' },
+        body: {
+          ownerName: 12345,
+          balance: 10
+        }
+      };
+
+      updateSingleCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or missing ownerName' });
+    });
+
+    it('should return 400 error when ownerName exceeds 100 characters', () => {
+      mockReq = {
+        params: { rfid: '55555' },
+        body: {
+          ownerName: 'a'.repeat(101),
+          balance: 10
+        }
+      };
+
+      updateSingleCard(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or missing ownerName' });
+    });
+  });
 });
+
