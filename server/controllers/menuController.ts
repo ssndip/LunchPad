@@ -133,26 +133,12 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
 
 export const fetchMenuBackups = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const backups = db.prepare("SELECT id, timestamp, menuDate, menuVersion, length(menuData) as rawSize FROM menu_backups ORDER BY timestamp DESC").all() as any[];
-    res.json(backups.map(b => {
-      let itemCount = 0;
-      try {
-        const fullBackup = db.prepare("SELECT menuData FROM menu_backups WHERE id = ?").get(b.id) as { menuData: string } | undefined;
-        if (fullBackup) {
-          const parsed = JSON.parse(fullBackup.menuData);
-          itemCount = Array.isArray(parsed) ? parsed.length : 0;
-        }
-      } catch (e) {
-        // Safe fallback
-      }
-      return {
-        id: b.id,
-        timestamp: b.timestamp,
-        menuDate: b.menuDate,
-        menuVersion: b.menuVersion,
-        itemCount
-      };
-    }));
+    const backups = db.prepare(`
+      SELECT id, timestamp, menuDate, menuVersion, json_array_length(menuData) as itemCount 
+      FROM menu_backups 
+      ORDER BY timestamp DESC
+    `).all() as any[];
+    res.json(backups);
   } catch (err) {
     next(err);
   }
