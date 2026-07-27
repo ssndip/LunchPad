@@ -11,7 +11,9 @@ import {
   AlertCircle,
   LayoutDashboard,
   LogOut,
-  Users
+  Users,
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MenuItem, Order, AppState, Card, DailySummary } from './types';
@@ -28,6 +30,9 @@ const App: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [kioskOpen, setKioskOpen] = useState(true);
   const [adminPin, setAdminPin] = useState<string>("");
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [orderButtonEnabled, setOrderButtonEnabled] = useState(true);
+  const [testModeEnabled, setTestModeEnabled] = useState(false);
   
   const rfidInputRef = useRef<HTMLInputElement>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -36,8 +41,27 @@ const App: React.FC = () => {
 
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
+  const fetchInitialState = async () => {
+    try {
+      const response = await fetch('/api/init');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.menu) setMenu(data.menu);
+        if (data.kioskOpen !== undefined) setKioskOpen(data.kioskOpen);
+        if (data.globalAccess !== undefined) setGlobalAccess(data.globalAccess);
+        if (data.orderButtonEnabled !== undefined) setOrderButtonEnabled(data.orderButtonEnabled);
+        if (data.testModeEnabled !== undefined) setTestModeEnabled(data.testModeEnabled);
+        setConnectionError(null);
+      }
+    } catch (err) {
+      console.error('Failed to fetch initial state', err);
+    }
+  };
+
   useEffect(() => {
-    // WebSocket connection logic
+    fetchInitialState();
+    
+    // WebSocket connection logic (sync only)
     let reconnectTimer: any;
     
     const connect = () => {
@@ -72,13 +96,24 @@ const App: React.FC = () => {
             break;
           case 'STATUS_UPDATE':
             setKioskOpen(message.data.kioskOpen);
+            if (message.data.orderButtonEnabled !== undefined) {
+              setOrderButtonEnabled(message.data.orderButtonEnabled);
+            }
+            if (message.data.testModeEnabled !== undefined) {
+              setTestModeEnabled(message.data.testModeEnabled);
+            }
             break;
         }
       };
 
-      ws.current.onclose = () => {
-        console.log('WebSocket Disconnected. Reconnecting...');
-        reconnectTimer = setTimeout(connect, 3000);
+      ws.current.onclose = (event) => {
+        console.log('WebSocket Disconnected. Code:', event.code);
+        if (event.code === 4003) {
+          setConnectionError("Global Access Disabled");
+          // Don't auto-reconnect if it's a security rejection
+        } else {
+          reconnectTimer = setTimeout(connect, 3000);
+        }
       };
 
       ws.current.onerror = (err) => {
@@ -95,10 +130,13 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'menu' | 'orders' | 'cards' | 'history'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'orders' | 'cards' | 'history' | 'settings'>('menu');
   const [editingMenu, setEditingMenu] = useState<MenuItem[]>([]);
   const [history, setHistory] = useState<Order[]>([]);
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
+  const [globalAccess, setGlobalAccess] = useState(false);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [dailyDetails, setDailyDetails] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -139,12 +177,77 @@ const App: React.FC = () => {
     }
   };
 
+  const fetchDailyDetails = async (date: string) => {
+    if (expandedDate === date) {
+      setExpandedDate(null);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/summaries/${date}`, { headers: { 'x-admin-pin': adminPin } });
+      const data = await response.json();
+      setDailyDetails(data);
+      setExpandedDate(date);
+    } catch (err) {
+      console.error('Failed to fetch daily details', err);
+    }
+  };
+
+  const copyDailySummary = (date: string, total: number) => {
+    const summaryText = `Daily Summary: ${date}\n` +
+      `--- \n` +
+      dailyDetails.map(item => `${item.category} | ${item.name} | ${item.quantity} | €${item.total.toFixed(2)}`).join('\n') +
+      `\n---\n` +
+      `TOTAL: €${total.toFixed(2)}`;
+    
+    navigator.clipboard.writeText(summaryText).then(() => {
+      alert('Summary copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy', err);
+    });
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/settings', { headers: { 'x-admin-pin': adminPin } });
+      const data = await response.json();
+      setGlobalAccess(data.globalAccess);
+      setOrderButtonEnabled(data.orderButtonEnabled);
+      if (data.testModeEnabled !== undefined) setTestModeEnabled(data.testModeEnabled);
+    } catch (err) {
+      console.error('Failed to fetch settings', err);
+    }
+  };
+
+  const updateSettings = async (access: boolean, orderBtn: boolean, testMode?: boolean) => {
+    try {
+      // Optimitic update
+      setGlobalAccess(access);
+      setOrderButtonEnabled(orderBtn);
+      if (testMode !== undefined) setTestModeEnabled(testMode);
+      
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
+        body: JSON.stringify({ 
+          globalAccess: access, 
+          orderButtonEnabled: orderBtn,
+          testModeEnabled: testMode !== undefined ? testMode : testModeEnabled
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to update settings', err);
+    }
+  };
+
   useEffect(() => {
+    setIsScanning(false); // Reset scanning status on view/tab change
     if (view === 'manager') {
       if (activeTab === 'history') {
         fetchHistory();
       } else if (activeTab === 'orders') {
         fetchSummaries();
+      } else if (activeTab === 'settings') {
+        fetchSettings();
       }
     }
   }, [activeTab, view]);
@@ -332,10 +435,22 @@ const App: React.FC = () => {
   }, [view, kioskOpen, selectedItems.length]);
 
   const handleOrder = async (rfidOverride?: string) => {
-    const activeRfid = rfidOverride || rfid;
-    if (!activeRfid || selectedItems.length === 0) return;
+    let activeRfid = rfidOverride || rfid;
+    
+    // Test mode bypass: if no RFID scanned and Test Mode is ON, use TEST-ADMIN
+    if ((!activeRfid || activeRfid.trim() === '') && testModeEnabled) {
+      activeRfid = 'TEST-ADMIN';
+    }
+
+    if (!activeRfid || selectedItems.length === 0) {
+      console.warn("[DEBUG] Order aborted: No RFID or no items selected.", { activeRfid, itemCount: selectedItems.length });
+      return;
+    }
 
     try {
+      setIsScanning(true);
+      console.log(`[DEBUG] Sending Order for RFID: "${activeRfid}" (Test Mode: ${testModeEnabled})`);
+      
       const response = await fetch('/api/v1/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -365,6 +480,8 @@ const App: React.FC = () => {
       setError('Network error. Please check your connection and try again.');
       setRfid('');
       setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -450,10 +567,39 @@ const App: React.FC = () => {
           </header>
 
           <div className="flex-1 columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-            {(Object.entries(groupedMenu) as [string, MenuItem[]][]).map(([category, items]) => (
+            {connectionError ? (
+              <div className="bg-white p-12 rounded-[40px] border-2 border-dashed border-red-200 text-center col-span-full shadow-lg">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">Connection Restricted</h3>
+                <p className="text-neutral-500 text-sm max-w-md mx-auto leading-relaxed">
+                  Your connection was blocked because <strong>Global Network Access</strong> is disabled. 
+                  Please enable it in **Admin → System Settings** to allow access from this device.
+                </p>
+              </div>
+            ) : !orderButtonEnabled ? (
+              <div className="bg-white p-12 rounded-[40px] border-2 border-dashed border-neutral-200 text-center col-span-full shadow-sm">
+                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Utensils className="w-8 h-8 text-neutral-400" />
+                </div>
+                <h3 className="text-xl font-black text-neutral-900 mb-2 uppercase tracking-tighter">Testing Mode</h3>
+                <p className="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
+                  🛒 Ordering is currently disabled for maintenance or testing.
+                </p>
+              </div>
+            ) : Object.keys(groupedMenu).length === 0 ? (
+              <div className="bg-white p-12 rounded-[40px] border border-neutral-200 text-center col-span-full shadow-sm">
+                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-8 h-8 text-neutral-400" />
+                </div>
+                <h3 className="text-xl font-bold text-neutral-900 mb-1">No items available today</h3>
+                <p className="text-neutral-400 text-xs uppercase tracking-widest font-mono">Check back later or refresh</p>
+              </div>
+            ) : (Object.entries(groupedMenu) as [string, MenuItem[]][]).map(([category, items]) => (
               <section 
                 key={category} 
-                className="break-inside-avoid bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden"
+                className="break-inside-avoid bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden mb-4"
               >
                 <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 flex justify-between items-center">
                   <h2 className="text-[9px] font-black text-neutral-800 uppercase tracking-[0.2em]">
@@ -475,9 +621,10 @@ const App: React.FC = () => {
                         color: selectedItems.find(i => i.id === item.id) ? "#ffffff" : "#404040",
                         scale: selectedItems.find(i => i.id === item.id) ? 1.02 : 1,
                       }}
+                      transition={{ duration: 0.15 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggleItem(item)}
-                      className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-300 relative rounded-lg mb-1 overflow-hidden ${
+                      className={`cursor-pointer group flex justify-between items-center px-4 py-3 transition-all duration-150 relative rounded-lg mb-1 overflow-hidden ${
                         selectedItems.find(i => i.id === item.id) 
                           ? 'shadow-xl z-10' 
                           : 'hover:bg-neutral-50 border border-transparent hover:border-neutral-200'
@@ -521,7 +668,7 @@ const App: React.FC = () => {
           </div>
 
         <AnimatePresence>
-          {selectedItems.length > 0 && (
+          {selectedItems.length > 0 && orderButtonEnabled && (
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
@@ -612,10 +759,15 @@ const App: React.FC = () => {
                   </div>
                   <button
                     onClick={handleOrder}
-                    disabled={!rfid || !matchedCard}
+                    disabled={isScanning || (selectedItems.length === 0) || (!testModeEnabled && (!rfid || !matchedCard))}
                     className="px-6 py-2 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                   >
-                    Order <ChevronRight className="w-4 h-4" />
+                    {isScanning ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    {testModeEnabled && !rfid ? "Test Order" : "Order"}
                   </button>
                 </div>
               </div>
@@ -762,6 +914,13 @@ const App: React.FC = () => {
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'cards' ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-500 hover:bg-neutral-50'}`}
             >
               <Users className="w-5 h-5" /> Card Management
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              tabIndex={-1}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'settings' ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-500 hover:bg-neutral-50'}`}
+            >
+              <Settings className="w-5 h-5" /> System Settings
             </button>
           </nav>
 
@@ -946,17 +1105,93 @@ const App: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
                       {summaries.map((summary) => (
-                        <tr key={summary.date} className="hover:bg-neutral-50 transition-colors">
-                          <td className="p-6 font-bold text-neutral-900">{summary.date}</td>
-                          <td className="p-6 text-center">
-                            <span className="px-3 py-1 bg-neutral-100 rounded-full font-mono font-bold text-neutral-900">
-                              {summary.orderCount}
-                            </span>
-                          </td>
-                          <td className="p-6 text-right font-mono font-bold text-neutral-900">
-                            €{summary.totalSales.toFixed(2)}
-                          </td>
-                        </tr>
+                        <React.Fragment key={summary.date}>
+                          <tr 
+                            onClick={() => {
+                              console.log('Expanding summary for:', summary.date);
+                              fetchDailyDetails(summary.date);
+                            }}
+                            className={`transition-colors cursor-pointer group ${expandedDate === summary.date ? 'bg-neutral-50' : 'hover:bg-neutral-50'}`}
+                          >
+                            <td className="p-6 font-bold text-neutral-900">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${expandedDate === summary.date ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400 group-hover:text-neutral-900 group-hover:bg-neutral-200'}`}>
+                                  <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedDate === summary.date ? 'rotate-90' : ''}`} />
+                                </div>
+                                <span className="tracking-tight">{summary.date}</span>
+                              </div>
+                            </td>
+                            <td className="p-6 text-center">
+                              <span className="px-4 py-1.5 bg-neutral-100 rounded-full font-mono font-bold text-neutral-900 group-hover:bg-neutral-200 transition-colors">
+                                {summary.orderCount}
+                              </span>
+                            </td>
+                            <td className="p-6 text-right font-mono font-bold text-neutral-900">
+                              €{summary.totalSales.toFixed(2)}
+                            </td>
+                          </tr>
+                          {expandedDate === summary.date && (
+                            <tr>
+                              <td colSpan={3} className="p-0 bg-neutral-50 border-b border-neutral-100">
+                                <motion.div
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="p-8"
+                                >
+                                  <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-1.5 h-6 bg-neutral-900 rounded-full" />
+                                      <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Items Breakdown</h3>
+                                    </div>
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); copyDailySummary(summary.date, summary.totalSales); }}
+                                      className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-xl active:scale-95"
+                                    >
+                                      <Plus className="w-4 h-4" /> Copy Text Summary
+                                    </button>
+                                  </div>
+
+                                  <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-2xl">
+                                    <table className="w-full text-left text-sm">
+                                      <thead>
+                                        <tr className="bg-neutral-50/50 border-b border-neutral-100">
+                                          <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400">Category / Item</th>
+                                          <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-center">Quantity</th>
+                                          <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-right">Price</th>
+                                          <th className="p-5 font-mono text-[10px] uppercase tracking-widest text-neutral-400 text-right">Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-neutral-50">
+                                        {dailyDetails.map((item, idx) => (
+                                          <tr key={idx} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="p-5">
+                                              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-0.5">{item.category}</p>
+                                              <p className="font-bold text-neutral-900 text-base">{item.name}</p>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                              <span className="bg-neutral-100 px-3 py-1 rounded-lg font-mono font-black text-neutral-900">
+                                                {item.quantity}
+                                              </span>
+                                            </td>
+                                            <td className="p-5 text-right font-mono text-neutral-500">€{item.price.toFixed(2)}</td>
+                                            <td className="p-5 text-right font-mono font-bold text-neutral-900">€{item.total.toFixed(2)}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                      <tfoot>
+                                        <tr className="bg-neutral-900 text-white">
+                                          <td colSpan={3} className="p-5 font-bold uppercase tracking-widest text-xs text-right">Daily Total Earnings</td>
+                                          <td className="p-5 text-right font-mono font-black text-lg">€{summary.totalSales.toFixed(2)}</td>
+                                        </tr>
+                                      </tfoot>
+                                    </table>
+                                  </div>
+                                </motion.div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                       {summaries.length === 0 && (
                         <tr>
@@ -1057,6 +1292,87 @@ const App: React.FC = () => {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </>
+            ) : activeTab === 'settings' ? (
+              <>
+                <div className="flex justify-between items-end mb-12">
+                  <div>
+                    <h1 className="text-4xl font-bold text-neutral-900 mb-2">System Settings</h1>
+                    <p className="text-neutral-500">Global application behavior and network access</p>
+                  </div>
+                </div>
+
+                <div className="max-w-2xl">
+                  <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                          <Settings className="w-6 h-6 text-neutral-900" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-neutral-900">Global Network Access</h3>
+                          <p className="text-sm text-neutral-500 italic">Allow connections from any device or location</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => updateSettings(!globalAccess, orderButtonEnabled, testModeEnabled)}
+                        className={`w-16 h-8 rounded-full transition-all relative ${globalAccess ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${globalAccess ? 'left-9' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-neutral-400 mt-0.5" />
+                        <div className="text-xs text-neutral-500 leading-relaxed font-serif italic">
+                          When <strong>DISABLED</strong>, access is restricted to devices on the local network (CORS & WebSocket protection).
+                          When <strong>ENABLED</strong>, anyone with the dashboard link can attempt to connect to the system.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                          <Plus className="w-6 h-6 text-neutral-900" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-neutral-900">Ordering Functionality</h3>
+                          <p className="text-sm text-neutral-500 italic">Toggle the visibility of the "Order" button on home screen</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => updateSettings(globalAccess, !orderButtonEnabled, testModeEnabled)}
+                        className={`w-16 h-8 rounded-full transition-all relative ${orderButtonEnabled ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${orderButtonEnabled ? 'left-9' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
+                          <Zap className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-neutral-900">Test Mode (Bypass RFID)</h3>
+                          <p className="text-sm text-neutral-500 italic">Allow placing orders without scanning a physical card</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => updateSettings(globalAccess, orderButtonEnabled, !testModeEnabled)}
+                        className={`w-16 h-8 rounded-full transition-all relative ${testModeEnabled ? 'bg-indigo-600' : 'bg-neutral-200'}`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${testModeEnabled ? 'left-9' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
