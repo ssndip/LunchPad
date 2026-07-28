@@ -562,6 +562,7 @@ const IdentificationOverlay: React.FC<{ t: any; onIdentify: (rfid: string) => vo
           onClick={onClose}
           className="absolute top-6 right-6 w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 transition-all active:scale-90"
           title={t('modals.close') || 'Close'}
+          aria-label={t('modals.close') || 'Close'}
         >
           <X className="w-5 h-5" />
         </button>
