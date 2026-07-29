@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
-import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet, BarChart2 } from 'lucide-react';
+import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet, BarChart2, Radio } from 'lucide-react';
 import { Card } from '../../../types';
+import { NfcWriteModal } from '../modals/NfcWriteModal';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 
@@ -64,6 +65,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   const [editingRfid, setEditingRfid] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<Partial<Card>>({});
   const [isSaving, setIsSaving] = React.useState(false);
+  const [nfcWriteCard, setNfcWriteCard] = React.useState<Card | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Search and Sort
@@ -403,6 +405,9 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                               </>
                             ) : (
                               <>
+                                <button onClick={() => setNfcWriteCard(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
+                                  <Radio className="w-4 h-4" />
+                                </button>
                                 <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
                                   <BarChart2 className="w-4 h-4" />
                                 </button>
@@ -528,6 +533,11 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           </div>
         </div>
       </div>
+
+      <NfcWriteModal
+        card={nfcWriteCard}
+        onClose={() => setNfcWriteCard(null)}
+      />
     </>
   );
 };
