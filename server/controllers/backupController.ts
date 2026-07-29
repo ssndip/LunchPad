@@ -81,6 +81,57 @@ export const importSystemBundle = (req: Request, res: Response) => {
 import fs from 'fs';
 import path from 'path';
 
+export const listSystemBackups = (req: Request, res: Response) => {
+  try {
+    const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
+    const backupsDir = path.join(DB_DIR, 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      return res.json([]);
+    }
+    const files = fs.readdirSync(backupsDir)
+      .filter(f => f.startsWith('lunchpad_') && f.endsWith('.db'))
+      .map(f => {
+        const stats = fs.statSync(path.join(backupsDir, f));
+        return {
+          filename: f,
+          sizeBytes: stats.size,
+          createdAt: stats.mtime.toISOString()
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    res.json(files);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const restoreSystemBackup = (req: Request, res: Response) => {
+  try {
+    const { filename } = req.params;
+    const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
+    const backupsDir = path.join(DB_DIR, 'backups');
+    const backupPath = path.join(backupsDir, filename);
+
+    if (!fs.existsSync(backupPath) || !filename.endsWith('.db')) {
+      return res.status(404).json({ error: "Backup file not found" });
+    }
+
+    db.close();
+    const activeDbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
+    fs.copyFileSync(backupPath, activeDbPath);
+
+    res.json({ success: true, message: "System database successfully restored. Server restarting..." });
+
+    if (process.env.NODE_ENV !== 'test') {
+      setTimeout(() => {
+        process.exit(0);
+      }, 500);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const initAutoBackup = () => {
   // Only activate automated backups if not running in a test suite
   if (process.env.NODE_ENV === 'test') return;
@@ -127,4 +178,5 @@ export const initAutoBackup = () => {
     performBackup();
   }, 24 * 60 * 60 * 1000);
 };
+
 
