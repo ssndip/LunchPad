@@ -39,7 +39,7 @@ This document presents the findings from our updated project-wide code audit and
 * **Impact**: **High**. Date extraction failed on standard menus using partial Bulgarian date formats (e.g., `"Меню за 09.04"`), and correcting it naively truncated the year off full dates.
 * **Fix**: Unified the regex to use a lookbehind unicode word boundary and optional prefix group:
   `(?<=^|[^a-zA-Z0-9_а-яА-ЯёЁ])(?:(?:меню|дата|от|за)\s+)?(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})\b|(?<=^|[^a-zA-Z0-9_а-яА-ЯёЁ])(?:меню|дата|от|за)\s+(\d{1,2}[.\-/]\d{1,2})\b`
-  and set `result.date = dateMatch[1] || dateMatch[2]` in [parserEngine.ts](file:///home/ssndip/lunchpadgit/src/utils/parserEngine.ts).
+  and set `result.date = dateMatch[1] || dateMatch[2]` in [parserEngine.ts](file:///home/ssndip/lunchpadgit/src/utils/parserEngine.ts) and [advancedMenuParser.ts](file:///home/ssndip/lunchpadgit/src/utils/advancedMenuParser.ts). Verified that all tests in [advancedMenuParser.test.ts](file:///home/ssndip/lunchpadgit/src/utils/advancedMenuParser.test.ts) pass successfully.
 
 ### 🐛 Bug 7: Order Reset Wipes Admin Dashboard Card List (State Sync Bug)
 * **Location**: [orderController.ts](file:///home/ssndip/lunchpadgit/server/controllers/orderController.ts#L144-L160)
