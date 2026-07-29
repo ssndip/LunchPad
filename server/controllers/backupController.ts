@@ -108,17 +108,31 @@ export const listSystemBackups = (req: Request, res: Response) => {
 export const restoreSystemBackup = (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
+
+    if (!filename || path.basename(filename) !== filename || !filename.endsWith('.db')) {
+      return res.status(404).json({ error: "Backup file not found" });
+    }
+
     const DB_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : '.';
     const backupsDir = path.join(DB_DIR, 'backups');
     const backupPath = path.join(backupsDir, filename);
 
-    if (!fs.existsSync(backupPath) || !filename.endsWith('.db')) {
+    if (!fs.existsSync(backupPath)) {
       return res.status(404).json({ error: "Backup file not found" });
     }
 
-    db.close();
     const activeDbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(DB_DIR, 'lunchpad.db');
-    fs.copyFileSync(backupPath, activeDbPath);
+
+    try {
+      db.close();
+      fs.copyFileSync(backupPath, activeDbPath);
+    } catch (copyErr: any) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('[Backup] Failed to restore database file:', copyErr);
+        process.exit(1);
+      }
+      throw copyErr;
+    }
 
     res.json({ success: true, message: "System database successfully restored. Server restarting..." });
 
@@ -131,6 +145,7 @@ export const restoreSystemBackup = (req: Request, res: Response) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 export const initAutoBackup = () => {
   // Only activate automated backups if not running in a test suite

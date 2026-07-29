@@ -80,6 +80,17 @@ describe('backupController', () => {
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Backup file not found' });
     });
 
+    it('should return 404 if filename contains path traversal delimiters', () => {
+      mockReq.params = { filename: '../secret.db' };
+      const existsSpy = vi.spyOn(fs, 'existsSync');
+
+      restoreSystemBackup(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Backup file not found' });
+      expect(existsSpy).not.toHaveBeenCalled();
+    });
+
     it('should close db, copy file, and return success', () => {
       mockReq.params = { filename: 'lunchpad_2026-01-01.db' };
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
@@ -93,6 +104,19 @@ describe('backupController', () => {
         success: true,
         message: 'System database successfully restored. Server restarting...',
       });
+    });
+
+    it('should return 500 if copyFileSync fails during restore', () => {
+      mockReq.params = { filename: 'lunchpad_2026-01-01.db' };
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'copyFileSync').mockImplementation(() => {
+        throw new Error('Disk error');
+      });
+
+      restoreSystemBackup(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Disk error' });
     });
   });
 });
