@@ -18,6 +18,11 @@ export function useNfcScanner({ onScan, active }: UseNfcScannerOptions): UseNfcS
   const [error, setError] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
   const initialize = useCallback(async () => {
     if (!supported || !active) return;
     setError(null);
@@ -44,14 +49,14 @@ export function useNfcScanner({ onScan, active }: UseNfcScannerOptions): UseNfcS
         }
 
         if (cardId) {
-          onScan(cardId);
+          onScanRef.current(cardId);
         }
       };
     } catch (err: any) {
       setScanning(false);
       setError(err.message || 'NFC Scan Failed');
     }
-  }, [supported, active, onScan]);
+  }, [supported, active]);
 
   useEffect(() => {
     if (!supported || !active || initializedRef.current) return;

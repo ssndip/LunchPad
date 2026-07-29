@@ -90,6 +90,44 @@ describe('useNfcScanner', () => {
     expect(onScan).toHaveBeenCalledWith('04a1b2c3d4e5f6');
   });
 
+  it('should invoke latest onScan callback even when onScan prop changes (stale closure test)', async () => {
+    let mockInstance: any;
+    class MockNDEFReader {
+      scan = vi.fn().mockResolvedValue(undefined);
+      onreading: ((event: any) => void) | null = null;
+      constructor() {
+        mockInstance = this;
+      }
+    }
+    vi.stubGlobal('NDEFReader', MockNDEFReader);
+
+    const initialOnScan = vi.fn();
+    const updatedOnScan = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onScan }) => useNfcScanner({ onScan, active: true }),
+      { initialProps: { onScan: initialOnScan } }
+    );
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pointerdown'));
+    });
+
+    rerender({ onScan: updatedOnScan });
+
+    const encoder = new TextEncoder();
+    act(() => {
+      mockInstance.onreading({
+        message: {
+          records: [{ recordType: 'text', data: encoder.encode('CARD999') }],
+        },
+      });
+    });
+
+    expect(initialOnScan).not.toHaveBeenCalled();
+    expect(updatedOnScan).toHaveBeenCalledWith('CARD999');
+  });
+
   it('should set error state when scan fails', async () => {
     class MockNDEFReader {
       scan = vi.fn().mockRejectedValue(new Error('Permission denied'));
