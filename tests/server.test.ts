@@ -60,4 +60,34 @@ describe('Server API tests', () => {
       expect(response.status).toBe(429);
     });
   });
+
+  describe('CORS', () => {
+    it('should allow local origins', async () => {
+      const response = await request(app)
+        .get('/api/menu')
+        .set('Origin', 'http://localhost:5173')
+        .set('Authorization', `Bearer ${token}`);
+      expect(response.status).not.toBe(500);
+      expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    });
+
+    it('should allow same-origin requests (Origin matches Host)', async () => {
+      const response = await request(app)
+        .get('/api/menu')
+        .set('Origin', 'https://ss.plcnet.org:3402')
+        .set('Host', 'ss.plcnet.org:3402')
+        .set('Authorization', `Bearer ${token}`);
+      expect(response.status).not.toBe(500);
+      expect(response.headers['access-control-allow-origin']).toBe('https://ss.plcnet.org:3402');
+    });
+
+    it('should block unauthorized remote origins without throwing 500', async () => {
+      const response = await request(app)
+        .get('/api/menu')
+        .set('Origin', 'https://malicious.com')
+        .set('Authorization', `Bearer ${token}`);
+      expect(response.status).not.toBe(500);
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
+    });
+  });
 });

@@ -61,17 +61,40 @@ export async function startServer() {
   const PORT = process.env.PORT || 3400;
 
   // CORS Middleware
-  app.use(cors({
-    origin: (origin, callback) => {
-      // Allow if no origin (e.g. mobile apps, curl)
-      if (!origin) return callback(null, true);
-      // Allow if globalAccess is true
-      if (settings.globalAccess) return callback(null, true);
-      // Allow if local origin
-      if (isLocalOrigin(origin)) return callback(null, true);
-      
-      callback(new Error('Not allowed by CORS'));
+  app.use(cors((req, callback) => {
+    const origin = req.header('Origin');
+    let corsOptions: cors.CorsOptions = { origin: false };
+
+    if (!origin) {
+      corsOptions.origin = true;
+    } else {
+      const host = req.header('Host');
+      const forwardedHost = req.header('x-forwarded-host');
+      const isLocal = isLocalOrigin(origin);
+
+      let originHostname = '';
+      try {
+        originHostname = new URL(origin).hostname;
+      } catch {}
+
+      let hostHostname = '';
+      try {
+        hostHostname = host ? host.split(':')[0] : '';
+      } catch {}
+
+      let forwardedHostname = '';
+      try {
+        forwardedHostname = forwardedHost ? forwardedHost.split(':')[0] : '';
+      } catch {}
+
+      const isSameOrigin = !!(originHostname && (originHostname === hostHostname || originHostname === forwardedHostname));
+
+      if (settings.globalAccess || isLocal || isSameOrigin) {
+        corsOptions.origin = true;
+      }
     }
+
+    callback(null, corsOptions);
   }));
 
   app.use(helmet({
