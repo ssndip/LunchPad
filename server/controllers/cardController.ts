@@ -261,3 +261,12 @@ export const getCardProfile = (req: Request, res: Response, next: NextFunction) 
     next(err);
   }
 };
+
+export const fetchActiveRfidList = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cards = db.prepare("SELECT rfid FROM cards").all() as { rfid: string }[];
+    res.json(cards.map(c => c.rfid.toLowerCase()));
+  } catch (err) {
+    next(err);
+  }
+};

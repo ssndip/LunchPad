@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { resetAllBalances, updateSingleCard, addOrUpdateCard } from './cardController';
+import { resetAllBalances, updateSingleCard, addOrUpdateCard, fetchActiveRfidList } from './cardController';
 import { db, initDb } from '../db';
 import * as broadcastModule from '../broadcast';
 
@@ -264,6 +264,35 @@ describe('cardController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or missing ownerName' });
+    });
+  });
+
+  describe('fetchActiveRfidList', () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      mockReq = {};
+      mockRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn()
+      };
+      mockNext = vi.fn();
+      db.exec("DELETE FROM cards");
+    });
+
+    it('should return array of lowercase rfids from cards table', () => {
+      db.prepare(`
+        INSERT INTO cards (rfid, ownerName, balance, isAdmin)
+        VALUES
+          ('111AAA', 'User 1', 10.50, 0),
+          ('222BBB', 'User 2', 5.00, 0)
+      `).run();
+
+      fetchActiveRfidList(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.json).toHaveBeenCalledWith(['111aaa', '222bbb']);
     });
   });
 });

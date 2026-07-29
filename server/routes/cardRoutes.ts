@@ -8,12 +8,14 @@ import {
   resetAllBalances, 
   resetSingleBalance, 
   getCardProfile,
-  updateSingleCard
+  updateSingleCard,
+  fetchActiveRfidList
 } from "../controllers/cardController";
 import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
+router.get("/active-list", fetchActiveRfidList);
 router.get("/", requireAdmin, fetchCards);
 router.post("/", requireAdmin, addOrUpdateCard);
 router.post("/batch", requireAdmin, batchAddCards);

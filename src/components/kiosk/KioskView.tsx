@@ -86,7 +86,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
-  const { kioskModeEnabled } = useStore();
+  const { kioskModeEnabled, setError } = useStore();
   const { isStandalone, enterFullscreen } = usePWA();
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [isIdentifying, setIsIdentifying] = useState(false);
@@ -232,6 +232,14 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
 
   const handleNfcScan = useCallback((scannedRfid: string) => {
+    if (connectionError) {
+      const cached = localStorage.getItem('lunchpad_valid_rfids');
+      const validRfids = cached ? JSON.parse(cached) : [];
+      if (!validRfids.includes(scannedRfid.toLowerCase())) {
+        setError("Card not registered (offline)");
+        return;
+      }
+    }
     if (preIdentificationEnabled) {
       if (scannedRfid !== rfid) {
         if (onIdentify) onIdentify(scannedRfid);
@@ -248,7 +256,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       setRfid(scannedRfid);
       onOrder(scannedRfid);
     }
-  }, [preIdentificationEnabled, rfid, onIdentify, pendingItem, onToggleItem, onOrder, setRfid]);
+  }, [connectionError, setError, preIdentificationEnabled, rfid, onIdentify, pendingItem, onToggleItem, onOrder, setRfid]);
 
   const nfcScanner = useNfcScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
@@ -258,6 +266,14 @@ export const KioskView: React.FC<KioskViewProps> = ({
   useRfidScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
     onScan: (scannedRfid) => {
+      if (connectionError) {
+        const cached = localStorage.getItem('lunchpad_valid_rfids');
+        const validRfids = cached ? JSON.parse(cached) : [];
+        if (!validRfids.includes(scannedRfid.toLowerCase())) {
+          setError("Card not registered (offline)");
+          return;
+        }
+      }
       if (preIdentificationEnabled) {
         // If scanning a DIFFERENT card than the current session
         if (scannedRfid !== rfid) {

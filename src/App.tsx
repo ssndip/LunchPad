@@ -84,6 +84,24 @@ export default function App() {
     }
   }, [s.mode, s.activeTab, fetchCards]);
 
+  // Cache active RFIDs for offline card validation
+  useEffect(() => {
+    const fetchActiveRfids = async () => {
+      try {
+        const res = await fetch('/api/cards/active-list');
+        if (res.ok) {
+          const rfids = await res.json();
+          localStorage.setItem('lunchpad_valid_rfids', JSON.stringify(rfids));
+        }
+      } catch (err) {
+        console.error('Failed to cache active RFIDs:', err);
+      }
+    };
+    if (navigator.onLine) {
+      fetchActiveRfids();
+    }
+  }, [s.connectionError]);
+
 
   // ─── Kiosk Handlers ────────────────────────────────────────────────────────
   const handleToggleItem = React.useCallback((item: MenuItem) => {
