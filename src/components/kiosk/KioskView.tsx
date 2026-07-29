@@ -91,7 +91,14 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [pendingItem, setPendingItem] = useState<MenuItem | null>(null);
-  
+
+  React.useEffect(() => {
+    document.body.classList.add('kiosk-mode');
+    return () => {
+      document.body.classList.remove('kiosk-mode');
+    };
+  }, []);
+
   // Feature: Multi-Day Navigation
   const availableDates = useMemo(() => {
     const dates = Array.from(new Set(menu.map(i => i.date).filter(Boolean)));

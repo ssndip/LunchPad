@@ -144,3 +144,14 @@ html, body, #root {
   overscroll-behavior-x: none;
   -webkit-tap-highlight-color: transparent;
 }
+
+.kiosk-mode {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.kiosk-mode img, 
+.kiosk-mode button {
+  -webkit-user-drag: none;
+}
+
