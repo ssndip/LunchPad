@@ -6,6 +6,7 @@ import { Card } from '../../../types';
 import { NfcWriteModal } from '../modals/NfcWriteModal';
 
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useNfcScanner } from '../../../hooks/useNfcScanner';
 
 interface CardsTabProps {
   cards: Card[];
@@ -67,6 +68,17 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   const [isSaving, setIsSaving] = React.useState(false);
   const [nfcWriteCard, setNfcWriteCard] = React.useState<Card | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { supported: nfcSupported, scanning: nfcScanning, error: nfcError, initialize: initializeNfc } = useNfcScanner({
+    onScan: (scannedId) => {
+      if (editingRfid) {
+        setEditValues((prev) => ({ ...prev, rfid: scannedId }));
+      } else {
+        setNewCardRfid(scannedId);
+      }
+    },
+    active: true,
+  });
 
   // Search and Sort
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -462,25 +474,38 @@ export const CardsTab: React.FC<CardsTabProps> = ({
 
               <div>
                 <label htmlFor="newCardRfid" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">{t('cards.rfid')}</label>
-                <input
-                  id="newCardRfid"
-                  ref={managerRfidRef}
-                  type="text"
-                  value={newCardRfid}
-                  onFocus={() => setIsScanning(true)}
-                  onBlur={() => setIsScanning(false)}
-                  onChange={(e) => setNewCardRfid(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const clean = e.currentTarget.value.trim().replace(/[^\x20-\x7E]/g, '');
-                      setNewCardRfid(clean);
-                      setIsScanning(false);
-                    }
-                  }}
-                  placeholder={t('cards.rfid_placeholder')}
-                  className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none"
-                />
+                <div className="relative">
+                  <input
+                    id="newCardRfid"
+                    ref={managerRfidRef}
+                    type="text"
+                    value={newCardRfid}
+                    onFocus={() => setIsScanning(true)}
+                    onBlur={() => setIsScanning(false)}
+                    onChange={(e) => setNewCardRfid(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const clean = e.currentTarget.value.trim().replace(/[^\x20-\x7E]/g, '');
+                        setNewCardRfid(clean);
+                        setIsScanning(false);
+                      }
+                    }}
+                    placeholder={t('cards.rfid_placeholder')}
+                    className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none pr-10"
+                  />
+                  {nfcSupported && (
+                    <button
+                      type="button"
+                      onClick={() => initializeNfc()}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors ${nfcScanning ? 'text-indigo-600 animate-pulse' : ''}`}
+                      title={nfcError || (nfcScanning ? 'NFC Scanning Active' : 'Scan NFC tag to auto-fill RFID')}
+                      aria-label="Scan NFC tag to auto-fill RFID"
+                    >
+                      <Radio className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
