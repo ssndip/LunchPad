@@ -38,7 +38,7 @@ export function useNfcScanner({ onScan, active }: UseNfcScannerOptions): UseNfcS
         if (event.message?.records) {
           for (const record of event.message.records) {
             if (record.recordType === 'text') {
-              cardId = decoder.decode(record.data);
+              cardId = typeof record.toText === 'function' ? record.toText() : decoder.decode(record.data);
               break;
             }
           }

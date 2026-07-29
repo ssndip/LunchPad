@@ -45,15 +45,15 @@ describe('useNfcScanner', () => {
     expect(mockInstance.scan).toHaveBeenCalled();
     expect(result.current.scanning).toBe(true);
 
-    // Simulate reading event with text record
-    const encoder = new TextEncoder();
+    // Simulate reading event with text record (using toText helper)
     act(() => {
       mockInstance.onreading({
         message: {
           records: [
             {
               recordType: 'text',
-              data: encoder.encode('CARD12345'),
+              data: new TextEncoder().encode('CARD12345'),
+              toText: () => 'CARD12345',
             },
           ],
         },
@@ -61,6 +61,42 @@ describe('useNfcScanner', () => {
     });
 
     expect(onScan).toHaveBeenCalledWith('CARD12345');
+  });
+
+  it('should fallback to TextDecoder if record.toText is not available', async () => {
+    let mockInstance: any;
+    class MockNDEFReader {
+      scan = vi.fn().mockResolvedValue(undefined);
+      onreading: ((event: any) => void) | null = null;
+      constructor() {
+        mockInstance = this;
+      }
+    }
+    vi.stubGlobal('NDEFReader', MockNDEFReader);
+
+    const onScan = vi.fn();
+    renderHook(() => useNfcScanner({ onScan, active: true }));
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pointerdown'));
+    });
+
+    const encoder = new TextEncoder();
+    act(() => {
+      mockInstance.onreading({
+        message: {
+          records: [
+            {
+              recordType: 'text',
+              data: encoder.encode('CARD67890'),
+              // no toText method
+            },
+          ],
+        },
+      });
+    });
+
+    expect(onScan).toHaveBeenCalledWith('CARD67890');
   });
 
   it('should fallback to serialNumber if text record is absent', async () => {
@@ -115,11 +151,10 @@ describe('useNfcScanner', () => {
 
     rerender({ onScan: updatedOnScan });
 
-    const encoder = new TextEncoder();
     act(() => {
       mockInstance.onreading({
         message: {
-          records: [{ recordType: 'text', data: encoder.encode('CARD999') }],
+          records: [{ recordType: 'text', data: new TextEncoder().encode('CARD999'), toText: () => 'CARD999' }],
         },
       });
     });
