@@ -46,9 +46,18 @@ export const calculateItemPrice = (item: any) => {
 
 export const validateAndEnrichItems = (requestedItems: RequestedItem[]) => {
   const enrichedItems: EnrichedItem[] = [];
+  const menuCache = new Map<number, any>();
 
   for (const ri of requestedItems) {
-    const baseItem = getMenuItemById(db, ri.id);
+    // ⚡ Bolt: Cache DB lookups for repeated items in the same order
+    let baseItem = menuCache.get(ri.id);
+    if (!baseItem) {
+      baseItem = getMenuItemById(db, ri.id);
+      if (baseItem) {
+        menuCache.set(ri.id, baseItem);
+      }
+    }
+
     if (!baseItem) continue;
 
     // Side-Dish Validation
