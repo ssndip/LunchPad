@@ -9,6 +9,8 @@ import { KioskOrderPanel, OrderSuccessOverlay } from './KioskOrderPanel';
 import { KioskOrderBar } from './KioskOrderBar';
 import { UserHistoryModal } from './UserHistoryModal';
 import { useRfidScanner } from '../../hooks/useRfidScanner';
+import { useNfcScanner } from '../../hooks/useNfcScanner';
+import { NfcStatusButton } from './NfcStatusButton';
 import { useResponsive } from '../../hooks/useResponsive';
 import { usePWA } from '../../hooks/usePWA';
 import { triggerHaptic } from '../../utils/haptics';
@@ -222,6 +224,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
 
 
+  const handleNfcScan = useCallback((scannedRfid: string) => {
+    if (preIdentificationEnabled) {
+      if (scannedRfid !== rfid) {
+        if (onIdentify) onIdentify(scannedRfid);
+        setIsIdentifying(false);
+        triggerHaptic('success');
+        if (pendingItem) {
+          onToggleItem(pendingItem);
+          setPendingItem(null);
+        }
+      } else {
+        onOrder(scannedRfid);
+      }
+    } else {
+      setRfid(scannedRfid);
+      onOrder(scannedRfid);
+    }
+  }, [preIdentificationEnabled, rfid, onIdentify, pendingItem, onToggleItem, onOrder, setRfid]);
+
+  const nfcScanner = useNfcScanner({
+    active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
+    onScan: handleNfcScan,
+  });
+
   useRfidScanner({
     active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
     onScan: (scannedRfid) => {
@@ -348,6 +374,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
         {/* Right Section — Matches Order Panel Width */}
         <div className="flex shrink-0 md:w-[35%] lg:w-80 px-4 items-center justify-end gap-2">
+          <NfcStatusButton
+            supported={nfcScanner.supported}
+            scanning={nfcScanner.scanning}
+            error={nfcScanner.error}
+            onInit={nfcScanner.initialize}
+          />
           {kioskModeEnabled && isStandalone && !document.fullscreenElement && (
             <button 
               onClick={enterFullscreen}
