@@ -420,7 +420,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                                 <button onClick={() => setNfcWriteCard(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
                                   <Radio className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.view_statistics')} aria-label={t('cards.view_statistics')}>
                                   <BarChart2 className="w-4 h-4" />
                                 </button>
                                 <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
