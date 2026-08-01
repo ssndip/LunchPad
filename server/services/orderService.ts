@@ -46,9 +46,14 @@ export const calculateItemPrice = (item: any) => {
 
 export const validateAndEnrichItems = (requestedItems: RequestedItem[]) => {
   const enrichedItems: EnrichedItem[] = [];
+  // ⚡ Bolt: Cache menu items to avoid N+1 queries when multiple identical items are in the cart
+  const itemCache = new Map<number, any>();
 
   for (const ri of requestedItems) {
-    const baseItem = getMenuItemById(db, ri.id);
+    if (!itemCache.has(ri.id)) {
+      itemCache.set(ri.id, getMenuItemById(db, ri.id));
+    }
+    const baseItem = itemCache.get(ri.id);
     if (!baseItem) continue;
 
     // Side-Dish Validation
