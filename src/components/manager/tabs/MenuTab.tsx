@@ -364,6 +364,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               onClick={handleApplyDeliveryFee}
               className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
               title={t('menu.apply_delivery_tax')}
+              aria-label={t('menu.apply_delivery_tax')}
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -386,6 +387,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               onClick={handleApplyPackagingFee}
               className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
               title={t('menu.apply_box_fee')}
+              aria-label={t('menu.apply_box_fee')}
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>

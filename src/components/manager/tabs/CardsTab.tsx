@@ -411,6 +411,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                                   onClick={handleCancel}
                                   className="p-2 bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors"
                                   title={t('modals.cancel')}
+                                  aria-label={t('modals.cancel')}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>

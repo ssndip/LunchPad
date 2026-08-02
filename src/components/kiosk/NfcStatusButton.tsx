@@ -26,6 +26,7 @@ export function NfcStatusButton({ supported, scanning, error, onInit }: NfcStatu
       onClick={onInit}
       className={`p-2 rounded-xl hover:bg-neutral-100 transition-all ${color}`}
       title={error || (scanning ? 'NFC Scanning Active' : 'NFC Inactive (Tap to scan)')}
+      aria-label={error || (scanning ? 'NFC Scanning Active' : 'NFC Inactive (Tap to scan)')}
     >
       {icon}
     </button>
