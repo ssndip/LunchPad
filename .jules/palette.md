@@ -5,3 +5,6 @@
 ## 2024-11-21 - Localized ARIA labels on utility buttons
 **Learning:** Even well-intentioned accessibility features like `title` and `aria-label` can fall short if they are hardcoded and not localized. I found a clear order utility button in `KioskOrderBar.tsx` that had `title="Clear order"` and `aria-label="Clear order"` hardcoded instead of using the translation function `t()`. This makes it unreadable for screen readers set to another language like Bulgarian.
 **Action:** Always verify that utility button attributes (especially `title` and `aria-label`) are wrapped in `t()` using translation keys.
+## 2024-11-21 - Custom Switch Focus Accessibility
+**Learning:** Custom switch components built with `role="switch"` and `focus:outline-none` lack visual feedback when focused via keyboard navigation, making them inaccessible to keyboard users.
+**Action:** Always replace or augment `focus:outline-none` with Tailwind's `focus-visible` classes (e.g., `focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900`) on interactive custom elements to ensure keyboard accessibility without affecting mouse users.
