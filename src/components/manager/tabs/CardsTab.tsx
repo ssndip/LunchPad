@@ -375,7 +375,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                             onClick={() => isEditing ? setEditValues({ ...values, isAdmin: !values.isAdmin }) : startEditing({ ...card, isAdmin: !card.isAdmin })}
                             role="switch" aria-checked={values.isAdmin}
                             className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
-                            aria-label="Toggle Admin"
+                            aria-label={t('cards.toggle_admin') || 'Toggle Admin'}
                           >
                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${values.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
                           </button>
@@ -420,7 +420,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                                 <button onClick={() => setNfcWriteCard(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
                                   <Radio className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+                                <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.view_statistics') || 'View Statistics'} aria-label={t('cards.view_statistics') || 'View Statistics'}>
                                   <BarChart2 className="w-4 h-4" />
                                 </button>
                                 <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
@@ -539,7 +539,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
                   role="switch" aria-checked={newCardIsAdmin}
                   className={`w-12 h-6 rounded-full transition-all relative focus:outline-none ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
-                  aria-label="Toggle Admin for new card"
+                  aria-label={t('cards.toggle_admin_new') || 'Toggle Admin for new card'}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
                 </button>
