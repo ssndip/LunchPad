@@ -152,7 +152,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                   {editForm.keywords.map(kw => (
                     <span key={kw} className="px-3 py-1 bg-white border border-neutral-200 rounded-full text-xs font-bold text-neutral-600 flex items-center gap-2 shadow-sm">
                       {kw}
-                      <button onClick={() => removeKeyword(kw)} title="Remove keyword" aria-label={`Remove keyword ${kw}`} className="hover:text-red-500"><XIcon /></button>
+                      <button onClick={() => removeKeyword(kw)} title={`${t('modals.remove')} ${kw}`} aria-label={`${t('modals.remove')} ${kw}`} className="hover:text-red-500"><XIcon /></button>
                     </span>
                   ))}
                   {editForm.keywords.length === 0 && <span className="text-xs text-neutral-400 italic">No keywords. AI might miss this.</span>}
@@ -189,8 +189,8 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                     {cat.names['en'] || cat.names['bg'] || Object.values(cat.names)[0] || 'Unnamed'}
                   </h4>
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(cat)} title="Edit category" aria-label={`Edit category ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-indigo-500"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(cat.id)} title="Delete category" aria-label={`Delete category ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleEdit(cat)} title={`${t('modals.edit')} ${t('menu.category').toLowerCase()} ${cat.names['en'] || cat.id}`} aria-label={`${t('modals.edit')} ${t('menu.category').toLowerCase()} ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-indigo-500"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(cat.id)} title={`${t('modals.remove')} ${t('menu.category').toLowerCase()} ${cat.names['en'] || cat.id}`} aria-label={`${t('modals.remove')} ${t('menu.category').toLowerCase()} ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
                 
