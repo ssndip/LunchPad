@@ -123,6 +123,7 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({
                 <button
                   onClick={handleDelete}
                   className="h-20 rounded-3xl bg-neutral-50 text-neutral-400 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all flex items-center justify-center"
+                  aria-label={t('modals.remove')}
                 >
                   <Delete className="w-8 h-8" />
                 </button>
