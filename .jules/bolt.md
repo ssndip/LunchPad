@@ -10,3 +10,6 @@
 ## 2026-04-25 - Prevent Memory Leaks when Caching Dynamic Regexes
 **Learning:** Caching `RegExp` compilations to avoid CPU overhead in parsing loops is highly effective. However, when the regex source strings (`rule.find`) come from dynamic or user-supplied inputs, using an unbounded `Map` for the cache creates a significant memory leak. Additionally, using raw strings as cache keys without prefixing the compilation strategy (e.g. `isRegex: boolean`) can cause cache key collisions, resulting in incorrect regex applications.
 **Action:** Always use a bounded cache (e.g., a FIFO cache by deleting `Map.keys().next().value` when `size >= maxSize`, or an LRU cache) when caching data derived from dynamic inputs. Ensure cache keys explicitly incorporate all variables that dictate the final cached object (e.g., `` `${isRegex}:${pattern}` ``) to prevent collisions.
+## 2025-03-09 - Prevent N+1 queries when fetching identical items
+**Learning:** Iterating through potentially duplicate items (like arrays of user cart items) and performing synchronous database lookups (e.g., `getMenuItemById`) within the loop introduces an N+1 query pattern for identical IDs.
+**Action:** Implement a local cache (e.g., a `Map` within the function scope) when iterating through items that require database lookups to prevent N+1 queries for identical IDs.
