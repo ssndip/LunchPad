@@ -32,6 +32,8 @@ export class MenuParserEngine {
   private boxKeywordRegex: RegExp;
   private priceRegex: RegExp;
   private bgnNoiseRegex: RegExp | null;
+  private startsWithWeightRegex: RegExp;
+  private startsWithPriceOrFeeRegex: RegExp;
 
   // Caches for array/rule based regexes
   private preprocessRegexCache: Map<string, RegExp>;
@@ -48,6 +50,8 @@ export class MenuParserEngine {
     this.boxFeeRegex = new RegExp(this.config.entityExtraction.boxFeePattern, 'i');
     this.boxKeywordRegex = new RegExp(this.config.entityExtraction.boxKeywordPattern, 'i');
     this.priceRegex = new RegExp(this.config.entityExtraction.pricePattern, 'i');
+    this.startsWithWeightRegex = new RegExp('^' + this.config.entityExtraction.weightPattern, 'i');
+    this.startsWithPriceOrFeeRegex = /^\d+(?:[.,]\d+)?\s*(?:€|\$|лв|лева|е|е\.|евро|кутийка)/i;
     this.bgnNoiseRegex = this.config.entityExtraction.bgnNoisePattern
       ? new RegExp(this.config.entityExtraction.bgnNoisePattern, 'gi')
       : null;
@@ -126,8 +130,8 @@ export class MenuParserEngine {
       // 4. Item Extraction
       // Use price/weight as fallback signals only when meaningful text
       // (an actual item name) remains after stripping those values.
-      const startsWithWeight = new RegExp('^' + this.config.entityExtraction.weightPattern, 'i').test(line);
-      const startsWithPriceOrFee = /^\d+(?:[.,]\d+)?\s*(?:€|\$|лв|лева|е|е\.|евро|кутийка)/i.test(line);
+      const startsWithWeight = this.startsWithWeightRegex.test(line);
+      const startsWithPriceOrFee = this.startsWithPriceOrFeeRegex.test(line);
       const hasBulletPrefix = !startsWithWeight && !startsWithPriceOrFee && this.itemPrefixRegex.test(line);
       const hasSignal = this.priceRegex.test(line) || this.weightRegex.test(line);
       let isItemLine = hasBulletPrefix;
