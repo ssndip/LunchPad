@@ -175,7 +175,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       broadcast({ type: "SETTINGS_UPDATE", settings: { aiProvider } as any });
     }
 
-    if (aiApiKey !== undefined) {
+    if (aiApiKey !== undefined && aiApiKey !== '********') {
       if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
       setAiApiKeyConfig(aiApiKey);
