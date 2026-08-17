@@ -722,7 +722,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         onClick={() => moveParsedItem(idx, 'up')}
                                         disabled={idx === 0}
                                         className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                        title="Move Up"
+                                        title={t('menu.move_up') || 'Move Up'}
                                       >
                                         <ArrowUp className="w-3.5 h-3.5" />
                                       </button>
@@ -730,7 +730,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         onClick={() => moveParsedItem(idx, 'down')}
                                         disabled={idx === parsed.items.length - 1}
                                         className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
-                                        title="Move Down"
+                                        title={t('menu.move_down') || 'Move Down'}
                                       >
                                         <ArrowDown className="w-3.5 h-3.5" />
                                       </button>

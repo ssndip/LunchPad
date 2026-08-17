@@ -182,6 +182,8 @@ export const translations = {
       summary_report: 'Summary Report',
     },
     menu: {
+      move_up: 'Move Up',
+      move_down: 'Move Down',
       category: 'Category',
       name: 'Name',
       price: 'Price',
@@ -239,6 +241,10 @@ export const translations = {
       side: 'Side',
     },
     cards: {
+      view_statistics: 'View Statistics',
+      toggle_admin: 'Toggle Admin',
+      scan_nfc_autofill: 'Scan NFC tag to auto-fill RFID',
+      toggle_admin_new_card: 'Toggle Admin for new card',
       rfid: 'RFID',
       owner_name: 'Owner Name',
       admin: 'Admin',
