@@ -17,11 +17,11 @@ import { isLocalOrigin } from "./server/middleware/auth";
 import { isWhitelisted } from "./server/middleware/whitelist";
 
 // Controllers (for init/broadcast)
-import { getMenu } from "./server/controllers/menuController";
 import { getCards } from "./server/controllers/cardController";
 import { getOrders } from "./server/controllers/orderController";
-import { kioskOpen, loadKioskStatus } from "./server/controllers/statusController";
+import { loadKioskStatus } from "./server/controllers/statusController";
 import { initAutoBackup } from "./server/controllers/backupController";
+import { buildClientState } from "./server/clientState";
 
 // Routes
 import statusRoutes from "./server/routes/statusRoutes";
@@ -168,36 +168,10 @@ export async function startServer() {
   // Orders & History (special case for backward compatibility of /api/v1/order)
   app.use("/api", orderRoutes); 
   
-  // Init route for frontend - always public so kiosk can bootstrap
+  // Init route for frontend - always public so kiosk can bootstrap.
+  // Unauthenticated, so it never carries admin-only fields (see buildClientState).
   app.get("/api/init", (req, res) => {
-    res.json({
-      menu: getMenu(),
-      menuVersion: settings.menuVersion, // ← Critical: fix for 409 Conflict errors
-      kioskOpen,
-      adminWhitelistEnabled: settings.adminWhitelistEnabled,
-      orderButtonEnabled: settings.orderButtonEnabled,
-      testModeEnabled: settings.testModeEnabled,
-      kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage,
-      bgnEnabled: settings.bgnEnabled,
-      adminWhitelist: settings.adminWhitelist,
-      menuDate: settings.menuDate,
-      announcement: settings.announcement,
-      aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
-      aiModel: settings.aiModel,
-      aiEndpoint: settings.aiEndpoint,
-      preIdentificationEnabled: settings.preIdentificationEnabled,
-      kioskAutoTiming: settings.kioskAutoTiming,
-      kioskOpenTime: settings.kioskOpenTime,
-      kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay,
-      deliveryFee: settings.deliveryFee || 0,
-      packagingFee: settings.packagingFee || 0.1,
-      publicAccessRequired: settings.publicAccessRequired,
-      globalAccess: settings.globalAccess
-    });
+    res.json(buildClientState({ isAdmin: false }));
   });
 
   // Global Error Handler
@@ -247,36 +221,14 @@ export async function startServer() {
 
     logger.ws(`Connection attempt: origin=${origin}, local=${isLocal}, admin=${isAdmin} -> ALLOWED`);
 
+    // Tag the socket so admin-only broadcasts (e.g. the AI key) can target it.
+    (ws as any).isAdmin = isAdmin;
+
     ws.send(JSON.stringify({
       type: "INITIAL_STATE",
-      menu: getMenu(),
-      orders: isAdmin ? getOrders(100) : [], 
-      kioskOpen,
+      ...buildClientState({ isAdmin }),
+      orders: isAdmin ? getOrders(100) : [],
       cards: isAdmin ? getCards() : [],
-      deliveryFee: settings.deliveryFee || 0,
-      packagingFee: settings.packagingFee || 0.1,
-      menuVersion: settings.menuVersion,
-      adminWhitelistEnabled: settings.adminWhitelistEnabled,
-      orderButtonEnabled: settings.orderButtonEnabled,
-      testModeEnabled: settings.testModeEnabled,
-      kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage,
-      bgnEnabled: settings.bgnEnabled,
-      adminWhitelist: settings.adminWhitelist,
-      menuDate: settings.menuDate,
-      announcement: settings.announcement,
-      aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
-      aiModel: settings.aiModel,
-      aiEndpoint: settings.aiEndpoint,
-      preIdentificationEnabled: settings.preIdentificationEnabled,
-      kioskAutoTiming: settings.kioskAutoTiming,
-      kioskOpenTime: settings.kioskOpenTime,
-      kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay,
-      publicAccessRequired: settings.publicAccessRequired,
-      globalAccess: settings.globalAccess
     } as any)); // Force type mapping for hydration
 
     ws.on("pong", () => {

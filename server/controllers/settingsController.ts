@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { broadcast } from "../broadcast";
+import { broadcast, broadcastAdmin } from "../broadcast";
 import { 
   settings,
   setAdminWhitelistEnabledConfig, 
@@ -158,7 +158,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       if (typeof adminWhitelist !== 'string') return res.status(400).json({ error: "Invalid value for adminWhitelist" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_whitelist", adminWhitelist);
       setAdminWhitelistConfig(adminWhitelist);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { adminWhitelist } as any });
+      broadcastAdmin({ type: "SETTINGS_UPDATE", settings: { adminWhitelist } as any });
     }
     
     if (announcement !== undefined) {
@@ -179,7 +179,7 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
       setAiApiKeyConfig(aiApiKey);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { aiApiKey } as any });
+      broadcastAdmin({ type: "SETTINGS_UPDATE", settings: { aiApiKey } as any });
     }
 
     if (aiModel !== undefined) {

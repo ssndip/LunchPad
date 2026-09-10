@@ -17,3 +17,20 @@ export const broadcast = (data: WsMessage) => {
     }
   });
 };
+
+/**
+ * Broadcast to admin sessions only.
+ *
+ * Sockets are tagged with `isAdmin` at connection time in server.ts after the
+ * JWT is verified. Used for settings that must not reach kiosk clients, such as
+ * the AI provider key and the admin IP whitelist.
+ */
+export const broadcastAdmin = (data: WsMessage) => {
+  if (!wssInstance) return;
+  const message = JSON.stringify(data);
+  wssInstance.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN && (client as any).isAdmin) {
+      client.send(message);
+    }
+  });
+};
