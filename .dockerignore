@@ -7,3 +7,14 @@ dist
 README.md
 Dockerfile
 .dockerignore
+
+# Local development state that must never enter the build context
+data
+*.db
+*.log
+docs
+tests
+.superpowers
+.jules
+.vscode
+.clinerules

@@ -5,7 +5,6 @@ import { WebSocketServer, WebSocket } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
-import { createServer as createViteServer } from "vite";
 import cors from "cors";
 
 // Modular Imports
@@ -243,6 +242,9 @@ export async function startServer() {
 
   // --- Static Files & Vite ---
   if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
+    // Imported lazily so `vite` stays a devDependency and never ships in the
+    // production image (this branch is unreachable when NODE_ENV=production).
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

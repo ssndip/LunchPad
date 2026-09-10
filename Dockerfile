@@ -6,9 +6,9 @@ WORKDIR /app
 # Install build dependencies for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-# Copy package files and install all dependencies
-COPY package*.json ./
-RUN npm install
+# Copy package files and install all dependencies (incl. dev: needed for the build)
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy the rest of the application code
 COPY . .
@@ -28,8 +28,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Copy only production dependencies
-COPY package*.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # Copy the built frontend and modular server files
 COPY --from=build-stage /app/dist ./dist
@@ -42,6 +42,10 @@ RUN mkdir -p /app/data && chown node:node /app/data
 
 # Expose the application port
 EXPOSE 3400
+
+# Fail the container health check if the server stops answering
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3400)+'/ping').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Start the application
 CMD ["npm", "start"]
