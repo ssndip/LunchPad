@@ -26,3 +26,7 @@ Welcome to the LunchPad documentation. This system is a self-service canteen man
     *   Docker setup.
     *   Environment Variables.
     *   Localization & Translations.
+
+6.  **[Dependency Notes](DEPENDENCIES.md)**
+    *   Accepted advisories and why.
+    *   `overrides` pins and when to remove them.

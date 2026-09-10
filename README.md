@@ -2,8 +2,8 @@
 
 LunchPad is a professional, self-service canteen management solution featuring a high-speed ordering Kiosk and a comprehensive Administrative Dashboard. It is designed to be lightweight, secure, and extremely easy to deploy.
 
-![LunchPad Banner](https://img.shields.io/badge/LunchPad-v1.0.0-blue?style=for-the-badge)
-![Built with React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![LunchPad Banner](https://img.shields.io/badge/LunchPad-v1.3.0-blue?style=for-the-badge)
+![Built with React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)
 ![Powered by Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)
 
 ---
@@ -61,7 +61,7 @@ All data (cards, orders, menu) is stored in a SQLite database located at `data/l
 - **Frontend**: React, Vite, Zustand, Tailwind CSS, Framer Motion.
 - **Backend**: Node.js, Express, WebSockets.
 - **Database**: SQLite.
-- **Infrastructure**: Nginx, Docker.
+- **Infrastructure**: Docker.
 
 ## 📖 Documentation
 Detailed documentation for developers and administrators can be found in the [**/docs**](./docs/INDEX.md) directory.
