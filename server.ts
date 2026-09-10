@@ -174,16 +174,6 @@ export async function startServer() {
     res.json(buildClientState({ isAdmin: false }));
   });
 
-  // Global Error Handler
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    logger.error(`[Global Error] ${err.message}`, { stack: err.stack, path: req.path });
-    res.status(500).json({ 
-      error: "Internal Server Error", 
-      message: "An unexpected error occurred",
-      path: req.path
-    });
-  });
-
   // --- WebSocket ---
   wss.on("connection", (ws, req) => {
     (ws as any).isAlive = true;
@@ -271,6 +261,20 @@ export async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  // Global Error Handler.
+  // Registered last, after the API routes AND the static/SPA handlers, because
+  // Express only routes an error to handlers declared after the middleware that
+  // threw it. Previously it sat above the static and Vite middleware, so errors
+  // raised there fell through to Express's default handler instead.
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    logger.error(`[Global Error] ${err.message}`, { stack: err.stack, path: req.path });
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: "An unexpected error occurred",
+      path: req.path
+    });
+  });
 
   if (process.env.NODE_ENV !== "test") {
     server.listen(Number(PORT), "0.0.0.0", () => {
