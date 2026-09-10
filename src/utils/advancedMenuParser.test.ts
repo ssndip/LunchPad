@@ -1,45 +1,14 @@
 /**
  * Regression test suite for advancedMenuParser.
- * Run with: npx tsx src/utils/advancedMenuParser.test.ts
- * 
+ *
  * Add new test cases here whenever a new menu format is encountered.
- * Before building the Docker image, verify ALL tests pass.
  */
+import { describe, it, expect } from 'vitest';
 import { parseMenuText } from './advancedMenuParser';
 
-let passed = 0;
-let failed = 0;
-
-function assert(description: string, actual: any, expected: any) {
-  const ok = JSON.stringify(actual) === JSON.stringify(expected);
-  if (ok) {
-    console.log(`  ✅ ${description}`);
-    passed++;
-  } else {
-    console.log(`  ❌ ${description}`);
-    console.log(`     Expected: ${JSON.stringify(expected)}`);
-    console.log(`     Actual:   ${JSON.stringify(actual)}`);
-    failed++;
-  }
-}
-
-function assertApprox(description: string, actual: number, expected: number) {
-  const ok = Math.abs(actual - expected) < 0.001;
-  if (ok) {
-    console.log(`  ✅ ${description}`);
-    passed++;
-  } else {
-    console.log(`  ❌ ${description}`);
-    console.log(`     Expected: ${expected}`);
-    console.log(`     Actual:   ${actual}`);
-    failed++;
-  }
-}
-
 // ─── Menu Format 1: Dash-prefixed, prices on items ───────────────────────────
-console.log('\n📋 Format 1: Dash prefix + prices on items (09.04.2026 format)');
-{
-  const menu = `Меню за 09.04.2026 
+describe('Format 1: Dash prefix + prices on items (09.04.2026 format)', () => {
+  const menu = `Меню за 09.04.2026
 
 Основно ястие:
 - Кюфтета по цариградски 3.20€
@@ -51,7 +20,7 @@ console.log('\n📋 Format 1: Dash prefix + prices on items (09.04.2026 format)'
 Супи:
 - Пилешка супа 1.80€
 - Шкембе 1.80€
-- Таратор 1.50€ 
+- Таратор 1.50€
 
 Салати:
 200гр 1.50€ + 0.10€ кутийка
@@ -62,7 +31,7 @@ console.log('\n📋 Format 1: Dash prefix + prices on items (09.04.2026 format)'
 Гарнитури :
 100гр 0.75€ ( 0.10€ кутийка ако е отделно)
 - Картофи по селски
-- Пържени картофи 
+- Пържени картофи
 
 Скара:
 0.10€ кутийка
@@ -73,39 +42,38 @@ console.log('\n📋 Format 1: Dash prefix + prices on items (09.04.2026 format)'
 - Домашна бисквитена торта 1.80€`;
 
   const r = parseMenuText(menu);
-
-  assert('Date detected', r.date, '09.04.2026');
-
   const mains = r.categories.find(c => /основн/i.test(c.categoryName));
-  assert('Mains category found', !!mains, true);
-  assertApprox('Кюфтета price', mains?.items[0]?.price ?? -1, 3.20);
-  assert('Кюфтета name clean', mains?.items[0]?.name, 'Кюфтета по цариградски');
-
   const soups = r.categories.find(c => /супи/i.test(c.categoryName));
-  assert('Soups category found', !!soups, true);
-  assertApprox('Таратор price', soups?.items[2]?.price ?? -1, 1.50);
-
   const salads = r.categories.find(c => /салат/i.test(c.categoryName));
-  assert('Salads category found', !!salads, true);
-  assert('Salads has 3 items', salads?.items.length, 3);
-  assertApprox('Шопска inherited price', salads?.items[0]?.price ?? -1, 1.50);
-  assertApprox('Зелева inherited price', salads?.items[1]?.price ?? -1, 1.50);
-  assertApprox('Млечна inherited price', salads?.items[2]?.price ?? -1, 1.50);
-  assert('Шопска name clean (no weight)', salads?.items[0]?.name, 'Шопска салата');
-
   const sides = r.categories.find(c => /гарнитур/i.test(c.categoryName));
-  assert('Sides category found', !!sides, true);
-  assertApprox('Картофи inherited price', sides?.items[0]?.price ?? -1, 0.75);
-
   const bbq = r.categories.find(c => /скара/i.test(c.categoryName));
-  assert('BBQ category found', !!bbq, true);
-  assertApprox('Кебапче price', bbq?.items[0]?.price ?? -1, 1.00);
-  assert('Кебапче name (no weight in name)', bbq?.items[0]?.name, 'Кебапче');
-}
+
+  it('Date detected', () => expect(r.date).toEqual('09.04.2026'));
+
+  it('Mains category found', () => expect(!!mains).toEqual(true));
+  it('Кюфтета price', () => expect(mains?.items[0]?.price ?? -1).toBeCloseTo(3.20, 3));
+  it('Кюфтета name clean', () => expect(mains?.items[0]?.name).toEqual('Кюфтета по цариградски'));
+
+  it('Soups category found', () => expect(!!soups).toEqual(true));
+  it('Таратор price', () => expect(soups?.items[2]?.price ?? -1).toBeCloseTo(1.50, 3));
+
+  it('Salads category found', () => expect(!!salads).toEqual(true));
+  it('Salads has 3 items', () => expect(salads?.items.length).toEqual(3));
+  it('Шопска inherited price', () => expect(salads?.items[0]?.price ?? -1).toBeCloseTo(1.50, 3));
+  it('Зелева inherited price', () => expect(salads?.items[1]?.price ?? -1).toBeCloseTo(1.50, 3));
+  it('Млечна inherited price', () => expect(salads?.items[2]?.price ?? -1).toBeCloseTo(1.50, 3));
+  it('Шопска name clean (no weight)', () => expect(salads?.items[0]?.name).toEqual('Шопска салата'));
+
+  it('Sides category found', () => expect(!!sides).toEqual(true));
+  it('Картофи inherited price', () => expect(sides?.items[0]?.price ?? -1).toBeCloseTo(0.75, 3));
+
+  it('BBQ category found', () => expect(!!bbq).toEqual(true));
+  it('Кебапче price', () => expect(bbq?.items[0]?.price ?? -1).toBeCloseTo(1.00, 3));
+  it('Кебапче name (no weight in name)', () => expect(bbq?.items[0]?.name).toEqual('Кебапче'));
+});
 
 // ─── Menu Format 2: Asterisk-prefixed, category price on header line ─────────
-console.log('\n📋 Format 2: Asterisk prefix + category price in header (27.04 format)');
-{
+describe('Format 2: Asterisk prefix + category price in header (27.04 format)', () => {
   const menu = `Меню за 27.04.26
 
 Супи:
@@ -130,29 +98,28 @@ console.log('\n📋 Format 2: Asterisk prefix + category price in header (27.04 
 *Мляко с ориз -1.00`;
 
   const r = parseMenuText(menu);
-
-  assert('Date detected', r.date, '27.04.26');
-
   const soups = r.categories.find(c => /супи/i.test(c.categoryName));
-  assert('Soups found', !!soups, true);
-  assertApprox('Пилешка price', soups?.items[0]?.price ?? -1, 1.70);
-  assert('Пилешка name', soups?.items[0]?.name, 'Пилешка супа');
-
   const salads = r.categories.find(c => /салат/i.test(c.categoryName));
-  assert('Salads found', !!salads, true);
-  assert('Salads has 3 items', salads?.items.length, 3);
-  assertApprox('Млечна inherited 0.67', salads?.items[0]?.price ?? -1, 0.67);
-  assertApprox('Шопска inherited 0.67', salads?.items[1]?.price ?? -1, 0.67);
-  assert('Млечна name clean', salads?.items[0]?.name, 'Млечна салата');
-
   const mains = r.categories.find(c => /основни/i.test(c.categoryName));
-  assert('Mains found', !!mains, true);
-  assertApprox('Миш маш price', mains?.items[0]?.price ?? -1, 2.60);
-}
+
+  it('Date detected', () => expect(r.date).toEqual('27.04.26'));
+
+  it('Soups found', () => expect(!!soups).toEqual(true));
+  it('Пилешка price', () => expect(soups?.items[0]?.price ?? -1).toBeCloseTo(1.70, 3));
+  it('Пилешка name', () => expect(soups?.items[0]?.name).toEqual('Пилешка супа'));
+
+  it('Salads found', () => expect(!!salads).toEqual(true));
+  it('Salads has 3 items', () => expect(salads?.items.length).toEqual(3));
+  it('Млечна inherited 0.67', () => expect(salads?.items[0]?.price ?? -1).toBeCloseTo(0.67, 3));
+  it('Шопска inherited 0.67', () => expect(salads?.items[1]?.price ?? -1).toBeCloseTo(0.67, 3));
+  it('Млечна name clean', () => expect(salads?.items[0]?.name).toEqual('Млечна салата'));
+
+  it('Mains found', () => expect(!!mains).toEqual(true));
+  it('Миш маш price', () => expect(mains?.items[0]?.price ?? -1).toBeCloseTo(2.60, 3));
+});
 
 // ─── Menu Format 3: No-bullet plain lines ────────────────────────────────────
-console.log('\n📋 Format 3: No bullets, plain lines with prices');
-{
+describe('Format 3: No bullets, plain lines with prices', () => {
   const menu = `27.04.26
 
 SIDE DISHES
@@ -164,40 +131,35 @@ BBQ
 
   const r = parseMenuText(menu);
   const sides = r.categories.find(c => /side/i.test(c.categoryName));
-  assert('SIDE DISHES found', !!sides, true);
-  assertApprox('Зелева price', sides?.items[0]?.price ?? -1, 1.50);
-  assert('Зелева name', sides?.items[0]?.name, 'Зелева салата');
-
   const bbq = r.categories.find(c => /bbq/i.test(c.categoryName));
-  assert('BBQ found', !!bbq, true);
-  assertApprox('Кебапче price', bbq?.items[0]?.price ?? -1, 1.00);
-  assert('Кебапче name (no weight)', bbq?.items[0]?.name, 'Кебапче');
-}
+
+  it('SIDE DISHES found', () => expect(!!sides).toEqual(true));
+  it('Зелева price', () => expect(sides?.items[0]?.price ?? -1).toBeCloseTo(1.50, 3));
+  it('Зелева name', () => expect(sides?.items[0]?.name).toEqual('Зелева салата'));
+
+  it('BBQ found', () => expect(!!bbq).toEqual(true));
+  it('Кебапче price', () => expect(bbq?.items[0]?.price ?? -1).toBeCloseTo(1.00, 3));
+  it('Кебапче name (no weight)', () => expect(bbq?.items[0]?.name).toEqual('Кебапче'));
+});
 
 // ─── Menu Format 4: Malformed Date Resilience ────────────────────────────────
-console.log('\n📋 Format 4: Malformed Date Resilience');
-{
+describe('Format 4: Malformed Date Resilience', () => {
   const menu = `Меню за 99.99.9999
 Понеделник
 Супи:
 - Пилешка супа 1.80€`;
 
-  try {
-    const r = parseMenuText(menu);
-    assert('Parser did not crash on malformed date', typeof r === 'object', true);
-    assert('Soups category exists', r.categories.length > 0, true);
-    assert('Item has a valid ISO date fallback', typeof r.categories[0].items[0].date === 'string', true);
-  } catch (e: any) {
-    assert('Parser crashed with error: ' + e.message, true, false);
-  }
-}
+  it('Parser did not crash on malformed date', () => {
+    expect(() => parseMenuText(menu)).not.toThrow();
+    expect(typeof parseMenuText(menu)).toEqual('object');
+  });
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
-console.log(`\n${'─'.repeat(50)}`);
-console.log(`Results: ${passed} passed, ${failed} failed`);
-if (failed > 0) {
-  console.log('❌ TESTS FAILED — do NOT build Docker image until these are fixed!');
-  process.exit(1);
-} else {
-  console.log('✅ All tests passed — safe to build Docker image.');
-}
+  it('Soups category exists', () => {
+    expect(parseMenuText(menu).categories.length > 0).toEqual(true);
+  });
+
+  it('Item has a valid ISO date fallback', () => {
+    const r = parseMenuText(menu);
+    expect(typeof r.categories[0].items[0].date).toEqual('string');
+  });
+});

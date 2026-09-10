@@ -1,4 +1,4 @@
-import { defineConfig, configDefaults } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -6,7 +6,6 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     setupFiles: ['./vitest.setup.ts'],
-    globals: true,
-    exclude: [...configDefaults.exclude, 'src/utils/advancedMenuParser.test.ts']
+    globals: true
   }
 });
