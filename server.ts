@@ -10,8 +10,8 @@ import cors from "cors";
 
 // Modular Imports
 import { logger } from "./server/logger";
-import { db, initDb, seedInitialData } from "./server/db";
-import { initSettings, settings, incrementMenuVersion } from "./server/config";
+import { initDb, seedInitialData } from "./server/db";
+import { initSettings, settings } from "./server/config";
 import { setWssInstance } from "./server/broadcast";
 import { isLocalOrigin } from "./server/middleware/auth";
 import { isWhitelisted } from "./server/middleware/whitelist";
