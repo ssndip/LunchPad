@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Smartphone, X, Info } from 'lucide-react';
 import { useStore } from './store/useStore';
@@ -28,17 +28,32 @@ import { PwaInstallBanner } from './components/shared/PwaInstallBanner';
 import { PullToRefresh } from './components/shared/PullToRefresh';
 
 // Tabs
-import { MenuTab } from './components/manager/tabs/MenuTab';
-import { OrdersTab } from './components/manager/tabs/OrdersTab';
-import { HistoryTab } from './components/manager/tabs/HistoryTab';
-import { CardsTab } from './components/manager/tabs/CardsTab';
-import { SettingsTab } from './components/manager/tabs/SettingsTab';
-import { ParserRulesTab } from './components/manager/tabs/ParserRulesTab';
-import { AnalyticsTab } from './components/manager/tabs/AnalyticsTab';
+// Loaded on demand: these are manager-only and pull in the heaviest dependencies
+// in the app (xlsx via CardsTab, recharts via AnalyticsTab). Keeping them out of
+// the entry chunk means kiosk clients never download the dashboard at all.
+const MenuTab = lazy(() => import('./components/manager/tabs/MenuTab').then(m => ({ default: m.MenuTab })));
+const OrdersTab = lazy(() => import('./components/manager/tabs/OrdersTab').then(m => ({ default: m.OrdersTab })));
+const HistoryTab = lazy(() => import('./components/manager/tabs/HistoryTab').then(m => ({ default: m.HistoryTab })));
+const CardsTab = lazy(() => import('./components/manager/tabs/CardsTab').then(m => ({ default: m.CardsTab })));
+const SettingsTab = lazy(() => import('./components/manager/tabs/SettingsTab').then(m => ({ default: m.SettingsTab })));
+const ParserRulesTab = lazy(() => import('./components/manager/tabs/ParserRulesTab').then(m => ({ default: m.ParserRulesTab })));
+const AnalyticsTab = lazy(() => import('./components/manager/tabs/AnalyticsTab').then(m => ({ default: m.AnalyticsTab })));
+
+// Small and dependency-light, so it stays in the main chunk: it renders inside an
+// AnimatePresence, where an extra Suspense boundary would break exit animations.
 import { HistoryReport } from './components/manager/tabs/HistoryReport';
 
 import { useTranslation } from './hooks/useTranslation';
 import { useSyncState } from './hooks/useSyncState';
+
+/** Shown in the dashboard content area while a lazily-loaded tab chunk arrives. */
+const TabLoadingFallback = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-live="polite">
+    <div className="w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full animate-spin" />
+    <span className="sr-only">Loading…</span>
+  </div>
+);
+
 
 export default function App() {
   const s = useStore();
@@ -377,6 +392,9 @@ export default function App() {
           kioskOpen={s.kioskOpen}
           onToggleKiosk={handleToggleKioskManual}
         >
+          {/* Boundary sits inside the dashboard chrome so switching tabs shows a
+              spinner in the content area only, not a full-page flash. */}
+          <Suspense fallback={<TabLoadingFallback />}>
           {s.activeTab === 'menu' && (
             <MenuTab
               editingMenu={s.menu}
@@ -712,6 +730,7 @@ export default function App() {
           {s.activeTab === 'parser_rules' && (
             <ParserRulesTab confirm={setConfirmConfig} />
           )}
+          </Suspense>
         </ManagerDashboard>
 
         <ConfirmModal
