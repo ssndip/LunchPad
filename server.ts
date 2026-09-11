@@ -113,17 +113,19 @@ export async function startServer() {
     contentSecurityPolicy: false, // Allow Vite dev server
   }));
 
+  // Deliberately has no `skip`. It used to exempt whitelisted IPs, which made
+  // it inert: adminWhitelistGuard answers this same route against the same
+  // list, so every caller able to attempt a PIN was also exempt from the limit,
+  // and the only requests it ever throttled were ones already being refused
+  // with 403. A 4-6 digit admin PIN could therefore be guessed at full speed
+  // from any machine on the canteen LAN — exactly the caller this is meant to
+  // slow down. 10/minute is far above what a person typing a PIN needs.
   const authLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: 10, // 10 attempts per minute
     standardHeaders: true,
     legacyHeaders: false,
     validate: { trustProxy: false },
-    skip: (req) => {
-      if (process.env.NODE_ENV === 'test') return false;
-      const clientIp = req.ip || "";
-      return isWhitelisted(clientIp, settings.adminWhitelist);
-    },
     message: { error: "Too many login attempts", message: "Please try again in a minute" },
     handler: (req, res, next, options) => {
       logger.warn(`Rate limit hit: Auth endpoint from IP ${req.ip}`);

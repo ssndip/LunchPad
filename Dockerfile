@@ -36,11 +36,22 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Built frontend and modular server files
+# Built frontend and modular server files.
+# `src/types` comes too: server/broadcast.ts, settingsController.ts and
+# parserController.ts all import from it. Those imports are type-only, so
+# esbuild erases them and the image happened to run without the directory —
+# but the first value imported from one of those files would crash the
+# container at startup while dev and tests stayed green.
 COPY --from=build-stage /app/dist ./dist
 COPY --from=build-stage /app/server.ts ./
 COPY --from=build-stage /app/server ./server
 COPY --from=build-stage /app/src/types.ts ./src/types.ts
+COPY --from=build-stage /app/src/types ./src/types
+
+# Test files travel with server/, and pull in vitest, which is not installed
+# here. Nothing imports them at runtime; they are dropped so the image holds
+# only what it actually runs.
+RUN find ./server -name '*.test.ts' -delete
 
 # The database directory. Owned by `node` because the process drops to that
 # user below; when a host directory is bind-mounted here it carries its own
