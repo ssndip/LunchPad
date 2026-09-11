@@ -1,60 +1,30 @@
 /**
  * categoryAutobox.ts
- * 
- * Single source of truth for "does this category/item require a packaging fee?"
- * Reads live from parserLocalSettings (localStorage), so toggling in the 
- * Admin Parser Rules tab takes effect immediately in the Kiosk without re-parsing.
+ *
+ * "Should this item show a packaging-fee badge?" for the kiosk UI.
+ *
+ * It used to answer that from `lunchpad_parser_settings` in localStorage, which
+ * is written only by the Parser Rules tab in one administrator's browser. The
+ * server cannot see it, so the badge — and the cart total, which used the same
+ * function — could advertise a fee that never reached the bill. Both now defer
+ * to the shared rule in packagingFee.ts, the one the server charges with, so
+ * what the customer is shown and what they pay cannot disagree.
+ *
+ * The localStorage settings still drive the *parser*, where they belong: they
+ * decide which tags and fees get baked into the menu at import time.
  */
 import { MenuItem } from '../types';
-import { loadCategorySettings } from './parserLocalSettings';
-import { MENU_CONFIG } from './menuConfig';
+import { categoryCarriesBoxFee, packagingFeeFor } from './packagingFee';
 
-/**
- * Given a category ID (e.g. "salads", "cat_123"), returns whether the
- * admin has enabled autoBox for that category in parser settings.
- */
+/** Does this category carry a packaging fee by default? */
 export function isCategoryAutoBox(categoryId: string): boolean {
-  const settings = loadCategorySettings();
-  if (!categoryId) return false;
-  
-  let normalizedKey = categoryId.toLowerCase().trim();
-  if (normalizedKey === 'salads') normalizedKey = 'salads';
-  else if (normalizedKey === 'side dishes' || normalizedKey === 'sides') normalizedKey = 'sides';
-  else if (normalizedKey === 'bbq') normalizedKey = 'bbq';
-  else if (normalizedKey === 'soups') normalizedKey = 'soups';
-  else if (normalizedKey === 'main dishes' || normalizedKey === 'mains') normalizedKey = 'mains';
-  else if (normalizedKey === 'bread') normalizedKey = 'bread';
-  else if (normalizedKey === 'desserts') normalizedKey = 'desserts';
-  else if (normalizedKey === 'other') normalizedKey = 'other';
-
-  return settings.categories[normalizedKey]?.autoBox === true;
+  return categoryCarriesBoxFee(categoryId);
 }
 
-/**
- * Returns true if a menu item should have a packaging fee applied.
- * Priority:
- *  1. Item has an explicit `autobox` or `has_custom_box` tag (set at parse time)
- *  2. Admin has enabled autoBox for this item's category in parser settings (live)
- *  3. Legacy fallback: category name contains known BG keywords
- */
+/** Will this item be charged a packaging fee? */
 export function isItemAutoBox(item: MenuItem): boolean {
   if (!item) return false;
-  if (item.packagingFee && item.packagingFee > 0) return true;
-
-  const tags = item.tags || [];
-
-  // 1. Explicit tag on the item
-  if (tags.some(t => t === 'autobox' || t === 'has_custom_box' || t === 'bbq')) {
-    return true;
-  }
-
-  // 2. Live parser settings for the category
-  if (item.category && isCategoryAutoBox(item.category)) {
-    return true;
-  }
-
-  // 3. Legacy category name fallback (BG keywords)
-  const cat = (item.category || '').toLowerCase();
-  return cat.includes('side dishes') || cat.includes('гарнитури') ||
-         cat.includes('bbq') || cat.includes('скара');
+  // A nominal default of 1 makes this a yes/no question about the rule rather
+  // than about the canteen's configured amount.
+  return packagingFeeFor(item as any, 1) > 0;
 }

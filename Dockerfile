@@ -47,6 +47,10 @@ COPY --from=build-stage /app/server.ts ./
 COPY --from=build-stage /app/server ./server
 COPY --from=build-stage /app/src/types.ts ./src/types.ts
 COPY --from=build-stage /app/src/types ./src/types
+# The packaging-fee rule is shared with the kiosk so the price quoted and the
+# price charged cannot drift apart. orderService imports it as a value, so
+# unlike src/types it genuinely has to be here.
+COPY --from=build-stage /app/src/utils/packagingFee.ts ./src/utils/packagingFee.ts
 
 # Test files travel with server/, and pull in vitest, which is not installed
 # here. Nothing imports them at runtime; they are dropped so the image holds

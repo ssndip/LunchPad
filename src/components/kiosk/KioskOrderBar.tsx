@@ -59,7 +59,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 100 }}
-          className="shrink-0 w-full px-4 pb-4 pt-2"
+          className="shrink-0 w-full px-4 pb-4 pt-2 pad-safe-bottom"
         >
           <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-neutral-200/80 px-5 py-4 flex flex-col gap-3">
             <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
@@ -107,9 +107,16 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
             {/* Divider */}
             <div className="h-px bg-neutral-100" />
 
-            {/* Total + actions row */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
+            {/* Total + actions row.
+                Wraps, because it cannot fit on a phone: the clear button, the
+                RFID field and the order button are all shrink-0 and together
+                need ~517px, while the card offers ~325px at 390px wide. The
+                overflow was clipped by an ancestor rather than scrolled, which
+                put the order button entirely outside the viewport — the primary
+                action was unreachable on a phone. Below sm the field and the
+                button each take their own full-width line. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
                   {t('orders.total')}
                 </p>
@@ -126,7 +133,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
 
               <button
                 onClick={onClearCart}
-                className="p-2 text-neutral-400 hover:text-red-500 transition-colors shrink-0"
+                className="p-2 touch-target flex items-center justify-center text-neutral-400 hover:text-red-500 transition-colors shrink-0"
                 title={t('kiosk.clear_order')}
                 aria-label={t('kiosk.clear_order')}
               >
@@ -134,7 +141,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
               </button>
 
               {/* RFID input */}
-              <div className="relative w-44 shrink-0">
+              <div className="relative w-full sm:w-44 shrink-0 order-2 sm:order-none">
                 <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                 <input
                   ref={rfidInputRef}
@@ -163,7 +170,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                   <button
                     tabIndex={-1}
                     onClick={() => setRfid('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors touch-target-expansion"
                     aria-label={t('modals.remove')}
                     title={t('modals.remove')}
                   >
@@ -176,7 +183,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
               <button
                 onClick={onOrder}
                 disabled={orderDisabled}
-                className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shrink-0"
+                className="px-5 py-2.5 touch-target-h w-full sm:w-auto order-3 sm:order-none bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shrink-0"
               >
                 {isScanning ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

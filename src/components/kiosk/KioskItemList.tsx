@@ -250,7 +250,7 @@ const QuantityControl: React.FC<{
               triggerHaptic("light");
               onToggle();
             }}
-            className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors touch-target-expansion touch-manipulation"
+            className="w-8 h-8 md:w-9 md:h-9 touch-target rounded-full border-2 border-neutral-200 cursor-pointer flex items-center justify-center hover:border-neutral-400 transition-colors touch-target-expansion touch-manipulation"
           />
         ) : (
           <motion.div
@@ -266,7 +266,7 @@ const QuantityControl: React.FC<{
                 triggerHaptic("light");
                 onDecrement();
               }}
-              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              className="w-8 h-8 md:w-9 md:h-9 touch-target flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
               title={t("modals.remove") || "Decrease"}
             >
               <Minus className="w-3.5 h-3.5" />
@@ -279,7 +279,7 @@ const QuantityControl: React.FC<{
                 triggerHaptic("light");
                 onIncrement();
               }}
-              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
+              className="w-8 h-8 md:w-9 md:h-9 touch-target flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-90 touch-target-expansion touch-manipulation"
               title={t("modals.add") || "Increase"}
             >
               <Plus className="w-3.5 h-3.5" />

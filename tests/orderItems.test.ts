@@ -121,7 +121,13 @@ describe('orders that are still fine', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.order.items).toHaveLength(2);
-    expect(await balanceOf(RFID)).toBeCloseTo(before + SOUP.price + SALAD.price, 2);
+    // The salad carries the packaging fee and the soup does not. This total was
+    // previously fee-free: the server's category list named `гарнитури`/`side
+    // dishes` and `скара`/`bbq` but had lost `салати`/`salads`, so a salad the
+    // kiosk quoted at 2.60 was billed at 2.50. Both sides read one list now —
+    // see tests/packagingFeeParity.test.ts.
+    const PACKAGING_FEE = 0.10;
+    expect(await balanceOf(RFID)).toBeCloseTo(before + SOUP.price + SALAD.price + PACKAGING_FEE, 2);
   });
 
   it('accepts an item switched back to Active', async () => {

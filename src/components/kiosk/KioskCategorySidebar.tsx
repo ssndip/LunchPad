@@ -79,7 +79,7 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
               <button
                 key={cat}
                 onClick={() => onSelect(cat)}
-                className={`shrink-0 md:w-full text-left px-4 py-3 md:py-4 rounded-xl transition-all relative group overflow-hidden ${
+                className={`shrink-0 md:w-full text-left px-4 py-3 md:py-4 touch-target-h rounded-xl transition-all relative group overflow-hidden ${
                   isActive
                     ? "bg-neutral-900 text-white shadow-md"
                     : "hover:bg-neutral-50 text-neutral-500"

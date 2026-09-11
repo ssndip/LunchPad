@@ -374,7 +374,7 @@ export default function App() {
     return (
       <div className="relative">
         <PublicAccessCodeEntry onUnlock={handleUnlock} />
-        <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
+        <div className="fixed inset-safe-bottom left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
       </div>
     );
   }
@@ -387,7 +387,7 @@ export default function App() {
             onLogin={(pin) => s.loginManager(pin)}
             onBack={() => { window.location.href = window.location.origin + '/'; }}
           />
-          <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
+          <div className="fixed inset-safe-bottom left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
         </div>
       );
     }
@@ -816,7 +816,7 @@ export default function App() {
           )}
         </AnimatePresence>
         {/* Dynamic Build Version Overlay in Manager Dashboard */}
-        <div className="fixed bottom-3 left-3 z-[9999] bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-white/50 pointer-events-none select-none">{APP_VERSION}</div>
+        <div className="fixed inset-safe-bottom left-3 z-[9999] bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-white/50 pointer-events-none select-none">{APP_VERSION}</div>
       </div>
     );
   }
@@ -830,7 +830,7 @@ export default function App() {
           window.history.pushState({}, '', url);
           window.dispatchEvent(new PopStateEvent('popstate'));
         }} />
-        <div className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
+        <div className="fixed inset-safe-bottom left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none">{APP_VERSION}</div>
       </div>
     );
   }
@@ -935,13 +935,18 @@ export default function App() {
         </AnimatePresence>
       </PullToRefresh>
 
-      {/* Dynamic Build Version Overlay */}
-      <div 
-        className="fixed bottom-3 left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none"
-        title={`Build Version: ${APP_VERSION}`}
-      >
-        {APP_VERSION}
-      </div>
+      {/* Dynamic Build Version Overlay.
+          Hidden once there is a cart: it is anchored bottom-left, which is where
+          the order bar slides in, and it was sitting on top of the totals. It is
+          a build stamp, not something anyone needs mid-order. */}
+      {s.selectedItems.length === 0 && (
+        <div
+          className="fixed inset-safe-bottom left-3 z-[9999] bg-neutral-900/5 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-mono font-black text-neutral-500/80 pointer-events-none select-none"
+          title={`Build Version: ${APP_VERSION}`}
+        >
+          {APP_VERSION}
+        </div>
+      )}
     </div>
   );
 }

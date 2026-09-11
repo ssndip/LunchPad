@@ -61,10 +61,46 @@
     position: fixed;
     inset: 0;
     overflow: hidden;
+    /* 100vh is the *large* viewport on mobile — it counts the space the URL bar
+       occupies, so the bottom of the screen (where the order bar lives) sits
+       under the browser chrome until the user scrolls it away. dvh tracks the
+       chrome as it collapses. The vh line stays as a fallback for browsers
+       without dvh; the dvh line wins wherever it is understood. Every other
+       full-screen view (dashboard, logins) already used 100dvh — the kiosk was
+       the one that did not. */
     height: 100vh;
-    width: 100vw;
+    height: 100dvh;
+    width: 100%;
     /* Allow vertical overscroll for pull-to-refresh */
     overscroll-behavior-y: auto;
+  }
+
+  /* Safe-area padding. index.html sets viewport-fit=cover, which extends the
+     page under the notch and the home indicator, so anything anchored to an
+     edge needs to be inset by hand or it sits underneath them. The tokens for
+     this existed in tailwind.config.js but were never applied anywhere. */
+  .pad-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pad-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .inset-safe-bottom {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Minimum comfortable touch size, in px on purpose.
+     `html` is sized with clamp(14px, 2vw, 16px), so on a phone 1rem is 14px and
+     every rem-based utility renders 12.5% smaller than on desktop — w-8 becomes
+     28px, py-2.5 becomes a 35px-tall button. The shrink lands hardest exactly
+     where fingers replace a mouse. These are px so that scaling cannot erode
+     them below the 44px floor (WCAG 2.5.5, Apple HIG 44pt, Material 48dp). */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .touch-target-h {
+    min-height: 44px;
   }
 
   /* No tap highlight on mobile for clean UI */

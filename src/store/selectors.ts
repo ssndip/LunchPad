@@ -1,7 +1,7 @@
 import { useStore } from './useStore';
 import { useMemo } from 'react';
 import { MenuItem } from '../types';
-import { isItemAutoBox } from '../utils/categoryAutobox';
+import { packagingFeeFor } from '../utils/packagingFee';
 
 export const useGroupedMenu = () => {
   const menu = useStore((state) => state.menu);
@@ -42,11 +42,11 @@ export const useTotalPrice = () => {
   const packagingFee = useStore((state) => state.packagingFee);
   return useMemo(() => {
     return selectedItems.reduce((sum, item) => {
-      // Priority: 
-      // 1. Explicit item packaging fee (extracted from text)
-      // 2. Global packaging fee if tagged or categorized
-      const isFeeItem = isItemAutoBox(item);
-      const fee = (item.packagingFee !== undefined && item.packagingFee !== null) ? item.packagingFee : (isFeeItem ? packagingFee : 0);
+      // Exactly the rule the server charges with — same module, same inputs.
+      // This used to consult the parser's localStorage settings, which the
+      // server cannot see, so the cart total could quote a fee that never
+      // reached the bill.
+      const fee = packagingFeeFor(item, packagingFee);
       return sum + (item.price + fee) * (item.quantity || 1);
     }, 0);
   }, [selectedItems, packagingFee]);

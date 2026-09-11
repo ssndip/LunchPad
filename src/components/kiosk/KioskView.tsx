@@ -323,12 +323,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
   return (
     <div 
-      className="h-screen w-screen overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch transition-colors duration-500"
+      className="overflow-hidden bg-[#F4F4F5] flex flex-col font-sans fixed-viewport items-stretch transition-colors duration-500"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* 1. Header — Compact 48px with Glassmorphism */}
-      <header className="h-16 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50">
+      <header className="h-16 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50 pad-safe-top">
         {/* Left Section — Matches Sidebar Width */}
         <div className="hidden md:flex shrink-0 md:w-[20%] xl:w-40 px-4 items-center gap-3">
           <motion.h1 
@@ -399,7 +399,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           {kioskModeEnabled && isStandalone && !document.fullscreenElement && (
             <button 
               onClick={enterFullscreen}
-              className="p-2 rounded-xl bg-violet-600 text-white shadow-md hover:bg-violet-700 transition-all active:scale-95"
+              className="p-2 touch-target flex items-center justify-center rounded-xl bg-violet-600 text-white shadow-md hover:bg-violet-700 transition-all active:scale-95"
               title="Fullscreen"
               aria-label="Fullscreen"
             >
@@ -409,7 +409,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           {preIdentificationEnabled && rfid && (
             <button 
               onClick={() => { triggerHaptic('medium'); onClearCart(); if (onIdentify) onIdentify(''); }} 
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95 border border-red-100 group" 
+              className="flex items-center justify-center gap-2 px-3 py-2 touch-target-h rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95 border border-red-100 group" 
               title={t('kiosk.logout')} 
               aria-label={t('kiosk.logout')}
             >
@@ -420,7 +420,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           )}
           <button 
             onClick={() => setUserHistoryOpen(true)} 
-            className="p-2.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
+            className="p-2.5 touch-target flex items-center justify-center rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
             title={t('kiosk.user_history_title')} 
             aria-label={t('kiosk.user_history_title')}
           >
@@ -428,7 +428,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
           </button>
           <button 
             onClick={onGoToManager} 
-            className="p-2.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
+            className="p-2.5 touch-target flex items-center justify-center rounded-xl bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-all active:scale-95 shadow-sm border border-neutral-100" 
             title={t('navigation.admin_login')} 
             aria-label={t('navigation.admin_login')}
           >
@@ -455,7 +455,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
               </div>
               <button 
                 onClick={() => setAnnouncementDismissed(true)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1 touch-target flex items-center justify-center shrink-0 hover:bg-white/10 rounded-lg transition-colors"
                 title={t('modals.close')}
                 aria-label={t('modals.close')}
               >
@@ -674,7 +674,7 @@ const IdentificationOverlay: React.FC<{ t: any; onIdentify: (rfid: string) => vo
 export const KioskClosed: React.FC<{ onGoToManager: () => void; }> = ({ onGoToManager }) => {
   const { t } = useTranslation();
   return (
-    <div className="h-screen w-screen overflow-hidden bg-white flex items-center justify-center p-8 fixed-viewport">
+    <div className="overflow-hidden bg-white flex items-center justify-center p-8 fixed-viewport">
       {/* Dynamic background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-100/30 rounded-full blur-[120px]" />

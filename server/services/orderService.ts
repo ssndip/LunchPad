@@ -4,6 +4,7 @@ import { settings } from "../config";
 import { getMenuItemById } from "../controllers/menuController";
 import { broadcast } from "../broadcast";
 import { localDateString } from "../utils/localTime";
+import { packagingFeeFor } from "../../src/utils/packagingFee";
 
 export interface RequestedItem {
   id: number;
@@ -23,21 +24,12 @@ export interface EnrichedItem {
 
 export const calculateItemPrice = (item: any) => {
   const basePrice = Number(item.price) || 0;
-  
-  // Tag-aware packaging fee logic
-  const tags = item.tags || [];
-  const isAutobox = tags.some((t: string) => t === 'autobox' || t === 'has_custom_box' || t === 'bbq');
-  const category = (item.category || '').toLowerCase();
-  
-  // Check for Bulgarian and English category names
-  const isCategorizedBox = category.includes('side dishes') || 
-                           category.includes('гарнитури') || 
-                           category.includes('bbq') || 
-                           category.includes('скара');
-  
-  const itemFee = (item.packagingFee !== undefined && item.packagingFee !== null) 
-    ? item.packagingFee 
-    : ((isAutobox || isCategorizedBox) ? (settings.packagingFee || 0.1) : 0);
+
+  // The rule lives in one place now, shared with the kiosk's cart total. This
+  // function kept its own copy of the category list and had drifted from the
+  // client's: a hand-added Salads item was quoted with the fee and charged
+  // without it. See src/utils/packagingFee.ts.
+  const itemFee = packagingFeeFor(item, settings.packagingFee || 0.1);
 
   return {
     basePrice,
