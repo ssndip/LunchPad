@@ -9,25 +9,15 @@ services:
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    environment:
-      - NODE_ENV=production
-      - PORT=3400
-      - APP_URL=https://ss.plcnet.org:3402
-      - JWT_SECRET=lunchpad-secret-key-change-me-in-production
-      - ADMIN_PIN=0000
-      - ENABLE_TEST_BYPASS=true
-      - DISABLE_ADMIN_WHITELIST=true # Set to true to bypass IP whitelist checks for remote admin login
-      # Which peers may set X-Forwarded-For. Trust it only when the connection
-      # itself comes from loopback or a private address — i.e. the Nginx that
-      # terminates HTTPS for APP_URL — and never from a public one, so a client
-      # reaching the container directly cannot choose its own req.ip.
-      # Deliberately an address list rather than a hop count: a hop count would
-      # trust the header on direct LAN/IP connections too. Works for both the
-      # proxied URL and plain http://<lan-ip>:3400 access.
-      # Requires Nginx to set X-Forwarded-For (proxy_set_header X-Forwarded-For
-      # $proxy_add_x_forwarded_for), which is the default recipe.
-      - TRUST_PROXY=loopback, uniquelocal
-      # The canteen's timezone. Without it the container runs UTC, so an
-      # 08:00-11:00 kiosk window opens at 10:00 or 11:00 local and the peak
-      # hours chart is shifted by the same offset. Change if not in Bulgaria.
-      - TZ=Europe/Sofia
+    # Configuration lives in .env, which is gitignored. Secrets used to sit in
+    # this file, so anyone with the repo held the JWT signing key and could
+    # mint an admin token without knowing the PIN. See .env.example.
+    env_file:
+      - .env
+    # Container logs are the only record of rate-limit hits, blocked whitelist
+    # attempts and WebSocket churn. Unbounded, they grow until the disk fills.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

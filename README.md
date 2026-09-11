@@ -43,16 +43,37 @@ docker compose up --build -d
 The application will be available at: **[http://localhost:3400](http://localhost:3400)**
 
 ### 3. Environment Configuration
-You can customize the deployment by modifying the `environment` section in `docker-compose.yml`:
+Configuration lives in `.env`, which `docker-compose.yml` reads via `env_file`. It is gitignored, so secrets stay out of the repository:
+
+```bash
+cp .env.example .env
+sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" .env
+```
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `ADMIN_PIN` | The PIN used to access the manager dashboard. | `0000` |
-| `JWT_SECRET` | Secret key for session security. **Change this for production!** | `secret` |
+| `ADMIN_PIN` | Dashboard login, until an admin sets a PIN in Settings. | `0000` |
+| `JWT_SECRET` | Signs dashboard sessions. Anyone who knows it can mint an admin token without the PIN, so generate a fresh one per deployment. | none — required |
+| `TZ` | The canteen's timezone. Decides when the kiosk window opens and when the daily summary rolls over. | `Europe/Sofia` |
+| `TRUST_PROXY` | Which peers may set `X-Forwarded-For`, which decides `req.ip` — what the admin whitelist and both rate limiters key off. | `loopback, uniquelocal` |
 | `PORT` | The port on which the container will listen. | `3400` |
 
+`.env.example` documents the rest, including the two escape hatches (`ENABLE_TEST_BYPASS`, `DISABLE_ADMIN_WHITELIST`) that must stay unset in production.
+
+The dashboard login is restricted to the local network by the admin IP whitelist. Leaving `ADMIN_PIN` at `0000` is only safe while that holds.
+
 ### 4. Persistence
-All data (cards, orders, menu) is stored in a SQLite database located at `data/lunchpad.db`. This directory is mounted as a Docker volume to ensure your data survives container restarts.
+All data (cards, orders, menu) is stored in a SQLite database located at `data/lunchpad.db`. This directory is mounted as a Docker volume to ensure your data survives container restarts. The container writes a daily snapshot to `data/backups/` and keeps the latest 7.
+
+Those snapshots sit on the same disk as the database they protect. `scripts/backup-offbox.sh` copies the newest one to another device, verifies it opens and passes `integrity_check` first, and exits non-zero if the snapshot is missing or stale — so a dead backup timer is noticed. Run it daily from cron:
+
+```
+30 3 * * * /path/to/lunchpad/scripts/backup-offbox.sh >/dev/null 2>&1
+```
+
+Set `LUNCHPAD_BACKUP_DEST` for the local target and `LUNCHPAD_BACKUP_REMOTE` (an `rsync` target such as `user@host:/srv/lunchpad`) to also push a copy off the machine.
+
+To restore, pick a snapshot in **Settings → Backups**. The server swaps the database file and exits; `restart: always` brings it back within about ten seconds.
 
 ---
 
