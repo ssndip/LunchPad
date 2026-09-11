@@ -178,7 +178,13 @@ export const deleteCard = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rfid } = req.params;
     const cleanRfid = cleanRfidUtil(rfid);
-    db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
+    // A card that matched nothing used to report success, so a mistyped or
+    // already-deleted RFID looked to the dashboard exactly like a card that had
+    // just been removed.
+    const { changes } = db.prepare("DELETE FROM cards WHERE LOWER(rfid) = ?").run(cleanRfid);
+    if (changes === 0) {
+      return res.status(404).json({ error: "Card not found" });
+    }
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
   } catch (err: any) {
@@ -246,7 +252,12 @@ export const resetSingleBalance = (req: Request, res: Response, next: NextFuncti
   try {
     const { rfid } = req.params;
     const cleanRfid = cleanRfidUtil(rfid);
-    db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?").run(new Date().toISOString(), cleanRfid);
+    // As with deleteCard: no matching card is a 404, not a silent success.
+    const { changes } = db.prepare("UPDATE cards SET balance = 0, lastUpdated = ? WHERE LOWER(rfid) = ?")
+      .run(new Date().toISOString(), cleanRfid);
+    if (changes === 0) {
+      return res.status(404).json({ error: "Card not found" });
+    }
     broadcast({ type: "CARDS_UPDATE" });
     res.json({ success: true, cards: getCards() });
   } catch (err: any) {
@@ -348,9 +359,23 @@ export const getCardProfile = (req: Request, res: Response, next: NextFunction) 
   }
 };
 
+/**
+ * RFIDs the kiosk may vouch for while it is offline.
+ *
+ * Admin cards are deliberately excluded. `/api/auth/login` accepts an admin
+ * card's RFID as the entire credential, so publishing that RFID here handed
+ * every client on the canteen LAN — which is all this endpoint requires — a
+ * dashboard password: read the list, replay each entry at the login endpoint,
+ * and whichever one belongs to an admin card returns an admin token.
+ *
+ * The cost is that an admin's own card cannot be validated at the kiosk while
+ * the network is down (KioskView's isCachedRfid). Once back online the order
+ * goes through normally, and a credential is not something to scatter across
+ * every tablet's localStorage to buy that.
+ */
 export const fetchActiveRfidList = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const cards = db.prepare("SELECT rfid FROM cards").all() as { rfid: string }[];
+    const cards = db.prepare("SELECT rfid FROM cards WHERE isAdmin != 1 OR isAdmin IS NULL").all() as { rfid: string }[];
     res.json(cards.map(c => c.rfid.toLowerCase()));
   } catch (err) {
     next(err);

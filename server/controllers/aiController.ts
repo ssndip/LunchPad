@@ -10,6 +10,42 @@ import { settings } from '../config';
 const ANTHROPIC_PREFERRED_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
 const ANTHROPIC_FALLBACK_MODEL = 'claude-opus-5';
 
+/**
+ * Outbound calls to an AI provider, with a deadline.
+ *
+ * None of these had one. `fetch` waits indefinitely, so a provider that
+ * accepted the connection and then stalled — a mistyped self-hosted Ollama
+ * address, a hung proxy, an endpoint holding the socket open under rate
+ * limiting — left the admin's request open forever. The Parser Rules tab spun
+ * with no error to show, and the express handler and its socket were never
+ * released; enough of them and the server runs out.
+ */
+const AI_TIMEOUT_MS = 45_000;
+
+/** OCR uploads a photo and waits for a whole menu back, so it gets longer. */
+const AI_VISION_TIMEOUT_MS = 120_000;
+
+const withTimeout = async (url: string, init: RequestInit, timeoutMs: number) => {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err: any) {
+    // A timeout surfaces as a bare "The operation was aborted", which tells an
+    // administrator nothing about which provider stopped answering.
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      let host = url;
+      try { host = new URL(url).host; } catch { /* keep the raw url */ }
+      throw new Error(`AI provider ${host} did not respond within ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw err;
+  }
+};
+
+const aiFetch = (url: string, init: RequestInit = {}) =>
+  withTimeout(url, init, AI_TIMEOUT_MS);
+
+const aiFetchVision = (url: string, init: RequestInit = {}) =>
+  withTimeout(url, init, AI_VISION_TIMEOUT_MS);
+
 export const suggestRules = async (req: Request, res: Response) => {
   console.log("[AI] Request Body:", JSON.stringify(req.body, null, 2));
   const { currentProfile, currentConfig, menuText, instructions, currentResult } = req.body;
@@ -81,7 +117,7 @@ export const ocrImage = async (req: Request, res: Response) => {
 
 async function getBestOpenAIModel(apiKey: string) {
   try {
-    const resp = await fetch('https://api.openai.com/v1/models', {
+    const resp = await aiFetch('https://api.openai.com/v1/models', {
       headers: { 'Authorization': `Bearer ${apiKey}` }
     });
     const data = await resp.json();
@@ -102,7 +138,7 @@ async function callOpenAI(apiKey: string, profile: any, menuText: string, instru
   const model = await getBestOpenAIModel(apiKey);
   console.log(`[OpenAI] Using model: ${model}`);
   
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await aiFetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -135,7 +171,7 @@ async function callOpenAIVision(apiKey: string, base64Image: string) {
   const base64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
   const model = await getBestOpenAIModel(apiKey);
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await aiFetchVision('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -195,7 +231,7 @@ export const listModels = async (req: Request, res: Response) => {
   if (!aiApiKey) return res.status(400).json({ error: 'API Key is missing.' });
 
   try {
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${aiApiKey}`);
+    const resp = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${aiApiKey}`);
     const data = await resp.json();
     res.json(data);
   } catch (err: any) {
@@ -211,7 +247,7 @@ export const testConnection = async (req: Request, res: Response) => {
     let result;
     if (aiProvider === 'openai') {
       const model = await getBestOpenAIModel(aiApiKey);
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      const resp = await aiFetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiApiKey}` },
         body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'Hello' }], max_tokens: 5 })
@@ -221,7 +257,7 @@ export const testConnection = async (req: Request, res: Response) => {
     } else if (aiProvider === 'gemini') {
       // DYNAMIC DISCOVERY: Fetch models first to see what's available for this key
       console.log(`[Gemini Discovery] Fetching models...`);
-      const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${aiApiKey}`);
+      const listResp = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${aiApiKey}`);
       const listData = await listResp.json();
       
       if (!listResp.ok) {
@@ -238,7 +274,7 @@ export const testConnection = async (req: Request, res: Response) => {
 
       console.log(`[Gemini Discovery] Selected: ${bestModel.name}`);
 
-      const testResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/${bestModel.name}:generateContent?key=${aiApiKey}`, {
+      const testResp = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/${bestModel.name}:generateContent?key=${aiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: 'Hello' }] }] })
@@ -248,7 +284,7 @@ export const testConnection = async (req: Request, res: Response) => {
       result = `Gemini Connected! (Auto-detected: ${bestModel.name.split('/').pop()})`;
     } else if (aiProvider === 'anthropic') {
       const model = await getBestAnthropicModel(aiApiKey);
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await aiFetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': aiApiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'Hello' }], max_tokens: 5 })
@@ -258,7 +294,7 @@ export const testConnection = async (req: Request, res: Response) => {
     } else if (aiProvider === 'ollama') {
       const endpoint = settings.aiEndpoint || 'http://localhost:11434';
       const model = settings.aiModel || 'llama3';
-      const resp = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+      const resp = await aiFetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: model, prompt: 'Hello', max_tokens: 5, stream: false })
@@ -286,7 +322,7 @@ export const testConnection = async (req: Request, res: Response) => {
 
 async function getBestGeminiModel(apiKey: string) {
   try {
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const resp = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     const data = await resp.json();
     if (!data.models) return 'models/gemini-1.5-flash';
     // Prefer 1.5 flash if available, otherwise first supported
@@ -303,7 +339,7 @@ async function callGemini(apiKey: string, profile: any, menuText: string, instru
   const prompt = constructPrompt(profile, menuText, instructions, currentResult);
   const modelName = await getBestGeminiModel(apiKey);
   
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
+  const response = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -331,7 +367,7 @@ async function callGeminiVision(apiKey: string, base64Image: string) {
   const mimeType = base64Image.includes('data:') ? base64Image.split(';')[0].split(':')[1] : 'image/jpeg';
   const modelName = await getBestGeminiModel(apiKey);
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
+  const response = await aiFetchVision(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -380,7 +416,7 @@ SOUPS
 
 async function getBestAnthropicModel(apiKey: string) {
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/models', {
+    const resp = await aiFetch('https://api.anthropic.com/v1/models', {
       headers: { 
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
@@ -409,7 +445,7 @@ async function callAnthropic(apiKey: string, profile: any, menuText: string, ins
   const model = await getBestAnthropicModel(apiKey);
   console.log(`[Anthropic] Using model: ${model}`);
   
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await aiFetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -439,7 +475,7 @@ async function callAnthropicVision(apiKey: string, base64Image: string) {
   const mimeType = base64Image.includes('data:') ? base64Image.split(';')[0].split(':')[1] : 'image/jpeg';
   const model = await getBestAnthropicModel(apiKey);
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await aiFetchVision('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -590,7 +626,7 @@ async function callOllama(profile: any, menuText: string, instructions?: string,
   
   console.log(`[Ollama] Connecting to: ${endpoint}/api/generate using model: ${model}`);
   
-  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+  const response = await aiFetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -626,7 +662,7 @@ async function callOllamaVision(base64Image: string) {
 
   console.log(`[Ollama Vision] Connecting to: ${endpoint}/api/generate using model: ${model}`);
 
-  const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+  const response = await aiFetchVision(`${endpoint.replace(/\/$/, '')}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

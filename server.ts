@@ -109,8 +109,49 @@ export async function startServer() {
     callback(null, corsOptions);
   }));
 
+  // A Content-Security-Policy is the difference between an injected string
+  // becoming script and it staying text. It was switched off outright with the
+  // note "Allow Vite dev server" — true of dev, but the flag was not gated on
+  // the environment, so production shipped with no CSP either.
+  //
+  // `useDefaults: false` is deliberate: helmet's default set includes
+  // `upgrade-insecure-requests`, which would rewrite every request on a kiosk
+  // reaching the server over plain http on a LAN address (http://192.168.x.x:
+  // 3400 — the normal deployment) to https and break the whole page.
+  //
+  // The app loads nothing from another origin: no CDN, no Google Fonts, no
+  // remote images. So everything is 'self', with three narrow exceptions noted
+  // below. In development this is off, because Vite's middleware serves inline
+  // scripts and an HMR websocket on another port.
+  const isProduction = process.env.NODE_ENV === "production";
+
   app.use(helmet({
-    contentSecurityPolicy: false, // Allow Vite dev server
+    contentSecurityPolicy: isProduction ? {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        // No inline script on the page: the PWA plugin's registration is an
+        // external /registerSW.js. See index.html.
+        scriptSrc: ["'self'"],
+        // React and motion inject <style> elements at runtime.
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        // data:/blob: cover the icons and the report and backup downloads the
+        // dashboard builds in the browser.
+        imgSrc: ["'self'", "data:", "blob:"],
+        fontSrc: ["'self'", "data:"],
+        // 'self' alone does not reliably cover ws:// in every browser, and the
+        // kiosk's live connection is the app's spine — losing it is a silent
+        // failure at the till. It is same-origin in practice (useWebSocket
+        // builds the URL from window.location.host).
+        connectSrc: ["'self'", "ws:", "wss:"],
+        workerSrc: ["'self'", "blob:"],
+        manifestSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+      }
+    } : false,
   }));
 
   // Deliberately has no `skip`. It used to exempt whitelisted IPs, which made
@@ -186,6 +227,15 @@ export async function startServer() {
   // Unauthenticated, so it never carries admin-only fields (see buildClientState).
   app.get("/api/init", (req, res) => {
     res.json(buildClientState({ isAdmin: false }));
+  });
+
+  // Unknown API paths must not reach the SPA fallback below. `app.get("*")`
+  // answers every unmatched path with index.html, so a typo'd or removed
+  // endpoint came back as 200 text/html — `res.ok` was true and the caller then
+  // threw parsing a page of HTML as JSON, which reads as a client bug rather
+  // than the missing route it is.
+  app.use("/api", (req, res) => {
+    res.status(404).json({ error: "Not Found", message: `No API route for ${req.method} ${req.originalUrl}` });
   });
 
   // --- WebSocket ---
@@ -289,12 +339,29 @@ export async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(__dirname, "dist");
-    app.use((req, res, next) => {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      next();
-    }, express.static(distPath));
+
+    // Everything under dist used to be served `no-store`, which meant a kiosk
+    // re-downloaded the entire ~2MB bundle on every cold load — over canteen
+    // wifi, on a tablet, before anyone can order. Vite fingerprints the files
+    // in /assets (index-DD638HiL.js), so their contents can never change under
+    // a given name and they are safe to cache for good.
+    //
+    // index.html, the service worker and the manifest are the opposite case:
+    // they keep their names across builds and are how a new release is picked
+    // up at all, so they must never be served from a stale cache.
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        const isFingerprinted = filePath.startsWith(path.join(distPath, "assets") + path.sep);
+        if (isFingerprinted) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      }
+    }));
+
     app.get("*", (req, res) => {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.sendFile(path.join(distPath, "index.html"));

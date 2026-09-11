@@ -17,6 +17,24 @@ const TABLES = [
   'custom_languages'
 ];
 
+/**
+ * Settings deliberately left out of an exported bundle.
+ *
+ * `jwt_secret` signs dashboard sessions, so anyone holding it can mint an admin
+ * token without knowing the PIN. It is the one secret here a restore does not
+ * need: `initSettings` generates a fresh one when the row is absent, and the
+ * only consequence is that sessions open at the time of the restore have to log
+ * in again. Shipping it meant a backup file — which by its nature gets copied to
+ * a laptop, a share, an email — was a permanent skeleton key to the dashboard.
+ *
+ * `pin_pepper` is NOT excluded, and must not be: card PIN digests are HMACs
+ * under it, so a bundle restored without it would leave every cardholder unable
+ * to pay. That is the trade this file is making explicitly rather than by
+ * accident — a backup still holds material worth protecting, just not the
+ * session-signing key on top of it.
+ */
+const EXPORT_EXCLUDED_SETTINGS = new Set(['jwt_secret']);
+
 export const exportSystemBundle = (req: Request, res: Response) => {
   try {
     const bundle: any = {
@@ -27,9 +45,18 @@ export const exportSystemBundle = (req: Request, res: Response) => {
     };
 
     for (const table of TABLES) {
-      bundle.data[table] = db.prepare(`SELECT * FROM ${table}`).all();
+      const rows = db.prepare(`SELECT * FROM ${table}`).all() as any[];
+      bundle.data[table] = table === 'settings'
+        ? rows.filter(row => !EXPORT_EXCLUDED_SETTINGS.has(row?.key))
+        : rows;
     }
 
+    // This body carries card PIN digests and the PIN pepper. Keep it out of
+    // every cache between here and the administrator's disk, and hand it to the
+    // browser as a download rather than something to render inline.
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="lunchpad_backup_${new Date().toISOString().split('T')[0]}.json"`);
     res.json(bundle);
   } catch (err: any) {
     console.error('[Backup] Export failed:', err);
@@ -49,7 +76,7 @@ export const importSystemBundle = (req: Request, res: Response) => {
   // Only tables the bundle actually carries are touched. The loop used to
   // DELETE every table before looking at what was in the bundle, so a bundle
   // that omitted one emptied it and committed — and an omitted `settings`
-  // meant losing `jwt_secret` (making every card PIN hash unverifiable) and
+  // meant losing `pin_pepper` (making every card PIN hash unverifiable) and
   // `admin_pin` (dropping the dashboard back to the default PIN).
   // A table present but empty is an explicit "this was empty", and is honoured.
   const tablesToRestore = TABLES.filter(table => bundle.data[table] !== undefined);

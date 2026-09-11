@@ -159,6 +159,9 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
       };
     };
 
+    // A new token means a different identity on the socket, so start its
+    // backoff clean rather than inheriting the previous connection's retries.
+    retryCount.current = 0;
     connect();
 
     return () => {
@@ -167,7 +170,14 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearTimeout(heartbeatTimer);
     };
-  }, []);
+    // `token` is read inside connect() to authenticate the socket, so the
+    // connection has to be rebuilt when it changes. With an empty dependency
+    // list the effect captured whatever the token was on first mount and never
+    // reconnected: logging in left an anonymous socket open, which the server
+    // treats as a kiosk — no admin broadcasts, and no orders or cards in its
+    // INITIAL_STATE. That was papered over by loginManager reloading the whole
+    // page, which is also why logging in flashed the app away and back.
+  }, [token]);
 
   return ws;
 }

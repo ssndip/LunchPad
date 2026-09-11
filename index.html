@@ -20,15 +20,14 @@
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <link rel="manifest" href="/manifest.webmanifest?v=3" />
     <title>LunchPad</title>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(reg => console.log('SW regular registration successful'))
-            .catch(err => console.log('SW registration failed:', err));
-        });
-      }
-    </script>
+    <!-- No service-worker registration here on purpose: vite-plugin-pwa injects
+         the registerSW.js script tag at build time. A hand-written inline
+         registration used to sit alongside it, registering /sw.js a second
+         time, and being inline it was also the only thing on this page that a
+         Content-Security-Policy could not allow without opening script-src up
+         to all inline script. See the CSP in server.ts.
+         Keep markup out of this comment - the build's HTML transform picks up
+         tag-shaped text even inside comments and emits it for real. -->
   </head>
   <body>
     <div id="root"></div>

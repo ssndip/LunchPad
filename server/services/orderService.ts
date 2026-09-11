@@ -114,7 +114,21 @@ export const findOrderByClientId = (clientOrderId: string) => {
 };
 
 export const processOrderTransaction = (card: any, enrichedItems: EnrichedItem[], clientOrderId?: string) => {
-  const total = enrichedItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
+  // Pin the box fee each item is actually charged onto the item before it is
+  // stored. `packagingFeeFor` falls back to the canteen-wide `settings.
+  // packagingFee` for an item that qualifies but names no amount of its own, so
+  // reading a stored order back priced it against whatever the fee happened to
+  // be *at that moment*: raise the box fee and every historical day's itemised
+  // breakdown (fetchSummaryDetails) silently rose with it, drifting away from
+  // the daily_summaries.totalSales that was really taken. An explicit fee is
+  // authoritative in packagingFeeFor, so recording it here freezes the order at
+  // what the customer paid. Orders written before this keep the old fallback.
+  const pricedItems = enrichedItems.map(item => ({
+    ...item,
+    packagingFee: calculateItemPrice(item).itemFee,
+  }));
+
+  const total = pricedItems.reduce((sum, item) => sum + calculateItemPrice(item).total, 0);
   const roundedTotal = Number(total.toFixed(2));
   
   const now = new Date();
@@ -129,7 +143,7 @@ export const processOrderTransaction = (card: any, enrichedItems: EnrichedItem[]
     id: orderId,
     rfid: card.rfid,
     ownerName: card.ownerName,
-    items: enrichedItems,
+    items: pricedItems,
     totalPrice: roundedTotal,
     timestamp: now.toISOString(),
     date: dateStr,
@@ -146,7 +160,7 @@ export const processOrderTransaction = (card: any, enrichedItems: EnrichedItem[]
     //    replay fails here rather than charging twice; the caller turns that
     //    into the original order.
     db.prepare("INSERT INTO orders (id, rfid, ownerName, items, totalPrice, timestamp, date, status, clientOrderId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(orderId, card.rfid, card.ownerName, JSON.stringify(enrichedItems), roundedTotal, now.toISOString(), dateStr, "completed", clientOrderId ?? null);
+      .run(orderId, card.rfid, card.ownerName, JSON.stringify(pricedItems), roundedTotal, now.toISOString(), dateStr, "completed", clientOrderId ?? null);
 
     // 3. Update Daily Summary
     const summary = db.prepare("SELECT * FROM daily_summaries WHERE date = ?").get(dateStr) as any;

@@ -102,6 +102,35 @@ const isValidType = (type: SettingSpec['type'], value: any): boolean => {
   }
 };
 
+/**
+ * A money amount the canteen charges. `typeof value === 'number'` alone let
+ * through negatives — which turn a fee into a discount on every order — and
+ * Infinity. NaN never reaches here, as JSON has no literal for it, but the
+ * finiteness check costs nothing and states the intent.
+ */
+const amountCheck = (label: string) => (value: number): string | undefined =>
+  (!Number.isFinite(value) || value < 0)
+    ? `${label} must be a number of zero or more`
+    : undefined;
+
+/**
+ * `kioskOpenTime`/`kioskCloseTime` are compared as strings against the current
+ * HH:mm (see placeOrder), so any string at all was accepted and quietly changed
+ * the comparison's meaning: "banana" sorts above every real time, so with auto
+ * timing on the window never opened and the kiosk refused every order with
+ * "outside operating hours" and no clue why.
+ */
+const isHHmm = (value: string): string | undefined =>
+  /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
+    ? undefined
+    : "Time must be in 24-hour HH:mm format";
+
+/** 0 = Sunday .. 6 = Saturday, or -1 for "no closing day". */
+const isCloseDay = (value: number): string | undefined =>
+  (Number.isInteger(value) && value >= -1 && value <= 6)
+    ? undefined
+    : "Closing day must be a whole number from -1 (none) to 6";
+
 const simpleUpdate = (settingsPatch: Record<string, any>): WsMessage =>
   ({ type: "SETTINGS_UPDATE", settings: settingsPatch } as WsMessage);
 
@@ -117,8 +146,10 @@ const SETTING_SPECS: SettingSpec[] = [
   { name: 'testModeEnabled', dbKey: 'test_mode_enabled', type: 'boolean', apply: (v) => setTestModeConfig(v),
     message: () => simpleUpdate({ testModeEnabled: settings.testModeEnabled }) },
   { name: 'packagingFee', dbKey: 'packaging_fee', type: 'number', apply: (v) => setPackagingFeeConfig(v),
+    check: amountCheck('Packaging fee'),
     message: () => simpleUpdate({ packagingFee: settings.packagingFee }) },
   { name: 'deliveryFee', dbKey: 'delivery_fee', type: 'number', apply: (v) => setDeliveryFeeConfig(v),
+    check: amountCheck('Delivery fee'),
     message: () => simpleUpdate({ deliveryFee: settings.deliveryFee }) },
   // Both PWA flags are broadcast together, as the client expects the pair.
   { name: 'kioskModeEnabled', dbKey: 'kiosk_mode_enabled', type: 'boolean', apply: (v) => setKioskModeConfig(v),
@@ -146,10 +177,13 @@ const SETTING_SPECS: SettingSpec[] = [
   { name: 'kioskAutoTiming', dbKey: 'kiosk_auto_timing', type: 'boolean', apply: (v) => setKioskAutoTimingConfig(v),
     message: () => simpleUpdate({ kioskAutoTiming: settings.kioskAutoTiming }) },
   { name: 'kioskOpenTime', dbKey: 'kiosk_open_time', type: 'string', apply: (v) => setKioskOpenTimeConfig(v),
+    check: isHHmm,
     message: () => simpleUpdate({ kioskOpenTime: settings.kioskOpenTime }) },
   { name: 'kioskCloseTime', dbKey: 'kiosk_close_time', type: 'string', apply: (v) => setKioskCloseTimeConfig(v),
+    check: isHHmm,
     message: () => simpleUpdate({ kioskCloseTime: settings.kioskCloseTime }) },
   { name: 'kioskCloseDay', dbKey: 'kiosk_close_day', type: 'number', apply: (v) => setKioskCloseDayConfig(v),
+    check: isCloseDay,
     message: () => simpleUpdate({ kioskCloseDay: settings.kioskCloseDay }) },
   { name: 'publicAccessRequired', dbKey: 'public_access_required', type: 'boolean', apply: (v) => setPublicAccessRequiredConfig(v),
     message: () => simpleUpdate({ publicAccessRequired: settings.publicAccessRequired }) },

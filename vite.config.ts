@@ -64,6 +64,38 @@ export default defineConfig(({mode}) => {
                 }
               }
             },
+            // The three public bootstrap endpoints. These are what a kiosk needs
+            // to show a menu after a cold reload with the network down, so they
+            // are deliberately kept on disk. None of them carries personal data.
+            {
+              urlPattern: ({ url }) =>
+                url.pathname === '/api/init' ||
+                url.pathname === '/api/status' ||
+                url.pathname.startsWith('/api/menu'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'lunchpad-bootstrap',
+                networkTimeoutSeconds: 5,
+                expiration: {
+                  maxEntries: 20,
+                  maxAgeSeconds: 60 * 60 * 24
+                },
+                cacheableResponse: {
+                  statuses: [200]
+                }
+              }
+            },
+            // Every other API response is answered from the network or not at
+            // all. The rule below used to be a single `/.*/ ` NetworkFirst, so
+            // /api/cards, /api/cards/:rfid/profile, /api/orders, /api/history
+            // and /api/analytics were all written to a persistent cache keyed
+            // only by URL — cardholder names, balances and order history left
+            // on the disk of every kiosk and manager tablet for a day, readable
+            // after logout and served back whenever the device went offline.
+            {
+              urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+              handler: 'NetworkOnly'
+            },
             {
               urlPattern: /.*/i,
               handler: 'NetworkFirst',

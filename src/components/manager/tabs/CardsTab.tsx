@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import * as XLSX from 'xlsx';
 import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet, BarChart2, Radio } from 'lucide-react';
 import { Card } from '../../../types';
 import { NfcWriteModal } from '../modals/NfcWriteModal';
@@ -152,7 +151,18 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     return value;
   };
 
-  const handleExport = (format: 'csv' | 'xlsx') => {
+  /**
+   * The spreadsheet library, fetched the first time somebody imports or
+   * exports. It is ~380kB minified — three quarters of this tab's bundle — for
+   * two buttons most sessions never press, and it used to be a static import,
+   * so every manager opening Card Management paid for it. Vite emits it as its
+   * own chunk; the browser caches it after the first use.
+   */
+  const loadXLSX = () => import('xlsx');
+
+  const handleExport = async (format: 'csv' | 'xlsx') => {
+    const XLSX = await loadXLSX();
+
     const data = cards.map(c => ({
       RFID: c.rfid,
       Name: c.ownerName,
@@ -173,8 +183,9 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXLSX();
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];

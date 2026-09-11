@@ -20,10 +20,12 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) 
   loginManager: (token) => {
     sessionStorage.setItem('token', token);
     set({ token, isManagerLoggedIn: true });
-    // Refresh to ensure all sync hooks and state are fresh
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    // No page reload. This used to hard-refresh 100ms after logging in, because
+    // useWebSocket captured the token once on mount and reconnecting the socket
+    // as an admin was only possible by reloading everything. The hook now
+    // watches the token, so setting it here is enough: the socket reconnects
+    // authenticated and useSyncState's loadManagerData pulls the dashboard's
+    // data, without throwing away the app and rebuilding it.
   },
   
   logoutManager: () => {
