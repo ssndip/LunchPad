@@ -147,7 +147,10 @@ async function callOpenAIVision(apiKey: string, base64Image: string) {
         {
           role: 'user',
           content: [
-            { text: `You are an OCR expert. Extract all text from this menu image. 
+            // `type` is required on every content part; without it the request
+            // is rejected with "Missing required parameter: messages[0].content[0].type"
+            // and OCR failed for every image on the OpenAI provider.
+            { type: 'text', text: `You are an OCR expert. Extract all text from this menu image.
 
 SPECIAL INSTRUCTIONS FOR WEEKLY MENUS:
 - If the menu is a TABLE (e.g. Days as columns, Categories as rows), you MUST transcribe it into a vertical list grouped by day.

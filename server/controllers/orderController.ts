@@ -205,24 +205,46 @@ export const fetchSummaries = (req: Request, res: Response) => {
 export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { date } = req.params;
-    
-    const items = db.prepare(`
-      SELECT 
-        CASE 
-          WHEN json_extract(value, '$.side') IS NOT NULL AND json_extract(value, '$.side') != '' 
-          THEN json_extract(value, '$.name') || ' (' || json_extract(value, '$.side') || ')'
-          ELSE json_extract(value, '$.name')
-        END as name,
-        COUNT(*) as quantity,
-        SUM(json_extract(value, '$.price')) as total,
-        json_extract(value, '$.price') as price,
-        json_extract(value, '$.category') as category
-      FROM orders, json_each(items)
-      WHERE date = ?
-      GROUP BY name
-      ORDER BY name ASC
-    `).all(date);
-    
+
+    // Aggregated here rather than in SQL because the amount actually charged is
+    // `price + packaging fee`, and the fee depends on the item's tags, category
+    // and the global setting — `calculateItemPrice` is the same function
+    // checkout uses. Summing the bare `$.price` column left the fee out, so the
+    // itemised rows came to less than the day's totalSales they sit under.
+    const rows = db.prepare("SELECT items FROM orders WHERE date = ?").all(date) as { items: string }[];
+
+    const grouped = new Map<string, { name: string; quantity: number; total: number; price: number; category: string | null }>();
+
+    for (const row of rows) {
+      let items: any[] = [];
+      try {
+        items = row.items ? JSON.parse(row.items) : [];
+      } catch (e) {
+        console.error(`[DB Error] Failed to parse items for a ${date} order`, e);
+      }
+      if (!Array.isArray(items)) continue;
+
+      for (const item of items) {
+        const label = item?.side ? `${item.name} (${item.side})` : String(item?.name ?? '');
+        const unitPrice = Number(OrderService.calculateItemPrice(item).total.toFixed(2));
+        const existing = grouped.get(label);
+        if (existing) {
+          existing.quantity += 1;
+          existing.total = Number((existing.total + unitPrice).toFixed(2));
+        } else {
+          grouped.set(label, {
+            name: label,
+            quantity: 1,
+            total: unitPrice,
+            price: unitPrice,
+            category: item?.category ?? null,
+          });
+        }
+      }
+    }
+
+    const items = [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name));
+
     res.json({
       items,
       sides: []

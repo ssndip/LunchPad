@@ -354,10 +354,11 @@ export default function App() {
     try {
       const res = await api.unlock(code);
       if (res.success) {
-        s.setPublicAccessRequired(false);
-        if (res.token) {
-          // If public session token is provided, store it or handle accordingly
-        }
+        // Recorded against this browser session, not by clearing
+        // `publicAccessRequired` — that field mirrors the server setting and is
+        // rewritten by the 30s /api/init poll and by every WebSocket
+        // INITIAL_STATE, which used to re-lock the kiosk mid-order.
+        s.setPublicAccessUnlocked(true);
       } else {
         throw new Error(res.error || t('settings.invalid_code'));
       }
@@ -369,7 +370,7 @@ export default function App() {
 
 
   // ─── Render Logic ──────────────────────────────────────────────────────────
-  if (s.publicAccessRequired) {
+  if (s.publicAccessRequired && !s.publicAccessUnlocked) {
     return (
       <div className="relative">
         <PublicAccessCodeEntry onUnlock={handleUnlock} />

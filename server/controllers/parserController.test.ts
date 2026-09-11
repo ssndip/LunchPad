@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { Request, Response } from 'express';
-import { exportAllProfiles } from './parserController';
+import { exportAllProfiles, getVersions } from './parserController';
 import { db, initDb } from '../db';
 
 describe('parserController', () => {
@@ -111,5 +111,40 @@ describe('parserController', () => {
 
       spy.mockRestore();
     });
+  });
+});
+
+describe('getVersions', () => {
+  let mockRes: any;
+
+  beforeAll(() => {
+    initDb();
+  });
+
+  beforeEach(() => {
+    mockRes = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    db.exec("DELETE FROM parser_versions");
+    db.exec("DELETE FROM parser_profiles");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // The profileId placeholder was never bound, so better-sqlite3 refused the
+  // statement and every call answered 500 instead of the version history.
+  it('returns the requested profile\'s versions, newest first', () => {
+    db.prepare("INSERT INTO parser_profiles (id, name, description, status, isActive) VALUES ('p1', 'P1', '', 'published', 1)").run();
+    db.prepare("INSERT INTO parser_profiles (id, name, description, status, isActive) VALUES ('p2', 'P2', '', 'published', 0)").run();
+    const insert = db.prepare("INSERT INTO parser_versions (id, profileId, versionNumber, configJson, changeNote, createdAt) VALUES (?, ?, ?, '{}', '', '')");
+    insert.run('v1', 'p1', 1);
+    insert.run('v2', 'p1', 2);
+    insert.run('v3', 'p2', 1);
+
+    getVersions({ params: { id: 'p1' } } as any, mockRes);
+
+    expect(mockRes.status).not.toHaveBeenCalledWith(500);
+    const versions = mockRes.json.mock.calls[0][0];
+    expect(versions.map((v: any) => v.id)).toEqual(['v2', 'v1']);
   });
 });

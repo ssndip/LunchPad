@@ -19,6 +19,15 @@ export interface SettingsSlice {
   availableLanguages: { code: string, name: string }[];
   dynamicTranslations: Record<string, any>;
   publicAccessRequired: boolean;
+  /**
+   * This browser has already entered the public access code.
+   *
+   * Kept apart from `publicAccessRequired`, which mirrors the server setting
+   * and is overwritten on every /api/init poll and WebSocket INITIAL_STATE.
+   * Unlocking used to just flip that flag, so the kiosk re-locked itself within
+   * 30 seconds and the customer lost the cart they were building.
+   */
+  publicAccessUnlocked: boolean;
   publicAccessCode: string;
   announcement: string;
   aiProvider: string;
@@ -44,6 +53,7 @@ export interface SettingsSlice {
   setAvailableLanguages: (languages: { code: string, name: string }[]) => void;
   setDynamicTranslations: (translations: Record<string, any>) => void;
   setPublicAccessRequired: (v: boolean) => void;
+  setPublicAccessUnlocked: (v: boolean) => void;
   setPublicAccessCode: (v: string) => void;
   setAnnouncement: (v: string) => void;
   setAiProvider: (v: string) => void;
@@ -76,6 +86,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   ],
   dynamicTranslations: {},
   publicAccessRequired: false,
+  publicAccessUnlocked: sessionStorage.getItem('lunchpad_public_unlocked') === '1',
   publicAccessCode: '',
   announcement: '',
   aiProvider: 'openai',
@@ -104,6 +115,13 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   setAvailableLanguages: (availableLanguages) => set({ availableLanguages }),
   setDynamicTranslations: (dynamicTranslations) => set({ dynamicTranslations }),
   setPublicAccessRequired: (v) => set({ publicAccessRequired: v }),
+  setPublicAccessUnlocked: (v) => {
+    // Session-scoped: closing the tab asks for the code again, a reload or a
+    // poll does not.
+    if (v) sessionStorage.setItem('lunchpad_public_unlocked', '1');
+    else sessionStorage.removeItem('lunchpad_public_unlocked');
+    set({ publicAccessUnlocked: v });
+  },
   setPublicAccessCode: (v) => set({ publicAccessCode: v }),
   setAnnouncement: (v) => set({ announcement: v }),
   setAiProvider: (v) => set({ aiProvider: v }),

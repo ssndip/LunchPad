@@ -80,7 +80,10 @@ export const activateProfile = (req: Request, res: Response) => {
 export const getVersions = (req: Request, res: Response) => {
   const { id } = req.params; // profileId
   try {
-    const versions = db.prepare("SELECT * FROM parser_versions WHERE profileId = ? ORDER BY versionNumber DESC").all() as ParserVersion[];
+    // The profileId was never bound, so better-sqlite3 refused the statement
+    // ("Too few parameter values were provided") and every request to this
+    // endpoint came back as a 500 instead of the profile's version history.
+    const versions = db.prepare("SELECT * FROM parser_versions WHERE profileId = ? ORDER BY versionNumber DESC").all(id) as ParserVersion[];
     res.json(versions);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch versions" });
