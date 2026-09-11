@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CartItem } from '../../types';
+import { formatPrice } from '../../utils/formatPrice';
 
 interface KioskOrderBarProps {
   selectedItems: CartItem[];
@@ -70,7 +71,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                       {item.name}
                     </span>
                     <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
-                      €{(item.price * item.quantity).toFixed(2)}
+                      €{formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
 

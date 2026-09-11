@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import { settings } from '../config';
 
+/**
+ * Anthropic models this picks from, most preferred first. The previous code
+ * pinned `claude-3-5-sonnet-20240620` as both the first choice and the fallback,
+ * so it kept selecting that model even once the account had newer ones — and
+ * would break outright when a retired id stopped being served.
+ */
+const ANTHROPIC_PREFERRED_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
+const ANTHROPIC_FALLBACK_MODEL = 'claude-opus-5';
+
 export const suggestRules = async (req: Request, res: Response) => {
   console.log("[AI] Request Body:", JSON.stringify(req.body, null, 2));
   const { currentProfile, currentConfig, menuText, instructions, currentResult } = req.body;
@@ -117,7 +126,9 @@ async function callOpenAI(apiKey: string, profile: any, menuText: string, instru
   }
 
   const data = await response.json();
-  return cleanAndParseJSON(data.choices[0].message.content);
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error('OpenAI returned no completion to parse.');
+  return cleanAndParseJSON(content);
 }
 
 async function callOpenAIVision(apiKey: string, base64Image: string) {
@@ -373,17 +384,20 @@ async function getBestAnthropicModel(apiKey: string) {
       }
     });
     const data = await resp.json();
-    if (!data.data) return 'claude-3-5-sonnet-20240620';
-    
-    const models = data.data.map((m: any) => m.id);
-    // Prefer Sonnet 3.5, then regular Sonnet, then Haiku
-    if (models.includes('claude-3-5-sonnet-20240620')) return 'claude-3-5-sonnet-20240620';
+    if (!data.data) return ANTHROPIC_FALLBACK_MODEL;
+
+    const models: string[] = data.data.map((m: any) => m.id);
+    // Preference order, intersected with what this account can actually see.
+    for (const preferred of ANTHROPIC_PREFERRED_MODELS) {
+      if (models.includes(preferred)) return preferred;
+    }
+    // Last resort for accounts with restricted model access.
     const anySonnet = models.find((m: string) => m.includes('sonnet'));
     if (anySonnet) return anySonnet;
     const anyHaiku = models.find((m: string) => m.includes('haiku'));
-    return anyHaiku || 'claude-3-5-sonnet-20240620';
+    return anyHaiku || ANTHROPIC_FALLBACK_MODEL;
   } catch {
-    return 'claude-3-5-sonnet-20240620';
+    return ANTHROPIC_FALLBACK_MODEL;
   }
 }
 

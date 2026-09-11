@@ -45,6 +45,7 @@ import { HistoryReport } from './components/manager/tabs/HistoryReport';
 
 import { useTranslation } from './hooks/useTranslation';
 import { useSyncState } from './hooks/useSyncState';
+import { newClientOrderId } from './utils/orderId';
 
 /** Shown in the dashboard content area while a lazily-loaded tab chunk arrives. */
 const TabLoadingFallback = () => (
@@ -167,8 +168,13 @@ export default function App() {
       Array(i.quantity).fill({ id: i.id, side: i.side })
     );
 
+    // One id for this attempt, reused if it ends up queued and replayed. A
+    // response lost after the server committed is indistinguishable from a
+    // failure here, so without it the retry charged the customer a second time.
+    const clientOrderId = newClientOrderId();
+
     try {
-      const res = await api.placeOrder(finalRfid, items, s.menuVersion, finalPin);
+      const res = await api.placeOrder(finalRfid, items, s.menuVersion, finalPin, clientOrderId);
 
       if (!res.ok) {
         if (res.status === 409) {
@@ -181,7 +187,8 @@ export default function App() {
             rfid: finalRfid,
             items,
             menuVersion: s.menuVersion,
-            pin: finalPin || undefined
+            pin: finalPin || undefined,
+            clientOrderId
           });
           s.setSuccessMessage(t('kiosk.order_queued_offline') || 'Order queued offline! It will sync once connection is restored.');
           s.setShowSuccess(true);
@@ -208,7 +215,8 @@ export default function App() {
         rfid: finalRfid,
         items,
         menuVersion: s.menuVersion,
-        pin: finalPin || undefined
+        pin: finalPin || undefined,
+        clientOrderId
       });
       s.setSuccessMessage(t('kiosk.order_queued_offline') || 'Order queued offline! It will sync once connection is restored.');
       s.setShowSuccess(true);

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { broadcast, broadcastAdmin } from "../broadcast";
+import { WsMessage } from "../../src/types/websocket";
 import { 
   settings,
   setAdminWhitelistEnabledConfig, 
@@ -30,8 +31,8 @@ import {
 } from "../config";
 import { kioskOpen } from "./statusController";
 
-export const fetchSettings = (req: Request, res: Response) => {
-  res.json({ 
+/** The settings projection returned to the dashboard. */
+const currentSettings = () => ({ 
     adminWhitelistEnabled: settings.adminWhitelistEnabled,
     orderButtonEnabled: settings.orderButtonEnabled,
     testModeEnabled: settings.testModeEnabled,
@@ -56,228 +57,160 @@ export const fetchSettings = (req: Request, res: Response) => {
     publicAccessRequired: settings.publicAccessRequired,
     publicAccessCode: settings.publicAccessCode,
     globalAccess: settings.globalAccess
-  });
+});
+
+export const fetchSettings = (req: Request, res: Response) => {
+  res.json(currentSettings());
 };
 
+/**
+ * One settable field: how to validate it, where it lives in the `settings`
+ * table, how to apply it in memory, and what (if anything) clients are told.
+ */
+interface SettingSpec {
+  /** Field name on the request body, and the name used in error messages. */
+  name: string;
+  dbKey: string;
+  type: 'boolean' | 'number' | 'string' | 'array';
+  /** Wrapped in a closure so the import is resolved at call time, not when
+   *  this table is built — a module-level dereference breaks partial mocks. */
+  apply: (value: any) => void;
+  /** Extra validation beyond the type check; return an error message to reject. */
+  check?: (value: any) => string | undefined;
+  /** Built after the write, so the payload reflects committed state. */
+  message?: () => WsMessage;
+  /** Admin-only payloads (secrets) must not reach kiosk clients. */
+  adminOnly?: boolean;
+}
+
+/** How a value is serialised into the settings table's TEXT column. */
+const serialise = (type: SettingSpec['type'], value: any): string => {
+  switch (type) {
+    case 'boolean': return value ? '1' : '0';
+    case 'number': return String(value);
+    case 'array': return JSON.stringify(value);
+    default: return value;
+  }
+};
+
+const isValidType = (type: SettingSpec['type'], value: any): boolean => {
+  switch (type) {
+    case 'boolean': return typeof value === 'boolean';
+    case 'number': return typeof value === 'number';
+    case 'array': return Array.isArray(value);
+    default: return typeof value === 'string';
+  }
+};
+
+const simpleUpdate = (settingsPatch: Record<string, any>): WsMessage =>
+  ({ type: "SETTINGS_UPDATE", settings: settingsPatch } as WsMessage);
+
+const SETTING_SPECS: SettingSpec[] = [
+  { name: 'adminWhitelistEnabled', dbKey: 'admin_whitelist_enabled', type: 'boolean', apply: (v) => setAdminWhitelistEnabledConfig(v),
+    message: () => simpleUpdate({ adminWhitelistEnabled: settings.adminWhitelistEnabled }) },
+  { name: 'preIdentificationEnabled', dbKey: 'pre_identification_enabled', type: 'boolean', apply: (v) => setPreIdentificationEnabledConfig(v),
+    message: () => simpleUpdate({ preIdentificationEnabled: settings.preIdentificationEnabled }) },
+  { name: 'globalAccess', dbKey: 'global_access', type: 'boolean', apply: (v) => setGlobalAccessConfig(v),
+    message: () => simpleUpdate({ globalAccess: settings.globalAccess }) },
+  { name: 'orderButtonEnabled', dbKey: 'order_button_enabled', type: 'boolean', apply: (v) => setOrderButtonEnabledConfig(v),
+    message: () => simpleUpdate({ orderButtonEnabled: settings.orderButtonEnabled }) },
+  { name: 'testModeEnabled', dbKey: 'test_mode_enabled', type: 'boolean', apply: (v) => setTestModeConfig(v),
+    message: () => simpleUpdate({ testModeEnabled: settings.testModeEnabled }) },
+  { name: 'packagingFee', dbKey: 'packaging_fee', type: 'number', apply: (v) => setPackagingFeeConfig(v),
+    message: () => simpleUpdate({ packagingFee: settings.packagingFee }) },
+  { name: 'deliveryFee', dbKey: 'delivery_fee', type: 'number', apply: (v) => setDeliveryFeeConfig(v),
+    message: () => simpleUpdate({ deliveryFee: settings.deliveryFee }) },
+  // Both PWA flags are broadcast together, as the client expects the pair.
+  { name: 'kioskModeEnabled', dbKey: 'kiosk_mode_enabled', type: 'boolean', apply: (v) => setKioskModeConfig(v),
+    message: () => ({ type: "PWA_SETTINGS_UPDATE", kioskModeEnabled: settings.kioskModeEnabled, allowPWAInstall: settings.allowPWAInstall }) },
+  { name: 'allowPWAInstall', dbKey: 'allow_pwa_install', type: 'boolean', apply: (v) => setAllowPWAInstallConfig(v),
+    message: () => ({ type: "PWA_SETTINGS_UPDATE", kioskModeEnabled: settings.kioskModeEnabled, allowPWAInstall: settings.allowPWAInstall }) },
+  { name: 'systemLanguage', dbKey: 'system_language', type: 'string', apply: (v) => setSystemLanguageConfig(v),
+    message: () => simpleUpdate({ systemLanguage: settings.systemLanguage }) },
+  { name: 'bgnEnabled', dbKey: 'bgn_enabled', type: 'boolean', apply: (v) => setBgnEnabledConfig(v),
+    message: () => simpleUpdate({ bgnEnabled: settings.bgnEnabled }) },
+  { name: 'adminWhitelist', dbKey: 'admin_whitelist', type: 'string', apply: (v) => setAdminWhitelistConfig(v), adminOnly: true,
+    message: () => simpleUpdate({ adminWhitelist: settings.adminWhitelist }) },
+  { name: 'announcement', dbKey: 'announcement', type: 'string', apply: (v) => setAnnouncementConfig(v),
+    message: () => simpleUpdate({ announcement: settings.announcement }) },
+  { name: 'aiProvider', dbKey: 'ai_provider', type: 'string', apply: (v) => setAiProviderConfig(v),
+    message: () => simpleUpdate({ aiProvider: settings.aiProvider }) },
+  { name: 'aiApiKey', dbKey: 'ai_api_key', type: 'string', apply: (v) => setAiApiKeyConfig(v), adminOnly: true,
+    message: () => simpleUpdate({ aiApiKey: settings.aiApiKey }) },
+  { name: 'aiModel', dbKey: 'ai_model', type: 'string', apply: (v) => setAiModelConfig(v),
+    message: () => simpleUpdate({ aiModel: settings.aiModel }) },
+  { name: 'aiEndpoint', dbKey: 'ai_endpoint', type: 'string', apply: (v) => setAiEndpointConfig(v),
+    message: () => simpleUpdate({ aiEndpoint: settings.aiEndpoint }) },
+  { name: 'customCategories', dbKey: 'custom_categories', type: 'array', apply: (v) => { settings.customCategories = v; },
+    message: () => simpleUpdate({ customCategories: settings.customCategories }) },
+  { name: 'kioskAutoTiming', dbKey: 'kiosk_auto_timing', type: 'boolean', apply: (v) => setKioskAutoTimingConfig(v),
+    message: () => simpleUpdate({ kioskAutoTiming: settings.kioskAutoTiming }) },
+  { name: 'kioskOpenTime', dbKey: 'kiosk_open_time', type: 'string', apply: (v) => setKioskOpenTimeConfig(v),
+    message: () => simpleUpdate({ kioskOpenTime: settings.kioskOpenTime }) },
+  { name: 'kioskCloseTime', dbKey: 'kiosk_close_time', type: 'string', apply: (v) => setKioskCloseTimeConfig(v),
+    message: () => simpleUpdate({ kioskCloseTime: settings.kioskCloseTime }) },
+  { name: 'kioskCloseDay', dbKey: 'kiosk_close_day', type: 'number', apply: (v) => setKioskCloseDayConfig(v),
+    message: () => simpleUpdate({ kioskCloseDay: settings.kioskCloseDay }) },
+  { name: 'publicAccessRequired', dbKey: 'public_access_required', type: 'boolean', apply: (v) => setPublicAccessRequiredConfig(v),
+    message: () => simpleUpdate({ publicAccessRequired: settings.publicAccessRequired }) },
+  // Deliberately not broadcast: the code itself must not reach kiosk clients.
+  { name: 'publicAccessCode', dbKey: 'public_access_code', type: 'string', apply: (v) => setPublicAccessCodeConfig(v),
+    check: (v) => (v.length > 0 && !/^\d{4,6}$/.test(v))
+      ? "Public access code must be between 4 and 6 digits and contain only numbers"
+      : undefined },
+];
+
+/**
+ * Apply a partial settings update.
+ *
+ * Every provided field is validated before anything is written. This used to be
+ * a chain of inline blocks that each wrote to the database and broadcast as it
+ * went, so a bad field part-way down returned 400 having already committed and
+ * announced the fields ahead of it — the dashboard reported a failed save while
+ * the server had quietly kept half of it.
+ */
 export const updateSettings = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { 
-      adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, 
-      packagingFee, deliveryFee, kioskModeEnabled, allowPWAInstall,
-      systemLanguage, bgnEnabled, adminWhitelist, announcement,
-      aiProvider, aiApiKey, aiModel, aiEndpoint, preIdentificationEnabled, customCategories,
-      kioskAutoTiming, kioskOpenTime, kioskCloseTime, kioskCloseDay,
-      publicAccessRequired, publicAccessCode, globalAccess
-    } = req.body;
-    
-    if (adminWhitelistEnabled !== undefined) {
-      if (typeof adminWhitelistEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for adminWhitelistEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_whitelist_enabled", adminWhitelistEnabled ? "1" : "0");
-      setAdminWhitelistEnabledConfig(adminWhitelistEnabled);
-      broadcast({ 
-        type: "SETTINGS_UPDATE", 
-        settings: { 
-          adminWhitelistEnabled: adminWhitelistEnabled,
-        } 
-      });
-    }
+    const body = req.body ?? {};
+    const provided = SETTING_SPECS.filter(spec => body[spec.name] !== undefined);
 
-    if (preIdentificationEnabled !== undefined) {
-      if (typeof preIdentificationEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for preIdentificationEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("pre_identification_enabled", preIdentificationEnabled ? "1" : "0");
-      setPreIdentificationEnabledConfig(preIdentificationEnabled);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { preIdentificationEnabled } as any });
-    }
-
-    if (globalAccess !== undefined) {
-      if (typeof globalAccess !== 'boolean') return res.status(400).json({ error: "Invalid value for globalAccess" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("global_access", globalAccess ? "1" : "0");
-      setGlobalAccessConfig(globalAccess);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { globalAccess } as any });
-    }
-
-    if (orderButtonEnabled !== undefined) {
-      if (typeof orderButtonEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for orderButtonEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("order_button_enabled", orderButtonEnabled ? "1" : "0");
-      setOrderButtonEnabledConfig(orderButtonEnabled);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { orderButtonEnabled } });
-    }
-
-    if (testModeEnabled !== undefined) {
-      if (typeof testModeEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for testModeEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("test_mode_enabled", testModeEnabled ? "1" : "0");
-      setTestModeConfig(testModeEnabled);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { testModeEnabled } });
-    }
-    
-    if (packagingFee !== undefined) {
-      if (typeof packagingFee !== 'number') return res.status(400).json({ error: "Invalid value for packagingFee" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("packaging_fee", String(packagingFee));
-      setPackagingFeeConfig(packagingFee);
-      // Broadcoast the update so the kiosk sees the new fee immediately
-      broadcast({ type: "SETTINGS_UPDATE", settings: { packagingFee } as any }); // Added packagingFee to type or keep as any for now
-    }
-
-    if (deliveryFee !== undefined) {
-      if (typeof deliveryFee !== 'number') return res.status(400).json({ error: "Invalid value for deliveryFee" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("delivery_fee", String(deliveryFee));
-      setDeliveryFeeConfig(deliveryFee);
-      // Broadcoast the update
-      broadcast({ type: "SETTINGS_UPDATE", settings: { deliveryFee } as any });
-    }
-
-    if (kioskModeEnabled !== undefined) {
-      if (typeof kioskModeEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for kioskModeEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_mode_enabled", kioskModeEnabled ? "1" : "0");
-      setKioskModeConfig(kioskModeEnabled);
-      broadcast({ type: "PWA_SETTINGS_UPDATE", kioskModeEnabled, allowPWAInstall: settings.allowPWAInstall });
-    }
-
-    if (allowPWAInstall !== undefined) {
-      if (typeof allowPWAInstall !== 'boolean') return res.status(400).json({ error: "Invalid value for allowPWAInstall" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("allow_pwa_install", allowPWAInstall ? "1" : "0");
-      setAllowPWAInstallConfig(allowPWAInstall);
-      broadcast({ type: "PWA_SETTINGS_UPDATE", allowPWAInstall, kioskModeEnabled: settings.kioskModeEnabled });
-    }
-    
-    if (systemLanguage !== undefined) {
-      if (typeof systemLanguage !== 'string') return res.status(400).json({ error: "Invalid value for systemLanguage" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("system_language", systemLanguage);
-      setSystemLanguageConfig(systemLanguage);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { systemLanguage } as any });
-    }
-    
-    if (bgnEnabled !== undefined) {
-      if (typeof bgnEnabled !== 'boolean') return res.status(400).json({ error: "Invalid value for bgnEnabled" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("bgn_enabled", bgnEnabled ? "1" : "0");
-      setBgnEnabledConfig(bgnEnabled);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { bgnEnabled } as any });
-    }
-    
-    if (adminWhitelist !== undefined) {
-      if (typeof adminWhitelist !== 'string') return res.status(400).json({ error: "Invalid value for adminWhitelist" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("admin_whitelist", adminWhitelist);
-      setAdminWhitelistConfig(adminWhitelist);
-      broadcastAdmin({ type: "SETTINGS_UPDATE", settings: { adminWhitelist } as any });
-    }
-    
-    if (announcement !== undefined) {
-      if (typeof announcement !== 'string') return res.status(400).json({ error: "Invalid value for announcement" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("announcement", announcement);
-      setAnnouncementConfig(announcement);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { announcement } as any });
-    }
-
-    if (aiProvider !== undefined) {
-      if (typeof aiProvider !== 'string') return res.status(400).json({ error: "Invalid value for aiProvider" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_provider", aiProvider);
-      setAiProviderConfig(aiProvider);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { aiProvider } as any });
-    }
-
-    if (aiApiKey !== undefined) {
-      if (typeof aiApiKey !== 'string') return res.status(400).json({ error: "Invalid value for aiApiKey" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_api_key", aiApiKey);
-      setAiApiKeyConfig(aiApiKey);
-      broadcastAdmin({ type: "SETTINGS_UPDATE", settings: { aiApiKey } as any });
-    }
-
-    if (aiModel !== undefined) {
-      if (typeof aiModel !== 'string') return res.status(400).json({ error: "Invalid value for aiModel" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_model", aiModel);
-      setAiModelConfig(aiModel);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { aiModel } as any });
-    }
-
-    if (aiEndpoint !== undefined) {
-      if (typeof aiEndpoint !== 'string') return res.status(400).json({ error: "Invalid value for aiEndpoint" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("ai_endpoint", aiEndpoint);
-      setAiEndpointConfig(aiEndpoint);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { aiEndpoint } as any });
-    }
-
-    if (customCategories !== undefined) {
-      if (!Array.isArray(customCategories)) return res.status(400).json({ error: "Invalid value for customCategories" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("custom_categories", JSON.stringify(customCategories));
-      settings.customCategories = customCategories;
-      broadcast({ type: "SETTINGS_UPDATE", settings: { customCategories } as any });
-    }
-
-    if (kioskAutoTiming !== undefined) {
-      if (typeof kioskAutoTiming !== 'boolean') return res.status(400).json({ error: "Invalid value for kioskAutoTiming" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_auto_timing", kioskAutoTiming ? "1" : "0");
-      setKioskAutoTimingConfig(kioskAutoTiming);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskAutoTiming } as any });
-    }
-
-    if (kioskOpenTime !== undefined) {
-      if (typeof kioskOpenTime !== 'string') return res.status(400).json({ error: "Invalid value for kioskOpenTime" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_open_time", kioskOpenTime);
-      setKioskOpenTimeConfig(kioskOpenTime);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskOpenTime } as any });
-    }
-
-    if (kioskCloseTime !== undefined) {
-      if (typeof kioskCloseTime !== 'string') return res.status(400).json({ error: "Invalid value for kioskCloseTime" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_time", kioskCloseTime);
-      setKioskCloseTimeConfig(kioskCloseTime);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskCloseTime } as any });
-    }
-
-    if (kioskCloseDay !== undefined) {
-      if (typeof kioskCloseDay !== 'number') return res.status(400).json({ error: "Invalid value for kioskCloseDay" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("kiosk_close_day", String(kioskCloseDay));
-      setKioskCloseDayConfig(kioskCloseDay);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { kioskCloseDay } as any });
-    }
-    
-    if (publicAccessRequired !== undefined) {
-      if (typeof publicAccessRequired !== 'boolean') return res.status(400).json({ error: "Invalid value for publicAccessRequired" });
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("public_access_required", publicAccessRequired ? "1" : "0");
-      setPublicAccessRequiredConfig(publicAccessRequired);
-      broadcast({ type: "SETTINGS_UPDATE", settings: { publicAccessRequired } as any });
-    }
-
-    if (publicAccessCode !== undefined) {
-      if (typeof publicAccessCode !== 'string') return res.status(400).json({ error: "Invalid value for publicAccessCode" });
-      if (publicAccessCode.length > 0 && !/^\d{4,6}$/.test(publicAccessCode)) {
-        return res.status(400).json({ error: "Public access code must be between 4 and 6 digits and contain only numbers" });
+    // 1. Validate everything up front.
+    for (const spec of provided) {
+      const value = body[spec.name];
+      if (!isValidType(spec.type, value)) {
+        return res.status(400).json({ error: `Invalid value for ${spec.name}` });
       }
-      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("public_access_code", publicAccessCode);
-      setPublicAccessCodeConfig(publicAccessCode);
+      const problem = spec.check?.(value);
+      if (problem) {
+        return res.status(400).json({ error: problem });
+      }
     }
 
-    res.json({ 
-      success: true, 
-      adminWhitelistEnabled: settings.adminWhitelistEnabled, 
-      orderButtonEnabled: settings.orderButtonEnabled, 
-      testModeEnabled: settings.testModeEnabled,
-      packagingFee: settings.packagingFee,
-      deliveryFee: settings.deliveryFee,
-      kioskModeEnabled: settings.kioskModeEnabled,
-      allowPWAInstall: settings.allowPWAInstall,
-      systemLanguage: settings.systemLanguage,
-      bgnEnabled: settings.bgnEnabled,
-      adminWhitelist: settings.adminWhitelist,
-      announcement: settings.announcement,
-      aiProvider: settings.aiProvider,
-      aiApiKey: settings.aiApiKey,
-      aiModel: settings.aiModel,
-      aiEndpoint: settings.aiEndpoint,
-      preIdentificationEnabled: settings.preIdentificationEnabled,
-      customCategories: settings.customCategories,
-      kioskAutoTiming: settings.kioskAutoTiming,
-      kioskOpenTime: settings.kioskOpenTime,
-      kioskCloseTime: settings.kioskCloseTime,
-      kioskCloseDay: settings.kioskCloseDay,
-      publicAccessRequired: settings.publicAccessRequired,
-      publicAccessCode: settings.publicAccessCode,
-      globalAccess: settings.globalAccess
-    });
+    // 2. Persist as one unit, so a failure part-way leaves nothing applied.
+    db.transaction(() => {
+      const upsert = db.prepare(
+        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+      );
+      for (const spec of provided) {
+        upsert.run(spec.dbKey, serialise(spec.type, body[spec.name]));
+      }
+    })();
+
+    // 3. Only now update the in-memory config and tell clients.
+    for (const spec of provided) spec.apply(body[spec.name]);
+    for (const spec of provided) {
+      const message = spec.message?.();
+      if (!message) continue;
+      if (spec.adminOnly) broadcastAdmin(message);
+      else broadcast(message);
+    }
+
+    res.json({ success: true, ...currentSettings() });
   } catch (err: any) {
     next(err);
   }
 };
+
 
 export const updatePin = (req: Request, res: Response, next: NextFunction) => {
   try {

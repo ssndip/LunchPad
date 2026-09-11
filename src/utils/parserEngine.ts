@@ -18,6 +18,25 @@ function safeFloat(value: any, fallback: number = 0): number {
   return isNaN(num) ? fallback : num;
 }
 
+/** Matches nothing, standing in for a pattern that would not compile. */
+const NEVER_MATCHES = /(?!)/;
+
+/**
+ * Compile an admin-supplied pattern without letting a typo throw.
+ *
+ * These come from the parser rules editor, so an unbalanced bracket is a normal
+ * authoring mistake rather than a programming error — it should show up as a
+ * rule that does not match, not as a blank screen.
+ */
+const compilePattern = (pattern: string, flags: string, label: string): RegExp => {
+  try {
+    return new RegExp(pattern, flags);
+  } catch (err) {
+    console.error(`[Parser] Ignoring invalid pattern for ${label}:`, err);
+    return NEVER_MATCHES;
+  }
+};
+
 /**
  * Robust Menu Parser Engine
  */
@@ -41,32 +60,35 @@ export class MenuParserEngine {
   constructor(config: ParserConfig) {
     this.config = config;
 
-    // Precompile entity extraction regexes
-    this.dateRegex = new RegExp(this.config.entityExtraction.datePattern, 'i');
-    this.itemPrefixRegex = new RegExp(this.config.entityExtraction.itemPrefixPattern);
-    this.weightRegex = new RegExp(this.config.entityExtraction.weightPattern, 'i');
-    this.boxFeeRegex = new RegExp(this.config.entityExtraction.boxFeePattern, 'i');
-    this.boxKeywordRegex = new RegExp(this.config.entityExtraction.boxKeywordPattern, 'i');
-    this.priceRegex = new RegExp(this.config.entityExtraction.pricePattern, 'i');
+    // Precompile entity extraction regexes. Every pattern here is editable by
+    // an admin in the parser rules tab, so one malformed pattern used to throw
+    // out of the constructor and take the whole tab down with it. A bad pattern
+    // is now reported and skipped: it simply never matches.
+    this.dateRegex = compilePattern(this.config.entityExtraction.datePattern, 'i', 'datePattern');
+    this.itemPrefixRegex = compilePattern(this.config.entityExtraction.itemPrefixPattern, '', 'itemPrefixPattern');
+    this.weightRegex = compilePattern(this.config.entityExtraction.weightPattern, 'i', 'weightPattern');
+    this.boxFeeRegex = compilePattern(this.config.entityExtraction.boxFeePattern, 'i', 'boxFeePattern');
+    this.boxKeywordRegex = compilePattern(this.config.entityExtraction.boxKeywordPattern, 'i', 'boxKeywordPattern');
+    this.priceRegex = compilePattern(this.config.entityExtraction.pricePattern, 'i', 'pricePattern');
     this.bgnNoiseRegex = this.config.entityExtraction.bgnNoisePattern
-      ? new RegExp(this.config.entityExtraction.bgnNoisePattern, 'gi')
+      ? compilePattern(this.config.entityExtraction.bgnNoisePattern, 'gi', 'bgnNoisePattern')
       : null;
 
     // Precompile preprocessing regexes
     this.preprocessRegexCache = new Map();
     for (const rule of this.config.preprocessing) {
       if ((rule.type === 'replace' || rule.type === 'remove') && rule.pattern) {
-        this.preprocessRegexCache.set(rule.id, new RegExp(rule.pattern, 'gi'));
+        this.preprocessRegexCache.set(rule.id, compilePattern(rule.pattern, 'gi', `preprocessing/${rule.id}`));
       }
     }
 
     // Precompile ignore rules regexes
-    this.ignoreRegexCache = this.config.ignoreRules.map(rule => new RegExp(rule.pattern, 'i'));
+    this.ignoreRegexCache = this.config.ignoreRules.map(rule => compilePattern(rule.pattern, 'i', `ignoreRule/${rule.id}`));
 
     // Precompile section detection regexes
     this.sectionRegexCache = new Map();
     for (const rule of this.config.sectionDetection) {
-      this.sectionRegexCache.set(rule.id, new RegExp(`^(${rule.pattern})$`, 'i'));
+      this.sectionRegexCache.set(rule.id, compilePattern(`^(${rule.pattern})$`, 'i', `section/${rule.id}`));
     }
   }
 

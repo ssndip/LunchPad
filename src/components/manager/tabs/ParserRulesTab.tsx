@@ -52,6 +52,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { suggestParserRules, getParserFixtures } from "../../../api";
 import { useStore } from "../../../store/useStore";
 import { ParseResult } from "../../../utils/menuParser";
+import { formatPrice } from '../../../utils/formatPrice';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -999,7 +1000,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                   {aiSandboxResult.items.slice(0, 5).map((item: any, idx: number) => (
                                     <div key={idx} className="flex justify-between text-[10px]">
                                       <span className="text-neutral-600 truncate mr-2">{item.name}</span>
-                                      <span className="font-mono font-bold text-indigo-600">€{item.price.toFixed(2)}</span>
+                                      <span className="font-mono font-bold text-indigo-600">€{formatPrice(item.price)}</span>
                                     </div>
                                   ))}
                                   {aiSandboxResult.items.length > 5 && (
@@ -1497,7 +1498,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                                 />
                               )}
                               <span className="font-mono font-black text-neutral-800 shrink-0">
-                                {item.price.toFixed(2)}€
+                                {formatPrice(item.price)}€
                               </span>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                 <button

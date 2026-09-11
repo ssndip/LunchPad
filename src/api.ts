@@ -88,11 +88,13 @@ export const placeOrder = async (
   items: { id: number, side?: string }[],
   menuVersion?: number,
   pin?: string,
+  /** Identifies this attempt so a replay is not charged again. */
+  clientOrderId?: string,
 ): Promise<Response> => {
   return fetch('/api/v1/order', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rfid: rfid?.trim() || undefined, pin, items, menuVersion }),
+    body: JSON.stringify({ rfid: rfid?.trim() || undefined, pin, items, menuVersion, clientOrderId }),
   });
 };
 

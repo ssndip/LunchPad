@@ -33,6 +33,11 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let heartbeatTimer: ReturnType<typeof setTimeout>;
+    // Closing a socket fires `onclose` asynchronously — after this effect's
+    // cleanup has already cleared the timers. Without this flag that handler
+    // scheduled another reconnect nobody could cancel, leaving a socket
+    // reconnecting forever behind an unmounted component.
+    let disposed = false;
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -63,7 +68,13 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
       };
 
       ws.current.onmessage = (event) => {
-        const message = JSON.parse(event.data as string) as WsMessage;
+        let message: WsMessage;
+        try {
+          message = JSON.parse(event.data as string) as WsMessage;
+        } catch (err) {
+          console.warn('[WS] Ignoring unparseable frame', err);
+          return;
+        }
         const h = handlersRef.current;
 
         // Reset heartbeat on any message (especially PING)
@@ -124,6 +135,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
       ws.current.onclose = (event) => {
         console.log('[WS] Disconnected. Code:', event.code);
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
+        if (disposed) return;
 
         if (event.code === 4003) {
           handlersRef.current.onConnectionError('Access Denied');
@@ -134,6 +146,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
           console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (retry #${retryCount.current + 1})...`);
           
           reconnectTimer = setTimeout(() => {
+            if (disposed) return;
             retryCount.current += 1;
             connect();
           }, delay);
@@ -149,6 +162,7 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
     connect();
 
     return () => {
+      disposed = true;
       ws.current?.close();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearTimeout(heartbeatTimer);

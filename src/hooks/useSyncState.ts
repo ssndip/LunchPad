@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useWebSocket } from './useWebSocket';
 import * as api from '../api';
+import { syncOfflineOrders } from '../utils/offlineSync';
 import { Language } from '../translations';
 
 export function useSyncState() {
@@ -265,35 +266,42 @@ export function useSyncState() {
   // Offline Synchronization Queue Logic
   const offlineQueue = useStore(s => s.offlineQueue);
   const setOfflineQueue = useStore(s => s.setOfflineQueue);
+  const addFailedOrders = useStore(s => s.addFailedOrders);
+
+  // Three separate triggers can fire this (the `online` event, the 15s timer,
+  // and the connection-restored effect). Without a guard they could replay the
+  // same queue snapshot concurrently and charge someone twice.
+  const syncInFlight = useRef(false);
 
   const syncOfflineQueue = useCallback(async () => {
-    if (offlineQueue.length === 0) return;
+    if (offlineQueue.length === 0 || syncInFlight.current) return;
+    syncInFlight.current = true;
     console.log(`[Offline Sync] Syncing ${offlineQueue.length} offline orders...`);
-    
-    let currentQueue = [...offlineQueue];
-    let hasChanges = false;
 
-    for (const order of offlineQueue) {
-      try {
-        const res = await api.placeOrder(order.rfid, order.items, order.menuVersion, order.pin);
-        if (res.ok || res.status < 500) {
-          currentQueue = currentQueue.filter(item => item.tempId !== order.tempId);
-          hasChanges = true;
-          console.log(`[Offline Sync] Order ${order.tempId} processed by server (status ${res.status}). Removed from queue.`);
-        } else {
-          console.warn(`[Offline Sync] Server error ${res.status} during order sync. Stopping sync.`);
-          break;
-        }
-      } catch (err) {
-        console.log('[Offline Sync] Connection still offline. Stopping sync.', err);
-        break;
+    try {
+      const { pending, failed, syncedCount } = await syncOfflineOrders(
+        offlineQueue,
+        (order) => api.placeOrder(order.rfid, order.items, order.menuVersion, order.pin, order.clientOrderId),
+      );
+
+      if (syncedCount > 0) console.log(`[Offline Sync] ${syncedCount} order(s) accepted.`);
+
+      if (failed.length > 0) {
+        // Surfaced rather than dropped: these will never succeed on a retry, so
+        // somebody has to know they happened.
+        failed.forEach(o =>
+          console.error(`[Offline Sync] Order ${o.tempId} (${o.rfid || 'PIN'}) rejected: ${o.reason}`)
+        );
+        addFailedOrders(failed);
       }
-    }
 
-    if (hasChanges) {
-      setOfflineQueue(currentQueue);
+      if (pending.length !== offlineQueue.length || failed.length > 0) {
+        setOfflineQueue(pending);
+      }
+    } finally {
+      syncInFlight.current = false;
     }
-  }, [offlineQueue, setOfflineQueue]);
+  }, [offlineQueue, setOfflineQueue, addFailedOrders]);
 
   // Sync when online event is triggered
   useEffect(() => {

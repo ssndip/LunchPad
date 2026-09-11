@@ -20,6 +20,21 @@ import { formatDate } from '../../utils/dateFormatter';
 
 import { useTranslation } from '../../hooks/useTranslation';
 
+/**
+ * Offline card check against the RFID list cached by App.tsx. Reading it is
+ * deliberately total: a corrupt or missing cache must not throw out of the scan
+ * handler, it just means we cannot vouch for the card while offline.
+ */
+const isCachedRfid = (scannedRfid: string): boolean => {
+  try {
+    const cached = localStorage.getItem('lunchpad_valid_rfids');
+    const validRfids = cached ? JSON.parse(cached) : [];
+    return Array.isArray(validRfids) && validRfids.includes(scannedRfid.toLowerCase());
+  } catch {
+    return false;
+  }
+};
+
 interface KioskViewProps {
   menu: MenuItem[];
   groupedMenu: Record<string, MenuItem[]>;
@@ -87,6 +102,8 @@ export const KioskView: React.FC<KioskViewProps> = ({
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const { kioskModeEnabled, setError } = useStore();
+  const failedOrders = useStore(s => s.failedOrders);
+  const clearFailedOrders = useStore(s => s.clearFailedOrders);
   const { isStandalone, enterFullscreen } = usePWA();
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [isIdentifying, setIsIdentifying] = useState(false);
@@ -231,11 +248,14 @@ export const KioskView: React.FC<KioskViewProps> = ({
 
 
 
-  const handleNfcScan = useCallback((scannedRfid: string) => {
+  /**
+   * Shared by both identification paths — an NFC tap and an RFID swipe are the
+   * same gesture as far as the kiosk is concerned. They were two copies of this
+   * logic, one of which was an inline arrow passed straight to useRfidScanner.
+   */
+  const handleCardScan = useCallback((scannedRfid: string) => {
     if (connectionError) {
-      const cached = localStorage.getItem('lunchpad_valid_rfids');
-      const validRfids = cached ? JSON.parse(cached) : [];
-      if (!validRfids.includes(scannedRfid.toLowerCase())) {
+      if (!isCachedRfid(scannedRfid)) {
         setError("Card not registered (offline)");
         return;
       }
@@ -258,43 +278,16 @@ export const KioskView: React.FC<KioskViewProps> = ({
     }
   }, [connectionError, setError, preIdentificationEnabled, rfid, onIdentify, pendingItem, onToggleItem, onOrder, setRfid]);
 
+  const scannersActive = ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly);
+
   const nfcScanner = useNfcScanner({
-    active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
-    onScan: handleNfcScan,
+    active: scannersActive,
+    onScan: handleCardScan,
   });
 
   useRfidScanner({
-    active: ((isIdentifying || selectedItems.length > 0 || (preIdentificationEnabled && !rfid)) && !userHistoryOpen && orderButtonEnabled && !isReadOnly),
-    onScan: (scannedRfid) => {
-      if (connectionError) {
-        const cached = localStorage.getItem('lunchpad_valid_rfids');
-        const validRfids = cached ? JSON.parse(cached) : [];
-        if (!validRfids.includes(scannedRfid.toLowerCase())) {
-          setError("Card not registered (offline)");
-          return;
-        }
-      }
-      if (preIdentificationEnabled) {
-        // If scanning a DIFFERENT card than the current session
-        if (scannedRfid !== rfid) {
-          if (onIdentify) onIdentify(scannedRfid);
-          setIsIdentifying(false);
-          triggerHaptic('success');
-          
-          // If we were waiting for identification to add an item
-          if (pendingItem) {
-            onToggleItem(pendingItem);
-            setPendingItem(null);
-          }
-        } else {
-          // If scanning the SAME card, proceed to order
-          onOrder(scannedRfid);
-        }
-      } else {
-        setRfid(scannedRfid);
-        onOrder(scannedRfid);
-      }
-    },
+    active: scannersActive,
+    onScan: handleCardScan,
   });
 
   const formatDateLabel = (dateStr: string) => {
@@ -555,6 +548,30 @@ export const KioskView: React.FC<KioskViewProps> = ({
           >
             <AlertCircle className="w-3.5 h-3.5" />
             <span>{error}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Offline orders the server refused for good. Persistent by design —
+          these are lost meals and lost charges, so the banner stays until
+          somebody acknowledges it rather than fading like a toast. */}
+      <AnimatePresence>
+        {failedOrders.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 max-w-[92vw] bg-red-700 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 z-50"
+            role="alert"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <div className="text-xs leading-snug">
+              <p className="font-bold uppercase tracking-tight">{t('kiosk.sync_failed_title')}</p>
+              <p className="opacity-90">{failedOrders.length} {t('kiosk.sync_failed_body')}</p>
+            </div>
+            <button
+              onClick={clearFailedOrders}
+              className="ml-1 shrink-0 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-[10px] font-bold uppercase tracking-widest transition-colors"
+            >
+              {t('kiosk.sync_failed_dismiss')}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

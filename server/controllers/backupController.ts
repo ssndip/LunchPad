@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
+import { initSettings, settings } from '../config';
+import { broadcast } from '../broadcast';
+import { getMenu } from './menuController';
+import { kioskOpen, loadKioskStatus } from './statusController';
 
 const TABLES = [
   'cards',
@@ -38,22 +42,52 @@ export const importSystemBundle = (req: Request, res: Response) => {
   if (!bundle || bundle.type !== 'LUNCHPAD_FULL_SYSTEM_SNAPSHOT') {
     return res.status(400).json({ error: 'Invalid backup format' });
   }
+  if (!bundle.data || typeof bundle.data !== 'object' || Array.isArray(bundle.data)) {
+    return res.status(400).json({ error: 'Invalid backup format: missing data' });
+  }
+
+  // Only tables the bundle actually carries are touched. The loop used to
+  // DELETE every table before looking at what was in the bundle, so a bundle
+  // that omitted one emptied it and committed — and an omitted `settings`
+  // meant losing `jwt_secret` (making every card PIN hash unverifiable) and
+  // `admin_pin` (dropping the dashboard back to the default PIN).
+  // A table present but empty is an explicit "this was empty", and is honoured.
+  const tablesToRestore = TABLES.filter(table => bundle.data[table] !== undefined);
+
+  // Validated up front so a malformed bundle is refused before any row is
+  // deleted, rather than surfacing as a 500 halfway through.
+  for (const table of tablesToRestore) {
+    if (!Array.isArray(bundle.data[table])) {
+      return res.status(400).json({ error: `Invalid backup format: "${table}" is not an array` });
+    }
+  }
+  if (tablesToRestore.length === 0) {
+    return res.status(400).json({ error: 'Invalid backup format: no known tables present' });
+  }
 
   // Disable foreign keys on the connection BEFORE starting the transaction
   db.pragma('foreign_keys = OFF');
 
+  const restored: Record<string, number> = {};
+
   try {
     const transaction = db.transaction(() => {
-      for (const table of TABLES) {
+      for (const table of tablesToRestore) {
+        const tableData = bundle.data[table] as any[];
+
         db.prepare(`DELETE FROM ${table}`).run();
-        
-        const tableData = bundle.data[table];
-        if (!tableData || tableData.length === 0) continue;
+        restored[table] = tableData.length;
+        if (tableData.length === 0) continue;
 
         // 2. Fetch valid column names in the current database schema to support divergent backups
         const tableInfo = db.prepare(`PRAGMA table_info(${table})`).all() as any[];
-        const validColumns = tableInfo.map((c: any) => c.name);
-        const columns = Object.keys(tableData[0]).filter(col => validColumns.includes(col));
+        const validColumns = new Set(tableInfo.map((c: any) => c.name));
+
+        // Union of keys across every row, not just the first: a bundle whose
+        // first row happened to omit a nullable column previously decided the
+        // column list for the whole table, and later rows bound `undefined`.
+        const columns = [...new Set(tableData.flatMap(row => Object.keys(row || {})))]
+          .filter(col => validColumns.has(col));
         if (columns.length === 0) continue;
 
         const placeholders = columns.map(() => '?').join(', ');
@@ -61,14 +95,33 @@ export const importSystemBundle = (req: Request, res: Response) => {
         const insertStmt = db.prepare(sql);
 
         for (const row of tableData) {
-          const values = columns.map(col => row[col]);
+          // `undefined` is not bindable; a column this row lacks is NULL.
+          const values = columns.map(col => (row?.[col] === undefined ? null : row[col]));
           insertStmt.run(...values);
         }
       }
     });
 
     transaction();
-    res.json({ success: true, message: 'System restored successfully' });
+
+    // The process still holds the pre-restore config in memory — menuVersion,
+    // fees, the JWT secret — so without this it keeps serving the old values
+    // until someone restarts it. initSettings also re-seeds anything the
+    // restored bundle left missing.
+    initSettings();
+    loadKioskStatus();
+
+    // Connected kiosks are still showing the old menu against the old version,
+    // which would make their next order fail the version check.
+    broadcast({
+      type: "MENU_UPDATE",
+      menu: getMenu(db),
+      version: settings.menuVersion,
+      menuDate: settings.menuDate
+    });
+    broadcast({ type: "STATUS_UPDATE", kioskOpen });
+
+    res.json({ success: true, message: 'System restored successfully', restored });
   } catch (err: any) {
     console.error('[Backup] Restore failed:', err);
     res.status(500).json({ error: 'System restore failed: ' + err.message });

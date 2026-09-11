@@ -6,12 +6,64 @@ if (!process.env.JWT_SECRET) {
   console.warn("[Config] WARNING: JWT_SECRET environment variable is not set. Using a default development secret. This is NOT recommended for production!");
 }
 
+/**
+ * Hash a card PIN.
+ *
+ * Deterministic on purpose: checkout looks a PIN up with an indexed equality
+ * match, which a per-row salt would turn into a full scan. The security comes
+ * from the pepper, which never leaves the server.
+ *
+ * That pepper used to be `settings.jwtSecret`, which tied every stored PIN to a
+ * value operators are told to rotate. Rotating it — or restoring a backup
+ * carrying a different one — invalidated every PIN at once, and because the
+ * migration below treats any 64-character value as already hashed, it could
+ * never repair itself. `pin_pepper` is seeded from the JWT secret the first
+ * time (so hashes written under the old scheme keep verifying) and then stays
+ * put. See initSettings.
+ */
 export const hashPin = (pin: string): string => {
-  return crypto.createHmac("sha256", settings.jwtSecret || "lunchpad-default-dev-secret-key-12345").update(pin).digest("hex");
+  const pepper = settings.pinPepper || settings.jwtSecret || "lunchpad-default-dev-secret-key-12345";
+  return crypto.createHmac("sha256", pepper).update(pin).digest("hex");
+};
+
+/**
+ * PIN used when nothing else has been configured, so a fresh install is
+ * reachable. Overridden by the ADMIN_PIN environment variable, and retired for
+ * good the moment an admin sets a PIN in the dashboard.
+ */
+export const DEFAULT_ADMIN_PIN = "0000";
+
+/** Constant-time comparison, so a wrong PIN reveals nothing through timing. */
+const safeEqual = (a: string, b: string): boolean => {
+  const bufA = Buffer.from(String(a), "utf8");
+  const bufB = Buffer.from(String(b), "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 };
 
 export const cleanRfid = (rfid: string | null | undefined): string => {
   return String(rfid || "").trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+};
+
+/**
+ * Express `trust proxy` value, from the TRUST_PROXY environment variable.
+ *
+ * Defaults to `false`: believing X-Forwarded-For while the server is directly
+ * reachable lets any client choose its own `req.ip`, which defeats the admin IP
+ * whitelist and the skip rules on both rate limiters.
+ *
+ * Behind a reverse proxy, prefer an address list naming who may set the header
+ * (`loopback, uniquelocal` for an nginx on the same host or docker network)
+ * over a hop count. A hop count trusts whoever connected, so it reopens the
+ * spoof for anyone reaching this server directly — which is the normal case
+ * when the same deployment is also served over the LAN on http://<ip>:PORT.
+ */
+export const parseTrustProxy = (raw?: string): boolean | number | string => {
+  const value = (raw || "").trim();
+  if (value === "" || value === "0" || value.toLowerCase() === "false") return false;
+  if (value.toLowerCase() === "true") return true;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value; // Express also accepts "loopback" or a comma-separated subnet list
 };
 
 // --- Settings Object (Ensures live bindings across modules) ---
@@ -37,6 +89,8 @@ export const settings = {
   publicAccessRequired: false,
   adminPin: "",
   jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex"),
+  /** Key for hashPin. Seeded once and deliberately never rotated. */
+  pinPepper: "",
   enableTestBypass: process.env.ENABLE_TEST_BYPASS === 'true' || process.env.NODE_ENV !== 'production',
   adminWhitelist: process.env.ADMIN_WHITELIST || "127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12",
   kioskAutoTiming: false,
@@ -88,12 +142,14 @@ export const verifyAdminPin = (pin: string): boolean => {
       if (isHashed) {
         return bcrypt.compareSync(pin, dbVal);
       } else {
-        return pin === dbVal;
+        return safeEqual(pin, dbVal);
       }
     }
-    // Secure fallback: If not set in DB yet, verify against the env ADMIN_PIN or default to "0000"
-    const defaultPin = process.env.ADMIN_PIN || "0000";
-    return pin === defaultPin || pin === "0000";
+    // No PIN stored yet: fall back to ADMIN_PIN, or DEFAULT_ADMIN_PIN so a fresh
+    // install can be logged into. This branch used to also accept "0000"
+    // unconditionally, which kept the default working as a second, permanent
+    // password even after ADMIN_PIN had been changed.
+    return safeEqual(pin, process.env.ADMIN_PIN || DEFAULT_ADMIN_PIN);
   } catch (err) {
     console.error("[Auth] PIN verification error", err);
     return false;
@@ -124,6 +180,20 @@ export const initSettings = () => {
     }
   }
   settings.jwtSecret = secret;
+
+  // Seed the PIN pepper before anything hashes a PIN. On an existing install
+  // this adopts the JWT secret the stored hashes were made with, so they keep
+  // verifying; from here on the two are independent and rotating JWT_SECRET no
+  // longer locks every cardholder out.
+  const pepperRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("pin_pepper") as { value: string } | undefined;
+  if (pepperRecord && pepperRecord.value) {
+    settings.pinPepper = pepperRecord.value;
+  } else {
+    settings.pinPepper = settings.jwtSecret;
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .run("pin_pepper", settings.pinPepper);
+    console.log("[Config] Seeded PIN pepper from the current JWT secret; card PINs are now independent of JWT_SECRET");
+  }
 
   const whitelistEnabled = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_whitelist_enabled") as { value: string } | undefined;
   if (!whitelistEnabled) {
@@ -347,6 +417,12 @@ export const initSettings = () => {
     settings.adminPin = currentPin;
   } else {
     settings.adminPin = "";
+    if ((process.env.ADMIN_PIN || DEFAULT_ADMIN_PIN) === DEFAULT_ADMIN_PIN) {
+      console.warn(
+        `[Config] WARNING: No admin PIN is set, so the default "${DEFAULT_ADMIN_PIN}" grants dashboard access. ` +
+        `Set one in Settings, or via the ADMIN_PIN environment variable.`
+      );
+    }
   }
 
   const customCatsRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("custom_categories") as { value: string } | undefined;
@@ -380,8 +456,14 @@ export const initSettings = () => {
     db.transaction(() => {
       const updateStmt = db.prepare("UPDATE cards SET pin = ? WHERE rfid = ?");
       userCards.forEach(c => {
-        // Plain-text user PIN is typically a 6-digit numeric string (not a 64-character SHA-256 hex string)
-        const isHashed = c.pin.length === 64; 
+        // A blank PIN is the absence of one. Hashing it gave every such card
+        // the same value, which is both meaningless and a uniqueness conflict.
+        if (!String(c.pin).trim()) {
+          updateStmt.run(null, c.rfid);
+          return;
+        }
+        // Plain-text user PIN is a 6-digit numeric string, never a 64-character hex digest.
+        const isHashed = /^[0-9a-f]{64}$/i.test(c.pin);
         if (!isHashed) {
           const hashed = hashPin(c.pin);
           updateStmt.run(hashed, c.rfid);

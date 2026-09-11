@@ -54,7 +54,13 @@ export interface Card {
   ownerName: string;
   balance: number;
   isAdmin?: boolean;
+  /**
+   * Write-only. The server never sends a PIN back — omit the field to leave a
+   * stored PIN untouched, or send "" to clear it.
+   */
   pin?: string;
+  /** Whether a PIN is set. The digest itself never leaves the server. */
+  hasPin?: boolean;
 }
 
 export interface DailySummary {

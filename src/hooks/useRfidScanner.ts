@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 
+
 const MIN_RFID_LENGTH = 4;
 
 interface UseRfidScannerOptions {
@@ -28,6 +29,16 @@ export function useRfidScanner({
   const bufferRef = useRef('');
   const firstKeyTimeRef = useRef<number>(0);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // `onScan` is read through a ref so that a caller passing a fresh inline
+  // arrow on every render does not change `handleKeyDown`'s identity. It used
+  // to: the effect below then re-ran mid-swipe, and its cleanup cleared
+  // `bufferRef`, so a re-render between the first and last keystroke delivered a
+  // truncated card number (or nothing) instead of the scanned one.
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -57,7 +68,7 @@ export function useRfidScanner({
         // Differentiate hardware scanner (rapid successive keystrokes) from manual human typing
         const averageDelay = bufferLength > 0 ? totalDuration / bufferLength : 0;
         if (raw.length >= minLength && averageDelay < 100) {
-          onScan(raw);
+          onScanRef.current(raw);
         }
         return;
       }
@@ -75,9 +86,11 @@ export function useRfidScanner({
         }, 2000);
       }
     },
-    [onScan, minLength],
+    [minLength],
   );
 
+  // Depends only on `active` and the now-stable `handleKeyDown`, so an ordinary
+  // re-render no longer detaches the listener or discards a scan in progress.
   useEffect(() => {
     if (!active) {
       bufferRef.current = '';
@@ -87,6 +100,7 @@ export function useRfidScanner({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       bufferRef.current = '';
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [active, handleKeyDown]);
 }

@@ -17,3 +17,17 @@ services:
       - ADMIN_PIN=0000
       - ENABLE_TEST_BYPASS=true
       - DISABLE_ADMIN_WHITELIST=true # Set to true to bypass IP whitelist checks for remote admin login
+      # Which peers may set X-Forwarded-For. Trust it only when the connection
+      # itself comes from loopback or a private address — i.e. the Nginx that
+      # terminates HTTPS for APP_URL — and never from a public one, so a client
+      # reaching the container directly cannot choose its own req.ip.
+      # Deliberately an address list rather than a hop count: a hop count would
+      # trust the header on direct LAN/IP connections too. Works for both the
+      # proxied URL and plain http://<lan-ip>:3400 access.
+      # Requires Nginx to set X-Forwarded-For (proxy_set_header X-Forwarded-For
+      # $proxy_add_x_forwarded_for), which is the default recipe.
+      - TRUST_PROXY=loopback, uniquelocal
+      # The canteen's timezone. Without it the container runs UTC, so an
+      # 08:00-11:00 kiosk window opens at 10:00 or 11:00 local and the peak
+      # hours chart is shifted by the same offset. Change if not in Bulgaria.
+      - TZ=Europe/Sofia

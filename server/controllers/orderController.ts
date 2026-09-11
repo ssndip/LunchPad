@@ -5,6 +5,8 @@ import { kioskOpen } from "./statusController";
 import { settings, hashPin, cleanRfid as cleanRfidUtil } from "../config";
 import * as OrderService from "../services/orderService";
 import { getMenu } from "./menuController";
+import { localDayOfWeek, localHHmm } from "../utils/localTime";
+import { splitFeeCents } from "../utils/splitFee";
 
 export const getOrders = (limit = 50) => {
   try {
@@ -35,13 +37,28 @@ interface RequestedItem {
 
 export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { rfid, pin, items: requestedItems, menuVersion: requestedVersion } = req.body as { rfid?: string, pin?: string, items: OrderService.RequestedItem[], menuVersion?: number };
+    const { rfid, pin, items: requestedItems, menuVersion: requestedVersion, clientOrderId } = req.body as { rfid?: string, pin?: string, items: OrderService.RequestedItem[], menuVersion?: number, clientOrderId?: string };
 
     if (pin !== undefined && typeof pin !== 'string') {
       return res.status(400).json({ error: "Invalid PIN format" });
     }
     if (rfid !== undefined && typeof rfid !== 'string') {
       return res.status(400).json({ error: "Invalid RFID format" });
+    }
+    if (clientOrderId !== undefined && (typeof clientOrderId !== 'string' || clientOrderId.length > 100)) {
+      return res.status(400).json({ error: "Invalid clientOrderId format" });
+    }
+
+    // Idempotency, checked before anything else that could refuse the request.
+    // A kiosk whose response was lost re-sends the same attempt; that order is
+    // already paid for, so it must come back as the original success and not be
+    // turned away by a menu version bump or a since-closed kiosk. Without this
+    // the replay created a second order and charged the customer twice.
+    if (clientOrderId) {
+      const existing = OrderService.findOrderByClientId(clientOrderId);
+      if (existing) {
+        return res.json({ success: true, duplicate: true, order: existing });
+      }
     }
 
     const isBypass = settings.testModeEnabled && !rfid && !pin;
@@ -63,11 +80,10 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
 
       if (settings.kioskAutoTiming) {
         const now = new Date();
-        if (settings.kioskCloseDay !== undefined && settings.kioskCloseDay !== -1 && now.getDay() === settings.kioskCloseDay) {
+        if (settings.kioskCloseDay !== undefined && settings.kioskCloseDay !== -1 && localDayOfWeek(now) === settings.kioskCloseDay) {
           return res.status(403).json({ error: "Kiosk is closed on this day (weekend/non-operating day)." });
         }
-        const currentHHmm = now.getHours().toString().padStart(2, '0') + ':' + 
-                            now.getMinutes().toString().padStart(2, '0');
+        const currentHHmm = localHHmm(now);
         const isWithinWindow = currentHHmm >= settings.kioskOpenTime && currentHHmm < settings.kioskCloseTime;
         if (!isWithinWindow) {
           return res.status(403).json({ error: "Kiosk is closed (outside operating hours)." });
@@ -124,7 +140,19 @@ export const placeOrder = (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: err.message });
     }
 
-    const newOrder = OrderService.processOrderTransaction(card, enrichedItems);
+    let newOrder;
+    try {
+      newOrder = OrderService.processOrderTransaction(card, enrichedItems, clientOrderId);
+    } catch (err: any) {
+      // Two replays of one attempt can race past the check above; the unique
+      // index catches the loser, which is still a success from the kiosk's
+      // point of view.
+      if (clientOrderId && String(err?.message || '').includes('UNIQUE constraint failed: orders.clientOrderId')) {
+        const existing = OrderService.findOrderByClientId(clientOrderId);
+        if (existing) return res.json({ success: true, duplicate: true, order: existing });
+      }
+      throw err;
+    }
 
     const { rfid: _rfid, ...sanitizedOrder } = newOrder;
     broadcast({ type: "NEW_ORDER", data: sanitizedOrder });
@@ -280,7 +308,7 @@ export const fetchAnalytics = (req: Request, res: Response) => {
 
     // 3. Peak Times
     const peakTimes = db.prepare(`
-      SELECT strftime('%H:00', timestamp) as hour, COUNT(*) as count
+      SELECT strftime('%H:00', timestamp, 'localtime') as hour, COUNT(*) as count
       FROM orders
       ${whereClause}
       GROUP BY hour
@@ -343,32 +371,39 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
       return res.status(400).json({ error: "Invalid date or fee amount" });
     }
 
-    // 1. Check if fee has already been distributed for this date
-    const summary = db.prepare("SELECT feeDistributed FROM daily_summaries WHERE date = ?").get(date) as { feeDistributed: number } | undefined;
-    
-    if (summary && summary.feeDistributed) {
-      return res.status(409).json({ error: "Fee already distributed for this date" });
-    }
+    // Everything below reads and writes inside one transaction: the duplicate
+    // check and the participant list used to be queried outside it, so two
+    // concurrent clicks could both pass the check and distribute twice.
+    let uniqueUsersCount = 0;
+    let conflict: { status: number; error: string } | null = null;
 
-    // 2. Find all unique RFIDs that ordered on that target date
-    const rows = db.prepare("SELECT DISTINCT rfid FROM orders WHERE date = ?").all(date) as { rfid: string }[];
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "No orders found for this date" });
-    }
-
-    const uniqueUsersCount = rows.length;
-    const splitFee = Number((fee / uniqueUsersCount).toFixed(2));
-
-    const now = new Date().toISOString();
-
-    // 3. Perform updates in a transaction
     db.transaction(() => {
-      const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
-      for (const row of rows) {
-        updateStmt.run(splitFee, now, row.rfid);
+      // 1. Check if fee has already been distributed for this date
+      const summary = db.prepare("SELECT feeDistributed FROM daily_summaries WHERE date = ?").get(date) as { feeDistributed: number } | undefined;
+      if (summary && summary.feeDistributed) {
+        conflict = { status: 409, error: "Fee already distributed for this date" };
+        return;
       }
-      
+
+      // 2. Find all unique RFIDs that ordered on that target date
+      const rows = db.prepare("SELECT DISTINCT rfid FROM orders WHERE date = ? ORDER BY rfid").all(date) as { rfid: string }[];
+      if (rows.length === 0) {
+        conflict = { status: 404, error: "No orders found for this date" };
+        return;
+      }
+
+      uniqueUsersCount = rows.length;
+      const now = new Date().toISOString();
+
+      // 3. Charge each share. Split in whole cents so the amounts add back up
+      //    to the fee — a single rounded share charged to everyone drifted by a
+      //    cent or two per distribution.
+      const shares = splitFeeCents(Math.round(fee * 100), rows.length);
+      const updateStmt = db.prepare("UPDATE cards SET balance = balance + ?, lastUpdated = ? WHERE rfid = ?");
+      rows.forEach((row, i) => {
+        updateStmt.run(shares[i] / 100, now, row.rfid);
+      });
+
       // Mark as distributed in summary (inserting a row if it does not exist yet)
       const hasSummary = db.prepare("SELECT 1 FROM daily_summaries WHERE date = ?").get(date);
       if (!hasSummary) {
@@ -379,6 +414,12 @@ export const applyDeliveryFee = (req: Request, res: Response, next: NextFunction
           .run(fee, date);
       }
     })();
+
+    if (conflict) {
+      return res.status((conflict as any).status).json({ error: (conflict as any).error });
+    }
+
+    const splitFee = Number((fee / uniqueUsersCount).toFixed(2));
 
     console.log(`[Fee] Distributed ${fee}€ to ${uniqueUsersCount} users (${splitFee}€ each) for ${date}`);
 

@@ -157,6 +157,7 @@ export const initDb = () => {
     { name: "tags", sql: "ALTER TABLE menu ADD COLUMN tags TEXT" },
     { name: "packagingFee", sql: "ALTER TABLE menu ADD COLUMN packagingFee REAL" },
     { name: "date", sql: "ALTER TABLE menu ADD COLUMN date TEXT" },
+    { name: "clientOrderId", sql: "ALTER TABLE orders ADD COLUMN clientOrderId TEXT" },
     { name: "feeDistributed", sql: "ALTER TABLE daily_summaries ADD COLUMN feeDistributed INTEGER DEFAULT 0" },
     { name: "distributedAmount", sql: "ALTER TABLE daily_summaries ADD COLUMN distributedAmount REAL DEFAULT 0" }
   ];
@@ -169,6 +170,34 @@ export const initDb = () => {
       // Column likely already exists
     }
   });
+
+  // Makes an order submission idempotent: a kiosk replaying an attempt whose
+  // response it never saw cannot create a second order. Partial, because orders
+  // placed by older clients carry no id.
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_client_id ON orders(clientOrderId) WHERE clientOrderId IS NOT NULL");
+
+  // Checkout resolves a PIN with `SELECT * FROM cards WHERE pin = ?`, so a
+  // duplicate means charging whichever row SQLite happens to return first.
+  // Enforced in the schema rather than only in the controllers, which missed
+  // the CSV import and the bulk update entirely. Partial, so the many cards
+  // with no PIN do not collide.
+  try {
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_cards_pin_unique ON cards(pin) WHERE pin IS NOT NULL");
+  } catch (e) {
+    // An existing database may already hold duplicates, which the admin has to
+    // resolve before the constraint can be applied. Name them and carry on —
+    // the controller checks still stop new ones being created, and this is
+    // retried on every start.
+    const dupes = db.prepare(`
+      SELECT pin, COUNT(*) AS n, GROUP_CONCAT(rfid, ', ') AS rfids
+      FROM cards WHERE pin IS NOT NULL GROUP BY pin HAVING n > 1
+    `).all() as any[];
+    console.warn(
+      `[DB] WARNING: could not enforce unique card PINs — ${dupes.length} PIN(s) are shared by more than one card. ` +
+      `Checkout by PIN is ambiguous for: ${dupes.map(d => `[${d.rfids}]`).join(' ')}. ` +
+      `Clear the duplicates in the Cards tab and restart to apply the constraint.`
+    );
+  }
 
   console.log("[DB] Schema verification complete");
 };

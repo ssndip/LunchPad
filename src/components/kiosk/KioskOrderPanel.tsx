@@ -15,6 +15,7 @@ import { isItemAutoBox } from "../../utils/categoryAutobox";
 import { useResponsive } from "../../hooks/useResponsive";
 import { triggerHaptic } from "../../utils/haptics";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { formatPrice } from '../../utils/formatPrice';
 
 interface KioskOrderPanelProps {
   selectedItems: CartItem[];
@@ -158,7 +159,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                           </span>
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-black text-neutral-900 shrink-0 font-mono">
-                              €{item.price.toFixed(2)}
+                              €{formatPrice(item.price)}
                             </span>
                             <button
                               onClick={(e) => {
@@ -374,7 +375,7 @@ export const KioskOrderPanel: React.FC<KioskOrderPanelProps> = React.memo(
                         {item.quantity} ×
                       </span>
                       <span className="text-xs font-mono font-black text-neutral-900 shrink-0">
-                        €{item.price.toFixed(2)}
+                        €{formatPrice(item.price)}
                       </span>
                     </div>
                     <button

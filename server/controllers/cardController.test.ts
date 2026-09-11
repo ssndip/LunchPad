@@ -166,7 +166,9 @@ describe('cardController', () => {
             ownerName: 'Updated Name',
             balance: 15.00,
             isAdmin: true,
-            pin: hashedPin
+            // The digest is no longer echoed back to the client; `hasPin` is
+            // what the dashboard gets. The stored value is asserted below.
+            hasPin: true
           })
         })
       );

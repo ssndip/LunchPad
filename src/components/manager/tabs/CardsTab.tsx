@@ -145,11 +145,18 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     setEditValues({});
   };
 
+  /** A PIN column value from a spreadsheet, or undefined to leave it unset. */
+  const importedPin = (raw: unknown): string | undefined => {
+    const value = raw === undefined || raw === null ? '' : String(raw).trim();
+    if (!value || value.toUpperCase() === 'SET') return undefined;
+    return value;
+  };
+
   const handleExport = (format: 'csv' | 'xlsx') => {
     const data = cards.map(c => ({
       RFID: c.rfid,
       Name: c.ownerName,
-      PIN: c.pin || '',
+      PIN: c.hasPin ? 'SET' : '',
       IsAdmin: c.isAdmin ? 'Yes' : 'No',
       Balance: c.balance.toFixed(2)
     }));
@@ -177,7 +184,10 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         const mappedCards: Card[] = data.map((row: any) => ({
           rfid: String(row.RFID || row.rfid || '').trim(),
           ownerName: String(row.Name || row.name || row.ownerName || 'User').trim(),
-          pin: row.PIN || row.pin ? String(row.PIN || row.pin).trim() : undefined,
+          // "SET" is the placeholder the export writes for a card that has a
+          // PIN, since the digest itself is never sent to the client. Re-importing
+          // an export must leave those PINs alone rather than try to set one.
+          pin: importedPin(row.PIN ?? row.pin),
           isAdmin: row.IsAdmin === 'Yes' || row.isAdmin === true || row.isAdmin === 1,
           balance: parseFloat(row.Balance || row.balance || '0')
         })).filter(c => c.rfid);
@@ -315,7 +325,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                     {[
                       { key: 'rfid' as keyof Card, label: t('cards.rfid') },
                       { key: 'ownerName' as keyof Card, label: t('cards.owner_name') },
-                      { key: 'pin' as keyof Card, label: 'PIN' },
+                      { key: 'hasPin' as keyof Card, label: 'PIN' },
                       { key: 'isAdmin' as keyof Card, label: t('cards.admin') },
                       { key: 'balance' as keyof Card, label: t('cards.owed') },
                     ].map((col) => (
@@ -362,9 +372,13 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                         <td className="p-6">
                           <input
                             type="text"
+                            inputMode="numeric"
                             maxLength={6}
-                            value={values.pin || ''}
-                            placeholder="------"
+                            value={values.pin ?? ''}
+                            placeholder={card.hasPin ? '••••••' : '------'}
+                            title={card.hasPin
+                              ? 'A PIN is set. Type a new one to replace it, or clear the box to remove it.'
+                              : 'No PIN set. Type six digits to add one.'}
                             onFocus={() => !isEditing && startEditing(card)}
                             onChange={(e) => setEditValues({ ...values, pin: e.target.value.replace(/\D/g, '') })}
                             className={`w-20 px-2 py-1.5 rounded-lg border font-mono text-center text-xs outline-none transition-all ${isEditing ? 'bg-white border-neutral-900 ring-1 ring-neutral-900' : 'bg-neutral-50 border-neutral-200'}`}

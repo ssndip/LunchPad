@@ -64,8 +64,14 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
       if (!i.name || typeof i.name !== 'string') {
         return res.status(400).json({ error: "Each menu item must have a valid name" });
       }
+      // `Number(null)` is 0, so null/undefined/"" used to slip past this and be
+      // stored as a NULL price. The kiosk then rendered `price.toFixed(2)` on
+      // it and threw, taking the whole screen down to the error boundary.
+      if (i.price === null || i.price === undefined || i.price === '') {
+        return res.status(400).json({ error: `Missing price for item "${i.name}": a price is required` });
+      }
       const price = Number(i.price);
-      if (isNaN(price) || price < 0) {
+      if (!Number.isFinite(price) || price < 0) {
         return res.status(400).json({ error: `Invalid price for item "${i.name}": must be a valid non-negative number` });
       }
     }
@@ -91,11 +97,13 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         `).run();
       }
 
-      // Save menuDate if provided (Global fallback/header)
+      // Save menuDate if provided (Global fallback/header). Only the row is
+      // written here; the in-memory copy is updated after the commit, because a
+      // rollback cannot undo an assignment and the two would then disagree
+      // until the next restart.
       if (date !== undefined) {
-        settings.menuDate = date || "";
         db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-          .run("menu_date", settings.menuDate);
+          .run("menu_date", date || "");
       }
 
       db.prepare("DELETE FROM menu").run();
@@ -110,7 +118,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         i.id, 
         i.name, 
         i.description, 
-        i.price, 
+        Number(i.price), 
         i.available ? 1 : 0, 
         i.category,
         i.requiresSideChoice ? 1 : 0,
@@ -122,6 +130,7 @@ export const updateMenu = (req: Request, res: Response, next: NextFunction) => {
         i.date || settings.menuDate || null
       ));
     })();
+    if (date !== undefined) settings.menuDate = date || "";
     const newVersion = incrementMenuVersion();
     const updated = getMenu(db);
     broadcast({ type: "MENU_UPDATE", menu: updated, version: newVersion, menuDate: settings.menuDate });
@@ -175,10 +184,9 @@ export const restoreMenuBackup = (req: Request, res: Response, next: NextFunctio
         `).run();
       }
 
-      // Restore menuDate
-      settings.menuDate = backup.menuDate || "";
+      // Restore menuDate. As above, the in-memory copy waits for the commit.
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-        .run("menu_date", settings.menuDate);
+        .run("menu_date", backup.menuDate || "");
 
       // Restore menu items
       db.prepare("DELETE FROM menu").run();
@@ -193,7 +201,9 @@ export const restoreMenuBackup = (req: Request, res: Response, next: NextFunctio
         i.id, 
         i.name, 
         i.description, 
-        i.price, 
+        // A backup predating price validation can carry NULL; zero keeps the
+        // kiosk renderable rather than reintroducing an unformattable row.
+        Number.isFinite(Number(i.price)) ? Number(i.price) : 0, 
         i.available ? 1 : 0, 
         i.category,
         i.requiresSideChoice ? 1 : 0,
@@ -205,6 +215,7 @@ export const restoreMenuBackup = (req: Request, res: Response, next: NextFunctio
         i.date || settings.menuDate || null
       ));
     })();
+    settings.menuDate = backup.menuDate || "";
 
     const newVersion = incrementMenuVersion();
     const updated = getMenu(db);

@@ -12,6 +12,7 @@ import {
 import { MenuItem, CartItem } from "../../types";
 import { isItemAutoBox } from "../../utils/categoryAutobox";
 import { triggerHaptic } from "../../utils/haptics";
+import { formatPrice } from '../../utils/formatPrice';
 
 interface KioskItemListProps {
   items: MenuItem[];
@@ -157,7 +158,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = React.memo(
 
                       <div className="flex flex-col items-end gap-0.5 min-w-[60px] md:min-w-[80px]">
                         <span className="text-[var(--fluid-lg)] font-black font-mono text-neutral-900">
-                          €{item.price.toFixed(2)}
+                          €{formatPrice(item.price)}
                         </span>
                         {isPackagingFeeItem(item) && (
                           <span className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter">

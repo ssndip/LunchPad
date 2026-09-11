@@ -47,13 +47,14 @@ describe('POST /api/v1/order', () => {
     expect(res.body.error).toMatch(/Card not found: unknown_rfid/);
   });
 
-  it('should return 400 if no valid items are selected', async () => {
+  it('should return 400 naming an item that is not on the menu', async () => {
     const res = await request(app)
       .post('/api/v1/order')
       .send({ rfid: '1234567890', items: [{ id: 999 }] }); // Assuming 999 doesn't exist
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('No valid items selected');
+    // Unknown ids used to be dropped silently; the error now says which one.
+    expect(res.body.error).toContain('999');
   });
 
   it('should process a valid order successfully', async () => {

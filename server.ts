@@ -10,8 +10,8 @@ import cors from "cors";
 // Modular Imports
 import { logger } from "./server/logger";
 import { initDb, seedInitialData } from "./server/db";
-import { initSettings, settings } from "./server/config";
-import { setWssInstance } from "./server/broadcast";
+import { initSettings, parseTrustProxy, settings } from "./server/config";
+import { safeSend, setWssInstance } from "./server/broadcast";
 import { isLocalOrigin } from "./server/middleware/auth";
 import { isWhitelisted } from "./server/middleware/whitelist";
 
@@ -50,12 +50,25 @@ export const appPromise = startServer();
 
 export async function startServer() {
   const app = express();
-  // Global IP Identification
-  app.set("trust proxy", 1);
+  // Global IP Identification. `trust proxy` decides whether X-Forwarded-For is
+  // believed when deriving req.ip, which the admin whitelist and both rate
+  // limiters key off — so it is opt-in via TRUST_PROXY rather than always on.
+  // See parseTrustProxy in server/config.ts.
+  app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
   setWssInstance(wss);
+
+  // Listen failures (port already taken, bad bind address) are emitted, not
+  // thrown, so without this they surface as an uncaught exception.
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    logger.error(`[HTTP] Server error: ${err.message}`, { code: err.code });
+  });
+
+  // Exposed so tests can drive a real socket; nothing in the app reads these.
+  app.set("httpServer", server);
+  app.set("wss", wss);
 
   const PORT = process.env.PORT || 3400;
 
@@ -174,9 +187,24 @@ export async function startServer() {
   });
 
   // --- WebSocket ---
+  // A `ws` socket with no 'error' listener rethrows, which ends the process.
+  // Every accepted socket gets one below; this covers failures raised on the
+  // server itself (a botched upgrade, an EADDR problem) before that point.
+  wss.on("error", (err) => {
+    logger.error(`[WS] Server error: ${err.message}`, { stack: err.stack });
+  });
+
   wss.on("connection", (ws, req) => {
     (ws as any).isAlive = true;
     const origin = req.headers.origin;
+
+    // Registered first, so it is in place for anything that follows. Abrupt
+    // client disconnects (a tablet sleeping, wifi dropping) surface here as
+    // ECONNRESET and must stay contained to this one socket.
+    ws.on("error", (err) => {
+      logger.ws(`Socket error, dropping client: ${err.message}`);
+      try { ws.terminate(); } catch { /* already gone */ }
+    });
     
     // Extract token from query string (e.g. ws://host?token=xxx)
     const url = new URL(req.url || "", `http://${req.headers.host || "localhost"}`);
@@ -213,7 +241,7 @@ export async function startServer() {
     // Tag the socket so admin-only broadcasts (e.g. the AI key) can target it.
     (ws as any).isAdmin = isAdmin;
 
-    ws.send(JSON.stringify({
+    safeSend(ws, JSON.stringify({
       type: "INITIAL_STATE",
       ...buildClientState({ isAdmin }),
       orders: isAdmin ? getOrders(100) : [],
@@ -227,12 +255,19 @@ export async function startServer() {
 
   // --- WebSocket Heartbeat (30s) ---
   const interval = setInterval(() => {
+    const ping = JSON.stringify({ type: "PING", ts: Date.now() });
     wss.clients.forEach((ws: any) => {
       if (ws.isAlive === false) return ws.terminate();
       ws.isAlive = false;
-      ws.ping();
+      try {
+        ws.ping();
+      } catch (err: any) {
+        logger.ws(`Ping failed, dropping client: ${err?.message || err}`);
+        ws.terminate();
+        return;
+      }
       // Also send a JSON ping for clients that don't handle binary pings easily
-      ws.send(JSON.stringify({ type: "PING", ts: Date.now() }));
+      safeSend(ws, ping);
     });
   }, 30000);
 
