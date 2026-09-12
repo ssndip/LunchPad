@@ -44,6 +44,11 @@ export const Sheet: React.FC<SheetProps> = ({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = React.useRef<HTMLElement | null>(null);
 
+  // Focus capture/init/restore and scroll locking depend only on whether the
+  // sheet is open, never on `onClose`'s identity. Keying this on `onClose`
+  // too would re-run it (and yank focus back to the top of the panel) on
+  // every parent re-render for a caller passing an inline `onClose` arrow —
+  // the common pattern, and exactly what Task 11 does.
   React.useEffect(() => {
     if (!isOpen) return;
 
@@ -58,11 +63,31 @@ export const Sheet: React.FC<SheetProps> = ({
       panel?.focus();
     }
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      const toRestore = previouslyFocusedRef.current;
+      if (toRestore && document.contains(toRestore)) {
+        toRestore.focus();
+      }
+    };
+  }, [isOpen]);
+
+  // Escape-to-close and the Tab trap legitimately need the current
+  // `onClose`, so this effect is keyed on it. Re-running it on every render
+  // of an inline `onClose` only re-adds a keydown listener, which is
+  // harmless — cleanup always removes the previous one first.
+  React.useEffect(() => {
+    if (!isOpen) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
         return;
       }
+      const panel = panelRef.current;
       if (e.key === 'Tab' && panel) {
         const items: HTMLElement[] = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
         if (items.length === 0) {
@@ -87,15 +112,8 @@ export const Sheet: React.FC<SheetProps> = ({
       }
     };
     document.addEventListener('keydown', onKeyDown);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previous;
-      const toRestore = previouslyFocusedRef.current;
-      if (toRestore && document.contains(toRestore)) {
-        toRestore.focus();
-      }
     };
   }, [isOpen, onClose]);
 

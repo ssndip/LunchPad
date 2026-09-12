@@ -113,6 +113,27 @@ describe('Sheet', () => {
     expect(screen.getByText('Second')).toHaveFocus();
   });
 
+  it('does not re-init focus when a parent re-render passes a new inline onClose', () => {
+    const { rerender } = render(
+      <Sheet isOpen onClose={() => {}} ariaLabel="Body only">
+        <button>First</button>
+        <button>Second</button>
+      </Sheet>
+    );
+    screen.getByText('Second').focus();
+    expect(screen.getByText('Second')).toHaveFocus();
+
+    // A new inline onClose identity, as a real consumer's re-render would pass.
+    rerender(
+      <Sheet isOpen onClose={() => {}} ariaLabel="Body only">
+        <button>First</button>
+        <button>Second</button>
+      </Sheet>
+    );
+
+    expect(screen.getByText('Second')).toHaveFocus();
+  });
+
   it('restores focus to the previously focused element on close', () => {
     const trigger = document.createElement('button');
     trigger.textContent = 'Open sheet';
