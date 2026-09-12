@@ -1,5 +1,5 @@
 import React from 'react';
-import { Order } from '../../../types';
+import { Order, PersistedOrderItem } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Printer, X, Download } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -140,7 +140,7 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
                       </td>
                       <td className="p-5 text-xs align-top">
                         <div className="space-y-1.5">
-                          {Array.isArray(order.items) && order.items.map((item: any, i) => (
+                          {Array.isArray(order.items) && order.items.map((item: PersistedOrderItem, i) => (
                             <div key={i} className="flex justify-between gap-4">
                               <span className="font-bold text-neutral-700">
                                 {item.name} {item.side && <span className="text-neutral-400 italic font-medium">({item.side})</span>}

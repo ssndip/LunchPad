@@ -36,6 +36,8 @@ export interface CartItem extends MenuItem {
 /** Strictly typed item for database persistence in the orders table */
 export interface PersistedOrderItem extends MenuItem {
   side?: string;
+  /** Quantity ordered. Optional because older persisted records may lack it. */
+  quantity?: number;
 }
 
 export interface Order {

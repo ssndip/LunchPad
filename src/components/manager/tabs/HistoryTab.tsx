@@ -20,13 +20,6 @@ interface HistoryTabProps {
   onApplyFilters: () => void;
 }
 
-/**
- * `PersistedOrderItem` (via `MenuItem`) does not declare `quantity`, but
- * persisted order records carry it on each item regardless. Widen locally
- * instead of reading through `any`.
- */
-type HistoryOrderItem = PersistedOrderItem & { quantity?: number };
-
 export const HistoryTab: React.FC<HistoryTabProps> = ({
   history,
   filters,
@@ -44,7 +37,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   ];
 
   const rows: DataListRow[] = (Array.isArray(history) ? history : []).map((order) => {
-    const items: HistoryOrderItem[] = order.items;
+    const items: PersistedOrderItem[] = order.items;
 
     return {
       key: order.id,
