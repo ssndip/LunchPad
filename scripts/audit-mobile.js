@@ -36,13 +36,17 @@
       const r = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
 
-      // Skip truly hidden elements. display is NOT inherited, so checking only
-      // cs.display === 'none' misses elements nested inside a hidden ancestor —
-      // the exact pattern manager dashboard overuse. Use checkVisibility(), which
-      // accounts for the entire ancestor chain, visibility:hidden, and content-visibility.
+      // Skip truly hidden elements using two complementary tests:
+      // 1. checkVisibility() catches display:none anywhere in the ancestor chain,
+      //    plus content-visibility. display is NOT inherited, so checking only an
+      //    element's own computed display misses everything nested inside a hidden
+      //    ancestor — the exact pattern that the manager dashboard overuses.
+      //    (Note: no-argument checkVisibility() does not check visibility:hidden;
+      //    this script is Chrome-devtools-only and the method has shipped since Chrome 105.)
       if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue;
-      // Fallback for older browsers: visibility is inherited, so this catches
-      // visibility:hidden anywhere in the ancestor chain.
+      // 2. visibility:hidden is inherited, so testing it once on the element catches
+      //    the entire ancestor chain. This test is load-bearing: no-argument checkVisibility()
+      //    does not cover visibility:hidden, so this line is essential, not dead code.
       if (cs.visibility === 'hidden') continue;
 
       // Empty label check must run before the size guard, because a t() miss
