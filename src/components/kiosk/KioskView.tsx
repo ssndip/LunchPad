@@ -370,7 +370,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
                   key={date}
                   data-date-active={isActive ? 'true' : 'false'}
                   onClick={() => { triggerHaptic('light'); setSelectedDate(date); }}
-                  className={`flex flex-col items-center justify-center min-w-[88px] md:min-w-[120px] h-12 rounded-2xl transition-all relative shrink-0 snap-start ${
+                  className={`flex flex-col items-center justify-center min-w-[88px] md:min-w-[120px] touch-target-h md:h-12 rounded-2xl transition-all relative shrink-0 snap-start ${
                     isActive 
                       ? 'bg-neutral-900 text-white shadow-lg scale-105' 
                       : 'bg-white/50 text-neutral-500 hover:bg-white border border-neutral-100'
