@@ -20,16 +20,38 @@
   const PHONE_H = 840;
   const MIN_TARGET = 44;
 
-  // True when `el` sits inside an ancestor that legitimately scrolls
-  // horizontally on purpose (overflow-x: auto/scroll AND actual overflow —
-  // scrollWidth beyond clientWidth). Such an element is expected to extend
-  // past the viewport edge; that's what makes the strip reachable by
-  // scrolling, not a stray horizontal body scroll. Walk up to the document
-  // and stop there.
+  // True when `el` sits inside an ancestor that DECLARES horizontal scrolling
+  // on purpose — never inferred from computed style.
+  //
+  // Computed overflowX cannot tell an intentional horizontal scroller from a
+  // vertical-only list that a bug has made overflow sideways. Per the CSS
+  // Overflow spec, when one axis is set to a non-visible value and the other
+  // is left `visible`, the `visible` axis computes to `auto` instead — so a
+  // plain `overflow-y: auto; width: 200px` box also reports computed
+  // overflowX "auto". Measured in the live app: that vertical-only box has
+  // overflowX "auto", overflowY "auto", clientWidth 185 (200 minus a 15px
+  // scrollbar); after a 900px-wide child broke it sideways, scrollWidth was
+  // 900 and the old computed-style check returned true — silently exempting
+  // a genuine bug. Testing overflowY too does not help: an intentional
+  // horizontal strip (Tailwind `overflow-x-auto`) and that broken vertical
+  // list report identical computed overflowX/overflowY. So this only trusts
+  // an explicit declaration — a bare `overflow-x-auto`/`overflow-x-scroll`
+  // class (unprefixed, so it applies at the phone width this audit runs at;
+  // a `md:overflow-x-auto` variant that isn't active at PHONE_W is
+  // correctly not a match) or an inline `style.overflowX` of auto/scroll —
+  // plus the existing scrollWidth > clientWidth requirement, so a declared
+  // but not-actually-overflowing ancestor still exempts nothing. Walk up to
+  // the document and stop there.
+  function declaresHorizontalScroll(node) {
+    if (node.style && (node.style.overflowX === 'auto' || node.style.overflowX === 'scroll')) {
+      return true;
+    }
+    return node.classList.contains('overflow-x-auto') || node.classList.contains('overflow-x-scroll');
+  }
+
   function hasScrollableAncestor(el) {
     for (let node = el.parentElement; node; node = node.parentElement) {
-      const overflowX = getComputedStyle(node).overflowX;
-      if ((overflowX === 'auto' || overflowX === 'scroll') && node.scrollWidth > node.clientWidth) {
+      if (declaresHorizontalScroll(node) && node.scrollWidth > node.clientWidth) {
         return true;
       }
     }
