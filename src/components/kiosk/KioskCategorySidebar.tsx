@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { isCategoryAutoBox } from "../../utils/categoryAutobox";
+import { categoryLabel } from "../../utils/categoryLabel";
 
 interface KioskCategorySidebarProps {
   categories: string[];
@@ -90,14 +91,7 @@ export const KioskCategorySidebar: React.FC<KioskCategorySidebarProps> =
                     isActive ? "text-white" : "group-hover:text-neutral-900"
                   }`}
                 >
-                  {(() => {
-                    const customCat = customCategories.find(c => c.id === cat);
-                    if (customCat) {
-                       return customCat.names[lang] || customCat.names['en'] || customCat.names['bg'] || cat;
-                    }
-                    const translated = t(`categories.${cat}`);
-                    return translated !== `categories.${cat}` ? translated : cat;
-                  })()}
+                  {categoryLabel(cat, t, customCategories, lang)}
                 </span>
 
                 {isPackagingFeeItem(cat) && (
