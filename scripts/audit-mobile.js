@@ -34,8 +34,23 @@
 
     for (const el of doc.querySelectorAll('*')) {
       const r = el.getBoundingClientRect();
-      if (!r.width && !r.height) continue;
       const cs = getComputedStyle(el);
+
+      // Skip display:none and visibility:hidden subtrees. Unlike size (which can
+      // legitimately be 0x0 for collapsed content we want to catch), these are
+      // reliably hidden and would produce false positives.
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+
+      // Empty label check must run before the size guard, because a t() miss
+      // renders as a 0x0 <span> — that's the exact case we're trying to catch.
+      const labelish = el.matches('span,h1,h2,h3,h4,label,th,td,p');
+      if (labelish && !el.children.length && !el.textContent.trim() && r.width < 4) {
+        add('empty-label', el, '', `width=${Math.round(r.width)}`);
+        continue;
+      }
+
+      // Remaining checks need rendered size.
+      if (!r.width && !r.height) continue;
 
       // Anything crossing the viewport edge. A horizontal body scroll on a phone
       // is always a bug; the only legitimate sideways scrollers are opt-in.
@@ -48,13 +63,6 @@
       // Text wider than its own clipped box — the literal "cut-off text" case.
       if (ownsText && cs.overflowX !== 'visible' && el.scrollWidth > el.clientWidth + 1) {
         add('clipped-x', el, el.textContent, `scrollWidth=${el.scrollWidth} clientWidth=${el.clientWidth}`);
-      }
-
-      // A label element that renders nothing. This is what a t() miss looks like
-      // in the DOM: the span exists, is styled, and is empty.
-      const labelish = el.matches('span,h1,h2,h3,h4,label,th,td,p');
-      if (labelish && !el.children.length && !el.textContent.trim() && r.width < 4) {
-        add('empty-label', el, '', `width=${Math.round(r.width)}`);
       }
     }
 
