@@ -109,4 +109,13 @@ describe('ManagerDashboard phone navigation', () => {
       new Set(['menu', 'orders', 'history', 'cards', 'analytics', 'parser_rules', 'settings']),
     );
   });
+
+  it('gives the kiosk toggle a 44px touch floor below md and an aria-label naming its action', () => {
+    render(<ManagerDashboard {...props} kioskOpen={true} />);
+    const closeToggle = screen.getByRole('button', { name: 'Close kiosk ordering' });
+    expect(closeToggle.className).toContain('max-md:touch-target-h');
+
+    render(<ManagerDashboard {...props} kioskOpen={false} />);
+    expect(screen.getByRole('button', { name: 'Open kiosk ordering' })).toBeInTheDocument();
+  });
 });

@@ -297,9 +297,10 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               </span>
               <button
                 onClick={() => onToggleKiosk(!kioskOpen)}
-                className={`ml-1 lg:ml-2 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                  kioskOpen 
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                aria-label={kioskOpen ? t('settings.kiosk_toggle_close_aria') : t('settings.kiosk_toggle_open_aria')}
+                className={`max-md:touch-target-h ml-1 lg:ml-2 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
+                  kioskOpen
+                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
                     : 'bg-green-50 text-green-600 hover:bg-green-100'
                 }`}
               >
