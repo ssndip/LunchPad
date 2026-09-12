@@ -2,6 +2,11 @@ export const translations = {
   en: {
     navigation: {
       menu_management: 'Menu Management',
+      menu_short: 'Menu',
+      orders_short: 'Orders',
+      history_short: 'History',
+      cards_short: 'Cards',
+      more: 'More',
       order_summary: 'Order Summary',
       history: 'History',
       copy_success: 'Summary copied to clipboard',
@@ -513,6 +518,11 @@ export const translations = {
   bg: {
     navigation: {
       menu_management: 'Управление на менюто',
+      menu_short: 'Меню',
+      orders_short: 'Поръчки',
+      history_short: 'История',
+      cards_short: 'Карти',
+      more: 'Още',
       order_summary: 'Обобщение на поръчките',
       history: 'История',
       copy_success: 'Обобщението е копирано в клипборда',
