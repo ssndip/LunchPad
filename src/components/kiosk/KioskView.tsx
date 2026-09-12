@@ -328,7 +328,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       {/* 1. Header — Compact 48px with Glassmorphism */}
-      <header className="h-16 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50 pad-safe-top">
+      <header className="min-h-16 shrink-0 glass-morphism flex items-center z-20 shadow-sm border-b-neutral-200/50 pad-safe-top">
         {/* Left Section — Matches Sidebar Width */}
         <div className="hidden md:flex shrink-0 md:w-[20%] xl:w-40 px-4 items-center gap-3">
           <motion.h1 
@@ -544,7 +544,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className="fixed top-14 left-1/2 -translate-x-1/2 bg-red-600 text-white px-5 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 text-xs font-bold"
+            className="fixed inset-safe-top-14 left-1/2 -translate-x-1/2 bg-red-600 text-white px-5 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 text-xs font-bold"
           >
             <AlertCircle className="w-3.5 h-3.5" />
             <span>{error}</span>

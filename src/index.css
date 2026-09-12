@@ -88,6 +88,12 @@
   .inset-safe-bottom {
     bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
+  /* Top-anchored overlays. `top-14` alone puts a toast under the notch on a
+     phone, because index.html sets viewport-fit=cover and the page extends
+     beneath it. */
+  .inset-safe-top-14 {
+    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
 
   /* Minimum comfortable touch size, in px on purpose.
      `html` is sized with clamp(14px, 2vw, 16px), so on a phone 1rem is 14px and
