@@ -75,6 +75,28 @@ Set `LUNCHPAD_BACKUP_DEST` for the local target and `LUNCHPAD_BACKUP_REMOTE` (an
 
 To restore, pick a snapshot in **Settings → Backups**. The server swaps the database file and exits; `restart: always` brings it back within about ten seconds.
 
+### Checking the phone layout
+
+`scripts/audit-mobile.js` is a browser console script. It renders the app in a
+390×840 iframe and reports text clipped by its own box, elements crossing the
+viewport edge, labels that render empty, and interactive targets under 44×44.
+
+```bash
+npm run dev
+```
+
+Open <http://localhost:3400>, paste `scripts/audit-mobile.js` into the devtools
+console, then:
+
+```js
+await __auditMobile('/')                // kiosk
+await __auditMobile('/?view=manager')   // dashboard
+```
+
+It lives outside the test suite on purpose: `happy-dom` does not lay out, so
+`scrollWidth` and `getBoundingClientRect` are zero under Vitest, and CI has no
+browser to run a real one in.
+
 ---
 
 ## 🛠️ Technology Stack
