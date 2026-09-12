@@ -13,7 +13,13 @@ interface SheetProps {
   /** Max width of the md+ dialog. Ignored on a phone, where the sheet is full width. */
   maxWidth?: string;
   children: React.ReactNode;
+  /** Accessible name to use when there is no `title`. Ignored when `title` is set. */
+  ariaLabel?: string;
 }
+
+/** Elements a keyboard user can land on inside the panel, for initial focus and the Tab trap. */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * A bottom sheet below md, a centred dialog above it.
@@ -30,15 +36,55 @@ export const Sheet: React.FC<SheetProps> = ({
   headerAction,
   maxWidth = 'max-w-md',
   children,
+  ariaLabel,
 }) => {
   const { isPhone } = useResponsive();
   const { t } = useTranslation();
   const titleId = React.useId();
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) return;
+
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const panel = panelRef.current;
+    const focusable = panel ? panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) : null;
+    if (focusable && focusable.length > 0) {
+      focusable[0].focus();
+    } else {
+      panel?.focus();
+    }
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && panel) {
+        const items: HTMLElement[] = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+        if (items.length === 0) {
+          e.preventDefault();
+          panel.focus();
+          return;
+        }
+        const first: HTMLElement = items[0];
+        const last: HTMLElement = items[items.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+          if (active === first || !panel.contains(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (active === last || !panel.contains(active)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     const previous = document.body.style.overflow;
@@ -46,6 +92,10 @@ export const Sheet: React.FC<SheetProps> = ({
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previous;
+      const toRestore = previouslyFocusedRef.current;
+      if (toRestore && document.contains(toRestore)) {
+        toRestore.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -65,10 +115,13 @@ export const Sheet: React.FC<SheetProps> = ({
           />
 
           <motion.div
+            ref={panelRef}
             data-testid="sheet-panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
+            aria-label={!title ? ariaLabel : undefined}
+            tabIndex={-1}
             initial={isPhone ? { y: '100%' } : { scale: 0.94, opacity: 0, y: 16 }}
             animate={isPhone ? { y: 0 } : { scale: 1, opacity: 1, y: 0 }}
             exit={isPhone ? { y: '100%' } : { scale: 0.94, opacity: 0, y: 16 }}

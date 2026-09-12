@@ -73,4 +73,57 @@ describe('Sheet', () => {
     rerender(<Sheet isOpen={false} onClose={vi.fn()} title="S">body</Sheet>);
     expect(document.body.style.overflow).toBe('');
   });
+
+  it('has an accessible name from ariaLabel when there is no title', () => {
+    render(<Sheet isOpen onClose={vi.fn()} ariaLabel="Quick settings">body</Sheet>);
+    expect(screen.getByRole('dialog', { name: 'Quick settings' })).toBeInTheDocument();
+  });
+
+  it('moves focus to the first focusable element in the panel on open', () => {
+    render(
+      <Sheet isOpen onClose={vi.fn()} ariaLabel="Body only">
+        <button>First</button>
+        <button>Second</button>
+      </Sheet>
+    );
+    expect(screen.getByText('First')).toHaveFocus();
+  });
+
+  it('wraps focus with Tab from the last focusable element to the first', () => {
+    render(
+      <Sheet isOpen onClose={vi.fn()} ariaLabel="Body only">
+        <button>First</button>
+        <button>Second</button>
+      </Sheet>
+    );
+    screen.getByText('Second').focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(screen.getByText('First')).toHaveFocus();
+  });
+
+  it('wraps focus with Shift+Tab from the first focusable element to the last', () => {
+    render(
+      <Sheet isOpen onClose={vi.fn()} ariaLabel="Body only">
+        <button>First</button>
+        <button>Second</button>
+      </Sheet>
+    );
+    screen.getByText('First').focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(screen.getByText('Second')).toHaveFocus();
+  });
+
+  it('restores focus to the previously focused element on close', () => {
+    const trigger = document.createElement('button');
+    trigger.textContent = 'Open sheet';
+    document.body.appendChild(trigger);
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    const { rerender } = render(<Sheet isOpen onClose={vi.fn()} ariaLabel="Body only">body</Sheet>);
+    rerender(<Sheet isOpen={false} onClose={vi.fn()} ariaLabel="Body only">body</Sheet>);
+
+    expect(trigger).toHaveFocus();
+    document.body.removeChild(trigger);
+  });
 });
