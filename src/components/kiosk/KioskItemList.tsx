@@ -79,7 +79,7 @@ export const KioskItemList: React.FC<KioskItemListProps> = React.memo(
       );
 
     return (
-      <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 pb-[180px] md:p-6 md:pb-6">
+      <div className="h-full overflow-y-auto no-scrollbar bg-[#F4F4F5] p-2 md:p-6">
         <div className="flex flex-col gap-[6px] mb-0 md:mb-6">
           {items
             .filter((i) => i.available)
