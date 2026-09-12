@@ -78,4 +78,38 @@ describe('KioskOrderBar', () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
+
+  it('returns to the same collapsed DOM after two full expand/collapse cycles', async () => {
+    // Regression test for a residue bug: collapse -> expand -> collapse left
+    // the expanded region's motion.div at a stale ~25px instead of fully
+    // settling to 0, because the animation targeted `height: 'auto'` (an
+    // ambiguous, internally-resolved value) rather than a fixed pixel number.
+    const { container } = render(<KioskOrderBar {...base} />);
+    const toggle = () => screen.getByTestId('order-bar-toggle');
+    const card = () => container.querySelector('.rounded-3xl') as HTMLElement;
+
+    fireEvent.click(toggle());
+    await screen.findByText('Soup');
+    fireEvent.click(toggle());
+    await waitForElementToBeRemoved(() => screen.queryByText('Soup'));
+    const firstCollapsedHTML = card().innerHTML;
+
+    fireEvent.click(toggle());
+    await screen.findByText('Soup');
+    fireEvent.click(toggle());
+    await waitForElementToBeRemoved(() => screen.queryByText('Soup'));
+    const secondCollapsedHTML = card().innerHTML;
+
+    expect(secondCollapsedHTML).toBe(firstCollapsedHTML);
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('moves the RFID input and clear button into the expanded region only', () => {
+    render(<KioskOrderBar {...base} />);
+    expect(screen.queryByPlaceholderText('cards.scan_to_register')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('order-bar-toggle'));
+    const rfidInput = screen.getByPlaceholderText('cards.scan_to_register');
+    expect(rfidInput).toBeInTheDocument();
+    expect(rfidInput.className).toContain('touch-target-h');
+  });
 });

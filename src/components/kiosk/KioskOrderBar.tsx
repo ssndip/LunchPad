@@ -46,10 +46,16 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
   onChangeSide,
   t,
 }) => {
-  // Collapsed by default: fully expanded the bar took 227px of an 840px phone
-  // screen. It opens itself once, the first time something is added, so the
-  // cart is not a mystery box; after that the customer decides. The auto-open
-  // is keyed off an actual 0 -> non-zero transition (via prevLength), not
+  // Collapsed by default: the first cut of this task left the RFID field and
+  // clear button in the always-visible row, which forces that row to wrap to
+  // three lines at phone width (153px) -- collapsing the item list on top of
+  // that barely moved the needle (242px collapsed vs. 228px before this task,
+  // a regression). The spec calls for a genuine single-row pill when
+  // collapsed: total, count, order button. Everything else -- the item list,
+  // the RFID field, the clear button -- lives in the expanded region only.
+  // It opens itself once, the first time something is added, so the cart is
+  // not a mystery box; after that the customer decides. The auto-open is
+  // keyed off an actual 0 -> non-zero transition (via prevLength), not
   // merely "cart is non-empty on this render" -- this component's hooks stay
   // mounted for the life of the kiosk view even while the cart is empty (the
   // conditional below only hides the JSX), so a naive "length > 0 and I
@@ -74,6 +80,23 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
     }
   }, [selectedItems.length]);
 
+  // Animate to/from a measured pixel height rather than motion/react's
+  // `height: 'auto'`. 'auto' has to be resolved through an internal
+  // measure-then-pin-then-release dance; toggling collapse -> expand ->
+  // collapse fast enough caught that mid-resolution and left the exit
+  // animating from a stale height, settling at a leftover ~25px instead of
+  // 0. Measuring the real content height ourselves on every expand means
+  // both `animate` and `exit` always interpolate between two concrete
+  // numbers (0 and a known pixel value), which has no such ambiguous state.
+  const expandedContentRef = React.useRef<HTMLDivElement>(null);
+  const [expandedHeight, setExpandedHeight] = React.useState(0);
+
+  React.useLayoutEffect(() => {
+    if (expanded && expandedContentRef.current) {
+      setExpandedHeight(expandedContentRef.current.scrollHeight);
+    }
+  }, [expanded, selectedItems]);
+
   const orderDisabled =
     isScanning ||
     selectedItems.length === 0 ||
@@ -90,152 +113,46 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
           className="shrink-0 w-full px-4 pb-4 pt-2 pad-safe-bottom"
         >
           <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-neutral-200/80 px-5 py-4 flex flex-col gap-3">
-            <button
-              data-testid="order-bar-toggle"
-              onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-              className="flex items-center justify-between gap-2 touch-target-h -my-1 text-left"
-            >
-              <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
-                {expanded ? t('kiosk.hide_items') : t('kiosk.show_items')}
-              </span>
-              <ChevronRight className={`w-4 h-4 text-neutral-400 transition-transform ${expanded ? '-rotate-90' : 'rotate-90'}`} />
-            </button>
-
-            <AnimatePresence initial={false}>
-              {expanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="overflow-hidden"
-                >
-                  <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
-                    {selectedItems.map((item) => (
-                      <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-sm font-bold text-neutral-900 truncate flex items-center gap-2">
-                            {item.quantity > 1 && <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-500 font-mono">x{item.quantity}</span>}
-                            {item.name}
-                          </span>
-                          <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
-                            €{formatPrice(item.price * item.quantity)}
-                          </span>
-                        </div>
-
-                        {/* Nested Sides & Fees */}
-                        <div className="pl-3 mt-1 space-y-0.5">
-                          {item.side && (
-                            <div className="flex items-center justify-between group">
-                              <span className="text-[10px] text-neutral-400 font-medium">
-                                └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
-                                <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
-                              </span>
-                              {(item.requiresSideChoice || item.hasIncludedSide) && (
-                                <button
-                                  onClick={() => onChangeSide(item)}
-                                  className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                  {t('kiosk.change')}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
-                            <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
-                              <span>└─ {fee.type}</span>
-                              <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Divider */}
-            <div className="h-px bg-neutral-100" />
-
-            {/* Total + actions row.
-                Wraps, because it cannot fit on a phone: the clear button, the
-                RFID field and the order button are all shrink-0 and together
-                need ~517px, while the card offers ~325px at 390px wide. The
-                overflow was clipped by an ancestor rather than scrolled, which
-                put the order button entirely outside the viewport — the primary
-                action was unreachable on a phone. Below sm the field and the
-                button each take their own full-width line. */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
-                  {t('orders.total')}
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-neutral-900 tracking-tighter">
-                    €{totalPrice.toFixed(2)}
-                  </span>
-                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                    ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)}{' '}
-                    {selectedItems.reduce((acc, i) => acc + i.quantity, 0) === 1 ? t('menu.item') : t('menu.items')})
-                  </span>
-                </div>
-              </div>
-
+            {/* Collapsed pill: this is the whole collapsed state -- total,
+                item count and the order button, one row, never wraps at
+                phone width. The toggle affordance is folded into the pill
+                itself (tapping the total/count area opens the item list)
+                rather than spending a dedicated 44px row on a chevron: the
+                order button already anchors the row's height, so a separate
+                toggle row would only cost space, not buy anything a chevron
+                on the pill doesn't already provide. */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={onClearCart}
-                className="p-2 touch-target flex items-center justify-center text-neutral-400 hover:text-red-500 transition-colors shrink-0"
-                title={t('kiosk.clear_order')}
-                aria-label={t('kiosk.clear_order')}
+                type="button"
+                data-testid="order-bar-toggle"
+                onClick={() => setExpanded((v) => !v)}
+                aria-expanded={expanded}
+                aria-label={expanded ? t('kiosk.hide_items') : t('kiosk.show_items')}
+                className="flex-1 min-w-0 flex items-center gap-2 touch-target-h text-left"
               >
-                <Trash2 className="w-5 h-5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                    {t('orders.total')}
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-neutral-900 tracking-tighter">
+                      €{totalPrice.toFixed(2)}
+                    </span>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                      ({selectedItems.reduce((acc, i) => acc + i.quantity, 0)}{' '}
+                      {selectedItems.reduce((acc, i) => acc + i.quantity, 0) === 1 ? t('menu.item') : t('menu.items')})
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 text-neutral-400 transition-transform shrink-0 ${expanded ? '-rotate-90' : 'rotate-90'}`} />
               </button>
 
-              {/* RFID input */}
-              <div className="relative w-full sm:w-44 shrink-0 order-2 sm:order-none">
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                <input
-                  ref={rfidInputRef}
-                  type="text"
-                  placeholder={t('cards.scan_to_register')}
-                  aria-label={t('cards.scan_to_register')}
-                  value={rfid}
-                  autoComplete="off"
-                  onChange={(e) => setRfid(e.target.value)}
-                  onFocus={(e) => { if (e.target.value) e.target.select(); }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const clean = e.currentTarget.value
-                        .trim()
-                        .replace(/[^\x20-\x7E]/g, '')
-                        .toLowerCase();
-                      if (!clean) return;
-                      setRfid(clean);
-                      onOrder();
-                    }
-                  }}
-                  className="w-full pl-9 pr-8 py-2.5 touch-target-h bg-neutral-100 rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm"
-                />
-                {rfid && (
-                  <button
-                    tabIndex={-1}
-                    onClick={() => setRfid('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors touch-target-expansion"
-                    aria-label={t('modals.remove')}
-                    title={t('modals.remove')}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Order button */}
+              {/* Order button -- stays outside the collapsible region. It is
+                  the primary action and must be reachable without expanding. */}
               <button
                 onClick={onOrder}
                 disabled={orderDisabled}
-                className="px-5 py-2.5 touch-target-h w-full sm:w-auto order-3 sm:order-none bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shrink-0"
+                className="px-5 py-2.5 touch-target-h shrink-0 whitespace-nowrap bg-neutral-900 text-white rounded-xl font-bold text-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 {isScanning ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -245,6 +162,120 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 {testModeEnabled && !rfid ? 'Test Order' : t('kiosk.place_order')}
               </button>
             </div>
+
+            {/* Expanded region: item list, clear button and the RFID field.
+                The RFID field moves in here (per spec) and keeps its 44px
+                floor via touch-target-h -- it no longer needs its own
+                full-width line since it isn't sharing the collapsed pill
+                with the order button any more. */}
+            <AnimatePresence initial={false}>
+              {expanded && (
+                <motion.div
+                  key="expanded-region"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: expandedHeight, opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <div ref={expandedContentRef} className="flex flex-col gap-3">
+                    <div className="h-px bg-neutral-100" />
+
+                    <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
+                      {selectedItems.map((item) => (
+                        <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-sm font-bold text-neutral-900 truncate flex items-center gap-2">
+                              {item.quantity > 1 && <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-500 font-mono">x{item.quantity}</span>}
+                              {item.name}
+                            </span>
+                            <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
+                              €{formatPrice(item.price * item.quantity)}
+                            </span>
+                          </div>
+
+                          {/* Nested Sides & Fees */}
+                          <div className="pl-3 mt-1 space-y-0.5">
+                            {item.side && (
+                              <div className="flex items-center justify-between group">
+                                <span className="text-[10px] text-neutral-400 font-medium">
+                                  └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
+                                  <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
+                                </span>
+                                {(item.requiresSideChoice || item.hasIncludedSide) && (
+                                  <button
+                                    onClick={() => onChangeSide(item)}
+                                    className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    {t('kiosk.change')}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
+                              <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
+                                <span>└─ {fee.type}</span>
+                                <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={onClearCart}
+                        className="p-2 touch-target flex items-center justify-center text-neutral-400 hover:text-red-500 transition-colors shrink-0"
+                        title={t('kiosk.clear_order')}
+                        aria-label={t('kiosk.clear_order')}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+
+                      {/* RFID input */}
+                      <div className="relative flex-1 min-w-0">
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                        <input
+                          ref={rfidInputRef}
+                          type="text"
+                          placeholder={t('cards.scan_to_register')}
+                          aria-label={t('cards.scan_to_register')}
+                          value={rfid}
+                          autoComplete="off"
+                          onChange={(e) => setRfid(e.target.value)}
+                          onFocus={(e) => { if (e.target.value) e.target.select(); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const clean = e.currentTarget.value
+                                .trim()
+                                .replace(/[^\x20-\x7E]/g, '')
+                                .toLowerCase();
+                              if (!clean) return;
+                              setRfid(clean);
+                              onOrder();
+                            }
+                          }}
+                          className="w-full pl-9 pr-8 py-2.5 touch-target-h bg-neutral-100 rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm"
+                        />
+                        {rfid && (
+                          <button
+                            tabIndex={-1}
+                            onClick={() => setRfid('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 transition-colors touch-target-expansion"
+                            aria-label={t('modals.remove')}
+                            title={t('modals.remove')}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       )}
