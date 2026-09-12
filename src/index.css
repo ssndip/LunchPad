@@ -15,8 +15,16 @@
   /* Measured at runtime by ManagerDashboard's PhoneBottomNav. The fallback
      covers first paint and any render without a ResizeObserver. The height is
      deliberately not written down anywhere else: a second hardcoded copy is
-     what let the content spacer drift out of step with the nav. */
-  --phone-nav-h: 72px;
+     what let the content spacer drift out of step with the nav.
+     The inset lives HERE, in the fallback, and nowhere else. The nav pads
+     itself with `pb-[env(safe-area-inset-bottom)]`, and offsetHeight includes
+     an element's own padding — so once the ResizeObserver publishes,
+     --phone-nav-h already includes the inset. Do not add + env(...) again at
+     a consumer of this property: a var()'s fallback only applies while the
+     property is unset, but the callback ref sets it synchronously on attach,
+     so from first paint onward any extra `+ env(...)` term stacks a second
+     inset permanently, not just before JS runs. */
+  --phone-nav-h: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
@@ -102,13 +110,15 @@
 
   /* Reserves space in the dashboard's scroll container for the fixed phone
      bottom nav, sized from the --phone-nav-h the nav measures itself into
-     (see :root). The env() term is belt-and-braces for the :root fallback
-     path only — the nav already pads itself by the safe-area inset, so a
-     measured --phone-nav-h already includes it. Zeroed out at md and up,
-     where the phone nav is not rendered, so tablet/desktop keep their normal
-     layout. */
+     (see :root). The safe-area inset is intentionally NOT added again here:
+     --phone-nav-h's own fallback already bakes it in, and once the nav's
+     ResizeObserver publishes, offsetHeight already includes the nav's own
+     safe-area padding too. Adding + env(...) here would double-count it on
+     every device that reports a nonzero inset, permanently, not just before
+     JS runs. Zeroed out at md and up, where the phone nav is not rendered,
+     so tablet/desktop keep their normal layout. */
   .phone-nav-spacer {
-    padding-bottom: calc(var(--phone-nav-h, 72px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: var(--phone-nav-h, 72px);
   }
   @media (min-width: 768px) {
     .phone-nav-spacer {
