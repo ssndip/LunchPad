@@ -98,6 +98,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
 }) => {
   const { t, lang } = useTranslation();
   const rfidInputRef = useRef<HTMLInputElement>(null);
+  const dateStripRef = useRef<HTMLDivElement>(null);
 
   const [userHistoryOpen, setUserHistoryOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
@@ -198,6 +199,19 @@ export const KioskView: React.FC<KioskViewProps> = ({
       setSelectedDate(orderingDate);
     }
   }, [orderingDate, selectedDate]);
+
+  // Keep the chosen day visible. The strip is start-aligned so that overflow
+  // stays reachable by scrolling, which means the active tab is not centred for
+  // free the way justify-center used to do it. Guarded because happy-dom (the
+  // test environment) does not implement scrollIntoView.
+  React.useEffect(() => {
+    const strip = dateStripRef.current;
+    if (!strip || !selectedDate) return;
+    const active = strip.querySelector<HTMLElement>('[data-date-active="true"]');
+    if (active && typeof active.scrollIntoView === 'function') {
+      active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedDate]);
 
   const isMenuOutdated = useMemo(() => {
     if (!selectedDate) return false;
@@ -341,7 +355,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
         </div>
 
         {/* Center Section — Date Picker Tabs */}
-        <div className="flex-1 flex items-center justify-center px-4 overflow-x-auto no-scrollbar gap-2">
+        <div
+          ref={dateStripRef}
+          className="flex-1 flex items-center justify-start md:justify-center px-4 overflow-x-auto no-scrollbar gap-2 snap-x snap-mandatory"
+        >
           {availableDates.length > 0 ? (
             availableDates.map(date => {
               const { dayName, fullDate } = formatDateLabel(date);
@@ -351,8 +368,9 @@ export const KioskView: React.FC<KioskViewProps> = ({
               return (
                 <button
                   key={date}
+                  data-date-active={isActive ? 'true' : 'false'}
                   onClick={() => { triggerHaptic('light'); setSelectedDate(date); }}
-                  className={`flex flex-col items-center justify-center min-w-[120px] h-12 rounded-2xl transition-all relative ${
+                  className={`flex flex-col items-center justify-center min-w-[88px] md:min-w-[120px] h-12 rounded-2xl transition-all relative shrink-0 snap-start ${
                     isActive 
                       ? 'bg-neutral-900 text-white shadow-lg scale-105' 
                       : 'bg-white/50 text-neutral-500 hover:bg-white border border-neutral-100'
