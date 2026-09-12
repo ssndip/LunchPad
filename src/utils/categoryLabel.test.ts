@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { categoryLabel } from './categoryLabel';
+import { CustomCategory } from '../types';
 
 // Mirrors useTranslation's real contract: a miss yields undefined, not the key.
 const t = (key: string) => ({
@@ -24,14 +25,15 @@ describe('categoryLabel', () => {
   });
 
   it('prefers a custom category name in the active language', () => {
-    const custom = [{ id: 'cat_1', names: { bg: 'Десерти', en: 'Desserts' } } as any];
+    const custom: CustomCategory[] = [{ id: 'cat_1', names: { bg: 'Десерти', en: 'Desserts' }, keywords: [], color: '#000' }];
     expect(categoryLabel('cat_1', t, custom, 'bg')).toBe('Десерти');
   });
 
   it('falls back through en then the raw id for a custom category', () => {
-    const custom = [{ id: 'cat_2', names: { en: 'Drinks' } } as any];
+    const custom: CustomCategory[] = [{ id: 'cat_2', names: { en: 'Drinks' }, keywords: [], color: '#000' }];
     expect(categoryLabel('cat_2', t, custom, 'bg')).toBe('Drinks');
-    expect(categoryLabel('cat_3', t, [{ id: 'cat_3', names: {} } as any], 'bg')).toBe('cat_3');
+    const custom2: CustomCategory[] = [{ id: 'cat_3', names: {}, keywords: [], color: '#000' }];
+    expect(categoryLabel('cat_3', t, custom2, 'bg')).toBe('cat_3');
   });
 
   it('returns the raw name rather than an empty string for a blank translation', () => {
