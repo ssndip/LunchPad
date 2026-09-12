@@ -709,9 +709,13 @@ it, because the fallback is a bare `72px` with no inset baked in.
 - [ ] **Step 5: Drop the unused responsive destructure**
 
 `src/components/manager/ManagerDashboard.tsx:41` — `isPhone`, `isTablet` and
-`isDesktop` are destructured and never read. Delete the line and the
-`useResponsive` import at line 18 if nothing else in the file uses them (grep
-first; Task 10 reintroduces the import, which is fine).
+`isDesktop` are destructured and never read; the three navs switch on CSS
+(`hidden lg:flex`, `hidden md:flex lg:hidden`, `flex md:hidden`), not on JS.
+Delete the line and the `useResponsive` import at line 18.
+
+Confirm with `grep -n 'useResponsive\|isPhone\|isTablet\|isDesktop' src/components/manager/ManagerDashboard.tsx`
+that nothing else reads them first. No later task reintroduces the import into
+this file — Task 11 adds `Sheet`, which calls `useResponsive` internally.
 
 - [ ] **Step 6: Verify**
 
@@ -1168,7 +1172,11 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ManagerDashboard } from './ManagerDashboard';
+import { useStore } from '../../store/useStore';
 
+// The store defaults to lang 'bg' (settingsSlice.ts:82), and Sheet reads
+// useResponsive, so both are pinned here: the labels asserted below are the
+// English ones.
 vi.mock('../../hooks/useResponsive', () => ({
   useResponsive: () => ({
     width: 390, height: 840, isPortrait: true, isLandscape: false,
@@ -1189,7 +1197,11 @@ const props = {
 const PRIMARY = ['Menu', 'Orders', 'History', 'Cards'];
 
 describe('ManagerDashboard phone navigation', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    useStore.setState({ lang: 'en' });
+  });
 
   it('shows exactly four primary tabs plus More', () => {
     render(<ManagerDashboard {...props} />);
@@ -1253,9 +1265,9 @@ describe('ManagerDashboard phone navigation', () => {
 });
 ```
 
-The test asserts English labels, which is the store's default `lang`. If the
-default is `bg`, set it in a `beforeEach` with
-`useStore.setState({ lang: 'en' })` and import `useStore` from `../../store/useStore`.
+The `beforeEach` pins `lang` to `en` on purpose: the store's default is `bg`
+(`src/store/slices/settingsSlice.ts:82` reads `localStorage.getItem('lang') || 'bg'`),
+so without it every label assertion here would compare against Bulgarian and fail.
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -1777,8 +1789,9 @@ describe('DataList', () => {
   });
 
   it('omits hideOnPhone columns from the card but keeps them in the table', () => {
-    render(<DataList columns={columns} rows={rows} emptyMessage="Nothing here" />);
+    const { unmount } = render(<DataList columns={columns} rows={rows} emptyMessage="Nothing here" />);
     expect(screen.queryByText('id-1')).not.toBeInTheDocument();
+    unmount(); // otherwise the second render stacks a table beside the cards
 
     responsive.value.isPhone = false;
     render(<DataList columns={columns} rows={rows} emptyMessage="Nothing here" />);
