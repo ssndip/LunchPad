@@ -46,6 +46,34 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
   onChangeSide,
   t,
 }) => {
+  // Collapsed by default: fully expanded the bar took 227px of an 840px phone
+  // screen. It opens itself once, the first time something is added, so the
+  // cart is not a mystery box; after that the customer decides. The auto-open
+  // is keyed off an actual 0 -> non-zero transition (via prevLength), not
+  // merely "cart is non-empty on this render" -- this component's hooks stay
+  // mounted for the life of the kiosk view even while the cart is empty (the
+  // conditional below only hides the JSX), so a naive "length > 0 and I
+  // haven't opened yet" check would also fire the very first time the render
+  // happens to observe a non-empty cart, fighting a customer who already
+  // collapsed the bar and then added more items.
+  const [expanded, setExpanded] = React.useState(false);
+  const hasOpenedOnce = React.useRef(false);
+  const prevLength = React.useRef(selectedItems.length);
+
+  React.useEffect(() => {
+    const prev = prevLength.current;
+    prevLength.current = selectedItems.length;
+
+    if (prev === 0 && selectedItems.length > 0 && !hasOpenedOnce.current) {
+      hasOpenedOnce.current = true;
+      setExpanded(true);
+    }
+    if (selectedItems.length === 0) {
+      hasOpenedOnce.current = false;
+      setExpanded(false);
+    }
+  }, [selectedItems.length]);
+
   const orderDisabled =
     isScanning ||
     selectedItems.length === 0 ||
@@ -62,47 +90,71 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
           className="shrink-0 w-full px-4 pb-4 pt-2 pad-safe-bottom"
         >
           <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-neutral-200/80 px-5 py-4 flex flex-col gap-3">
-            <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
-              {selectedItems.map((item) => (
-                <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-sm font-bold text-neutral-900 truncate flex items-center gap-2">
-                      {item.quantity > 1 && <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-500 font-mono">x{item.quantity}</span>}
-                      {item.name}
-                    </span>
-                    <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
-                      €{formatPrice(item.price * item.quantity)}
-                    </span>
-                  </div>
+            <button
+              data-testid="order-bar-toggle"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className="flex items-center justify-between gap-2 touch-target-h -my-1 text-left"
+            >
+              <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                {expanded ? t('kiosk.hide_items') : t('kiosk.show_items')}
+              </span>
+              <ChevronRight className={`w-4 h-4 text-neutral-400 transition-transform ${expanded ? '-rotate-90' : 'rotate-90'}`} />
+            </button>
 
-                  {/* Nested Sides & Fees */}
-                  <div className="pl-3 mt-1 space-y-0.5">
-                    {item.side && (
-                      <div className="flex items-center justify-between group">
-                        <span className="text-[10px] text-neutral-400 font-medium">
-                          └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
-                          <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
-                        </span>
-                        {(item.requiresSideChoice || item.hasIncludedSide) && (
-                          <button
-                            onClick={() => onChangeSide(item)}
-                            className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            {t('kiosk.change')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
-                      <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
-                        <span>└─ {fee.type}</span>
-                        <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
+            <AnimatePresence initial={false}>
+              {expanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-2">
+                    {selectedItems.map((item) => (
+                      <div key={item.id} className="flex flex-col flex-1 min-w-0 pb-1 border-b border-neutral-50 last:border-0">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-bold text-neutral-900 truncate flex items-center gap-2">
+                            {item.quantity > 1 && <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-500 font-mono">x{item.quantity}</span>}
+                            {item.name}
+                          </span>
+                          <span className="text-xs font-mono text-neutral-500 shrink-0 ml-2">
+                            €{formatPrice(item.price * item.quantity)}
+                          </span>
+                        </div>
+
+                        {/* Nested Sides & Fees */}
+                        <div className="pl-3 mt-1 space-y-0.5">
+                          {item.side && (
+                            <div className="flex items-center justify-between group">
+                              <span className="text-[10px] text-neutral-400 font-medium">
+                                └─ {t('kiosk.side')}: <span className="text-neutral-600 font-bold">{item.side}</span>
+                                <span className="ml-1 text-[8px] opacity-70">({t('kiosk.included')})</span>
+                              </span>
+                              {(item.requiresSideChoice || item.hasIncludedSide) && (
+                                <button
+                                  onClick={() => onChangeSide(item)}
+                                  className="text-[9px] font-bold text-blue-500 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  {t('kiosk.change')}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {item.extraFees && item.extraFees.length > 0 && item.extraFees.map((fee, idx) => (
+                            <div key={idx} className="flex items-baseline justify-between text-[10px] text-neutral-400">
+                              <span>└─ {fee.type}</span>
+                              <span className="font-mono">+{fee.amount.toFixed(2)}€</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Divider */}
             <div className="h-px bg-neutral-100" />
