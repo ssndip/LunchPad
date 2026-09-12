@@ -1,9 +1,10 @@
 import React from 'react';
-import { Order } from '../../../types';
+import { Order, PersistedOrderItem } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { FileText } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { formatDate } from '../../../utils/dateFormatter';
+import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
 
 interface Filters {
   startDate: string;
@@ -19,6 +20,13 @@ interface HistoryTabProps {
   onApplyFilters: () => void;
 }
 
+/**
+ * `PersistedOrderItem` (via `MenuItem`) does not declare `quantity`, but
+ * persisted order records carry it on each item regardless. Widen locally
+ * instead of reading through `any`.
+ */
+type HistoryOrderItem = PersistedOrderItem & { quantity?: number };
+
 export const HistoryTab: React.FC<HistoryTabProps> = ({
   history,
   filters,
@@ -27,6 +35,56 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 }) => {
   const { t } = useTranslation();
   const setShowHistoryReport = useStore(s => s.setShowHistoryReport);
+
+  const columns: DataListColumn[] = [
+    { key: 'when', label: t('orders.timestamp') || '', role: 'title' },
+    { key: 'who', label: t('orders.cardholder') || '' },
+    { key: 'items', label: t('orders.items') || '' },
+    { key: 'total', label: t('orders.total') || '', align: 'right' },
+  ];
+
+  const rows: DataListRow[] = (Array.isArray(history) ? history : []).map((order) => {
+    const items: HistoryOrderItem[] = order.items;
+
+    return {
+      key: order.id,
+      cells: {
+        when: (
+          <>
+            <p className="font-bold text-neutral-900">{formatDate(order.timestamp)}</p>
+            <p className="text-[10px] text-neutral-400 font-mono">
+              {new Date(order.timestamp).toLocaleTimeString()}
+            </p>
+          </>
+        ),
+        who: (
+          <>
+            <p className="font-bold text-neutral-900">{order.ownerName ?? t('menu.unknown_user')}</p>
+            <p className="text-[10px] text-neutral-400 font-mono">{order.rfid ?? 'N/A'}</p>
+          </>
+        ),
+        items: (
+          <div className="space-y-1 max-h-24 overflow-y-auto pr-2 custom-scrollbar">
+            {Array.isArray(items) ? (
+              items.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center gap-4 text-xs">
+                  <span className="font-bold text-neutral-900 truncate">{item.name}</span>
+                  <span className="text-neutral-400 font-mono">x{item.quantity || 1}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-neutral-400 italic">{t('menu.no_items')}</p>
+            )}
+          </div>
+        ),
+        total: (
+          <span className="font-mono font-bold text-neutral-900">
+            €{(Number(order.totalPrice) || 0).toFixed(2)}
+          </span>
+        ),
+      },
+    };
+  });
 
   return (
     <>
@@ -133,56 +191,12 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
       {/* Results */}
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr>
-                {[t('orders.timestamp'), t('orders.cardholder'), t('orders.items'), t('orders.total')].map((h, i) => (
-                  <th
-                    key={h}
-                    className={`p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100 ${i === 3 ? 'text-right' : ''}`}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {Array.isArray(history) && history.map((order) => (
-                <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
-                  <td className="p-6">
-                    <p className="font-bold text-neutral-900">{formatDate(order.timestamp)}</p>
-                    <p className="text-[10px] text-neutral-400 font-mono">{new Date(order.timestamp).toLocaleTimeString()}</p>
-                  </td>
-                  <td className="p-6">
-                    <p className="font-bold text-neutral-900">{order.ownerName ?? t('menu.unknown_user')}</p>
-                    <p className="text-[10px] text-neutral-400 font-mono">{order.rfid ?? 'N/A'}</p>
-                  </td>
-                  <td className="p-6">
-                    <div className="space-y-1 max-h-24 overflow-y-auto pr-2 custom-scrollbar">
-                      {Array.isArray(order.items) ? order.items.map((i: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center gap-4 text-xs">
-                          <span className="font-bold text-neutral-900 truncate">{i.name}</span>
-                          <span className="text-neutral-400 font-mono">x{i.quantity || 1}</span>
-                        </div>
-                      )) : <p className="text-xs text-neutral-400 italic">{t('menu.no_items')}</p>}
-                    </div>
-                  </td>
-                  <td className="p-6 text-right font-mono font-bold text-neutral-900">
-                    €{(Number(order.totalPrice) || 0).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-              {(!Array.isArray(history) || history.length === 0) && (
-                <tr>
-                  <td colSpan={4} className="p-12 text-center text-neutral-400 italic text-sm">
-                    {t('menu.no_history')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataList
+          columns={columns}
+          rows={rows}
+          emptyMessage={t('menu.no_history') || ''}
+          tableClassName="min-w-[600px]"
+        />
       </div>
     </>
   );
