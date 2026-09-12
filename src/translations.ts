@@ -25,6 +25,7 @@ export const translations = {
       network_error: 'Network Error',
       logout: 'Logout',
       parser_rules: 'Parser Rules',
+      actions: 'Actions',
     },
     ocr: {
       upload_image: 'Upload Photo',
@@ -545,6 +546,7 @@ export const translations = {
       network_error: 'Мрежова грешка',
       logout: 'Изход',
       parser_rules: 'Правила на парсера',
+      actions: 'Действия',
     },
     ocr: {
       upload_image: 'Качи снимка',
