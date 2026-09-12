@@ -139,7 +139,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               type="date"
               value={filters.startDate}
               onChange={(e) => onFilterChange('startDate', e.target.value)}
-              className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
             />
           </div>
           <div>
@@ -151,7 +151,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               type="date"
               value={filters.endDate}
               onChange={(e) => onFilterChange('endDate', e.target.value)}
-              className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
             />
           </div>
           <div>
@@ -165,13 +165,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               onChange={(e) => onFilterChange('rfid', e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onApplyFilters()}
               placeholder={t('filters.search_placeholder')}
-              className="w-full px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={onApplyFilters}
-              className="w-full py-2.5 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-lg shadow-neutral-200"
+              className="w-full py-2.5 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-lg shadow-neutral-200"
             >
               {t('filters.apply')}
             </button>
@@ -180,7 +180,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
             <button
               onClick={() => setShowHistoryReport(true)}
               disabled={!history || history.length === 0}
-              className="w-full py-2.5 bg-white text-neutral-900 border border-neutral-200 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 touch-target-h bg-white text-neutral-900 border border-neutral-200 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileText className="w-4 h-4" />
               {t('analytics.summary_report')}
