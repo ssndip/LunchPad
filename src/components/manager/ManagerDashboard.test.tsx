@@ -41,6 +41,21 @@ describe('ManagerDashboard phone navigation', () => {
     expect(within(nav).getAllByRole('button')).toHaveLength(5);
   });
 
+  it('wires the nav element into the --phone-nav-h height publisher (guards a dropped ref)', () => {
+    // Task 6's callback ref (`setPhoneNavRef`) publishes --phone-nav-h onto
+    // document.documentElement the instant the <nav> mounts, and removes it
+    // on unmount. None of the other tests in this file would notice if a
+    // future edit dropped `ref={setPhoneNavRef}` from the rewritten <nav> —
+    // all label/routing assertions would keep passing while the dashboard's
+    // content spacer silently goes stale. This test fails specifically for
+    // that regression: comment out the ref and this is the one that turns red.
+    document.documentElement.style.removeProperty('--phone-nav-h');
+    const { unmount } = render(<ManagerDashboard {...props} />);
+    expect(document.documentElement.style.getPropertyValue('--phone-nav-h')).not.toBe('');
+    unmount();
+    expect(document.documentElement.style.getPropertyValue('--phone-nav-h')).toBe('');
+  });
+
   it('keeps every primary label short enough not to truncate', () => {
     render(<ManagerDashboard {...props} />);
     const nav = screen.getByTestId('phone-bottom-nav');
