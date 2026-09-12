@@ -176,11 +176,14 @@ describe('DataList', () => {
     fireEvent.keyDown(cards[0], { key: 'Enter' });
     fireEvent.keyDown(cards[0], { key: ' ' });
     expect(onClick).toHaveBeenCalledTimes(2);
+    // The card is a <div>; role="button" there is correct and idiomatic.
     expect(cards[0]).toHaveAttribute('tabindex', '0');
+    expect(cards[0]).toHaveAttribute('role', 'button');
     expect(cards[1]).not.toHaveAttribute('tabindex');
+    expect(cards[1]).not.toHaveAttribute('role');
   });
 
-  it('drives the table branch: click and keyboard activate onClick, expanded content colSpan matches the column count, and a header click fires onSort', () => {
+  it('drives the table branch: click and keyboard activate onClick without overriding role="row", expanded content colSpan matches the column count, and a header click fires onSort', () => {
     responsive.value.isPhone = false;
     const onClick = vi.fn();
     const onSort = vi.fn();
@@ -196,20 +199,28 @@ describe('DataList', () => {
         isExpanded: true,
         expandedContent: <div>breakdown</div>,
       },
+      { key: 2, cells: { name: 'Salad', price: '€2.50' } }, // not clickable
     ];
     render(<DataList columns={sortableColumns} rows={expandableRows} emptyMessage="none" />);
 
     fireEvent.click(screen.getByText('Name'));
     expect(onSort).toHaveBeenCalledTimes(1);
 
-    // A clickable <tr> takes role="button" for keyboard focusability, which
-    // means it is no longer exposed as role="row" — look it up by its new role.
-    const dataRow = screen.getByRole('button');
-    expect(dataRow.tagName).toBe('TR');
-    expect(dataRow).toHaveAttribute('tabindex', '0');
-    fireEvent.click(dataRow);
-    fireEvent.keyDown(dataRow, { key: 'Enter' });
-    fireEvent.keyDown(dataRow, { key: ' ' });
+    // A clickable <tr> stays a table row in the a11y tree — it must NOT take
+    // role="button" (that would drop it, and its cells, out of the table's
+    // row/column-header associations for a screen-reader user). It is still
+    // focusable and Enter/Space-activatable via tabIndex + a key handler.
+    const rows_ = screen.getAllByRole('row'); // [0] header, [1] clickable row, [2] expanded-content row, [3] plain row
+    const clickableRow = rows_[1];
+    const plainRow = rows_[3];
+    expect(clickableRow).not.toHaveAttribute('role');
+    expect(clickableRow).toHaveAttribute('tabindex', '0');
+    expect(plainRow).not.toHaveAttribute('role');
+    expect(plainRow).not.toHaveAttribute('tabindex');
+
+    fireEvent.click(clickableRow);
+    fireEvent.keyDown(clickableRow, { key: 'Enter' });
+    fireEvent.keyDown(clickableRow, { key: ' ' });
     expect(onClick).toHaveBeenCalledTimes(3);
 
     const expandedCell = screen.getByText('breakdown').closest('td');

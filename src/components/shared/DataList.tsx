@@ -126,7 +126,13 @@ export const DataList: React.FC<DataListProps> = ({
               <React.Fragment key={row.key}>
                 <tr
                   onClick={row.onClick}
-                  role={row.onClick ? 'button' : undefined}
+                  // Deliberately no role="button" here, unlike the card below.
+                  // This <tr> is inside a real <table>; overriding its
+                  // implicit role="row" would drop it out of the table's
+                  // accessibility tree, so a screen reader could no longer
+                  // associate its cells with the column headers. tabIndex +
+                  // the Enter/Space handler make it focusable and activatable
+                  // without giving up "row".
                   tabIndex={row.onClick ? 0 : undefined}
                   onKeyDown={handleActivationKeyDown(row.onClick)}
                   className={`transition-colors ${row.onClick ? 'cursor-pointer' : ''} ${
