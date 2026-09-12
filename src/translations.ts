@@ -247,6 +247,7 @@ export const translations = {
     cards: {
       rfid: 'RFID',
       owner_name: 'Owner Name',
+      pin: 'PIN',
       admin: 'Admin',
       owed: 'Owed',
       conflict: 'A conflict occurred',
@@ -768,6 +769,7 @@ export const translations = {
     cards: {
       rfid: 'RFID',
       owner_name: 'Име на собственика',
+      pin: 'ПИН',
       admin: 'Админ',
       owed: 'Дължима сума',
       conflict: 'Възникна конфликт',
