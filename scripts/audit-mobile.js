@@ -36,10 +36,14 @@
       const r = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
 
-      // Skip display:none and visibility:hidden subtrees. Unlike size (which can
-      // legitimately be 0x0 for collapsed content we want to catch), these are
-      // reliably hidden and would produce false positives.
-      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      // Skip truly hidden elements. display is NOT inherited, so checking only
+      // cs.display === 'none' misses elements nested inside a hidden ancestor —
+      // the exact pattern manager dashboard overuse. Use checkVisibility(), which
+      // accounts for the entire ancestor chain, visibility:hidden, and content-visibility.
+      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue;
+      // Fallback for older browsers: visibility is inherited, so this catches
+      // visibility:hidden anywhere in the ancestor chain.
+      if (cs.visibility === 'hidden') continue;
 
       // Empty label check must run before the size guard, because a t() miss
       // renders as a 0x0 <span> — that's the exact case we're trying to catch.
