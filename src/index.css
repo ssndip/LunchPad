@@ -140,6 +140,23 @@
     min-height: 44px;
   }
 
+  /* Same 44px floor, but only below md (767px), for a control that already
+     looks right at its current size on tablet/desktop and would look
+     oversized if it grew there too.
+
+     This is hand-written rather than `max-md:touch-target-h` on purpose:
+     Tailwind's `max-*` variant does not get generated for this file's
+     hand-written `@layer utilities` classes in this project's build (verified
+     against the compiled `dist/assets/*.css` — no `max-md` rule is emitted
+     anywhere), so that class name compiles to nothing and silently does not
+     apply. Do not "simplify" this back to a `max-md:` prefix — it will
+     silently reintroduce an undersized control. */
+  @media (max-width: 767px) {
+    .touch-target-h-phone {
+      min-height: 44px;
+    }
+  }
+
   /* No tap highlight on mobile for clean UI */
   .no-tap-highlight {
     -webkit-tap-highlight-color: transparent;
