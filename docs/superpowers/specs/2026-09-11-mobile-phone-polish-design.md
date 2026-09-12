@@ -188,14 +188,20 @@ broke in the first place, so the height is never written down twice.
 
 Each tab is migrated in the same three steps: `TabHeader` for the toolbar,
 `DataList` for the table, `Sheet` for its modals. `SettingsTab` and
-`ParserRulesTab` have no tables — they get `TabHeader`, `Sheet`, and a pass
-over their fixed-width controls (`w-[200px]`, `w-[240px]`, and the
-`grid-cols-[1fr_auto_auto]` row at `ParserRulesTab.tsx:1256`) to make them
-fluid below `md`.
+`ParserRulesTab` have no tables. Checked against the files rather than assumed,
+neither has a toolbar either: `SettingsTab`'s header is a title and subtitle
+with no buttons, and `ParserRulesTab` has no tab-level header at all. So
+`TabHeader` applies to `SettingsTab` only, to normalise its type scale, and
+both get a pass over their fixed-width controls — `w-[200px]`, `w-[240px]`, the
+`grid-cols-[1fr_auto_auto]` rule rows at `ParserRulesTab.tsx:1256`, and the
+`truncate max-w-[35%]` rule previews, which at 390px cut the before/after text
+to about eighteen characters and hide the one thing that panel exists to show.
 
-`AnalyticsTab`'s recharts containers get an explicit phone height and their
-legends move below the plot, where at 390px they otherwise steal half the
-chart width.
+`AnalyticsTab` renders no legends — four `ResponsiveContainer`s in fixed `h-80`
+divs and nothing else. Its squeeze is the two vertical bar charts, which
+reserve a 100px category axis plus 70px of margin inside a `p-8` card: on a
+390px screen that spends 170px of a 326px plot before a bar is drawn. The axis
+width, the margins and the card padding shrink below `md`.
 
 ## Testing
 
