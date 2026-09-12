@@ -2,6 +2,18 @@ import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 
+/**
+ * The one authoritative spelling of the actions-column key. A tab that wants
+ * an actions *column* in the table adds `{ key: ACTIONS_COLUMN_KEY, label,
+ * align: 'center' }` to `columns` and puts the buttons in `row.actions`.
+ * The table renders them in that column; the card renders them in its own
+ * action row, and never as a labelled body pair. If a consumer supplies
+ * `row.actions` on any row and forgets to declare this column, DataList adds
+ * one itself so the table and the card never disagree about whether the
+ * buttons exist.
+ */
+export const ACTIONS_COLUMN_KEY = '__actions';
+
 export interface DataListColumn {
   key: string;
   label: string;
@@ -38,6 +50,16 @@ export interface DataListProps {
 const alignClass = (align?: DataListColumn['align']) =>
   align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
 
+/** Enter/Space activates a clickable row or card exactly like a click would. */
+const handleActivationKeyDown =
+  (onClick?: () => void) => (event: React.KeyboardEvent) => {
+    if (!onClick) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
 /**
  * A table above md, a stacked card list below it.
  *
@@ -48,12 +70,10 @@ const alignClass = (align?: DataListColumn['align']) =>
  * Cells must arrive without <td> layout classes: this component owns padding
  * and alignment in both modes.
  *
- * The `__actions` column key is a convention, not a magic string enforced by
- * types: a tab that wants an actions *column* in the table adds
- * `{ key: '__actions', label, align: 'center' }` to `columns` and puts the
- * buttons in `row.actions`. The table renders them in that column; the card
- * renders them in its own action row. No consumer supplies the buttons
- * twice.
+ * See `ACTIONS_COLUMN_KEY` above for the actions-column convention: no
+ * consumer supplies the buttons twice, and DataList — not the consumer — is
+ * responsible for keeping the table and the card in agreement about whether
+ * an actions column exists.
  */
 export const DataList: React.FC<DataListProps> = ({
   columns,
@@ -63,13 +83,25 @@ export const DataList: React.FC<DataListProps> = ({
 }) => {
   const { isPhone } = useResponsive();
 
+  // If any row carries actions but the consumer never declared the actions
+  // column, add it ourselves. Otherwise the card (which renders row.actions
+  // unconditionally) and the table (which only has a cell for a declared
+  // column) silently disagree: the buttons show on the phone and vanish on
+  // desktop.
+  const hasDeclaredActionsColumn = columns.some((col) => col.key === ACTIONS_COLUMN_KEY);
+  const hasRowActions = rows.some((row) => row.actions);
+  const effectiveColumns: DataListColumn[] =
+    !hasDeclaredActionsColumn && hasRowActions
+      ? [...columns, { key: ACTIONS_COLUMN_KEY, label: '', align: 'center' }]
+      : columns;
+
   if (!isPhone) {
     return (
       <div className="overflow-x-auto">
         <table className={`w-full text-left border-collapse ${tableClassName}`}>
           <thead>
             <tr>
-              {columns.map((col) => (
+              {effectiveColumns.map((col) => (
                 <th
                   key={col.key}
                   onClick={col.sortable ? col.onSort : undefined}
@@ -94,19 +126,22 @@ export const DataList: React.FC<DataListProps> = ({
               <React.Fragment key={row.key}>
                 <tr
                   onClick={row.onClick}
+                  role={row.onClick ? 'button' : undefined}
+                  tabIndex={row.onClick ? 0 : undefined}
+                  onKeyDown={handleActivationKeyDown(row.onClick)}
                   className={`transition-colors ${row.onClick ? 'cursor-pointer' : ''} ${
                     row.isExpanded ? 'bg-neutral-50' : 'hover:bg-neutral-50'
                   }`}
                 >
-                  {columns.map((col) => (
+                  {effectiveColumns.map((col) => (
                     <td key={col.key} className={`p-6 ${alignClass(col.align)}`}>
-                      {col.key === '__actions' ? row.actions : row.cells[col.key]}
+                      {col.key === ACTIONS_COLUMN_KEY ? row.actions : row.cells[col.key]}
                     </td>
                   ))}
                 </tr>
                 {row.isExpanded && row.expandedContent && (
                   <tr>
-                    <td colSpan={columns.length} className="p-0 bg-neutral-50 border-b border-neutral-100">
+                    <td colSpan={effectiveColumns.length} className="p-0 bg-neutral-50 border-b border-neutral-100">
                       {row.expandedContent}
                     </td>
                   </tr>
@@ -115,7 +150,7 @@ export const DataList: React.FC<DataListProps> = ({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="p-12 text-center text-neutral-400 italic text-sm">
+                <td colSpan={effectiveColumns.length} className="p-12 text-center text-neutral-400 italic text-sm">
                   {emptyMessage}
                 </td>
               </tr>
@@ -126,11 +161,17 @@ export const DataList: React.FC<DataListProps> = ({
     );
   }
 
-  const visible = columns.filter((col) => !col.hideOnPhone);
+  // The actions column (declared or auto-appended) is never a body pair on
+  // the card: row.actions already gets its own action row below, so
+  // including it here would render a labelled "Actions" pair whose value is
+  // always undefined.
+  const visible = effectiveColumns.filter(
+    (col) => !col.hideOnPhone && col.key !== ACTIONS_COLUMN_KEY,
+  );
   const titleCols = visible.filter((col) => col.role === 'title');
   const bodyCols = visible.filter((col) => !col.role || col.role === 'body');
   const metaCols = visible.filter((col) => col.role === 'meta');
-  const sortCols = columns.filter((col) => col.sortable);
+  const sortCols = effectiveColumns.filter((col) => col.sortable);
 
   if (rows.length === 0) {
     return <p className="p-12 text-center text-neutral-400 italic text-sm">{emptyMessage}</p>;
@@ -161,6 +202,9 @@ export const DataList: React.FC<DataListProps> = ({
             <div
               data-testid="datalist-card"
               onClick={row.onClick}
+              role={row.onClick ? 'button' : undefined}
+              tabIndex={row.onClick ? 0 : undefined}
+              onKeyDown={handleActivationKeyDown(row.onClick)}
               className={`flex flex-col gap-2 px-4 py-4 ${row.onClick ? 'cursor-pointer active:bg-neutral-50' : ''}`}
             >
               {titleCols.map((col) => (
