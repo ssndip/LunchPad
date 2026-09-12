@@ -164,7 +164,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                       onOrder();
                     }
                   }}
-                  className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm"
+                  className="w-full pl-9 pr-8 py-2.5 touch-target-h bg-neutral-100 rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm"
                 />
                 {rfid && (
                   <button
