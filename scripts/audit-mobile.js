@@ -20,6 +20,22 @@
   const PHONE_H = 840;
   const MIN_TARGET = 44;
 
+  // True when `el` sits inside an ancestor that legitimately scrolls
+  // horizontally on purpose (overflow-x: auto/scroll AND actual overflow —
+  // scrollWidth beyond clientWidth). Such an element is expected to extend
+  // past the viewport edge; that's what makes the strip reachable by
+  // scrolling, not a stray horizontal body scroll. Walk up to the document
+  // and stop there.
+  function hasScrollableAncestor(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const overflowX = getComputedStyle(node).overflowX;
+      if ((overflowX === 'auto' || overflowX === 'scroll') && node.scrollWidth > node.clientWidth) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function audit(doc) {
     const W = doc.documentElement.clientWidth;
     const findings = [];
@@ -61,8 +77,15 @@
       if (!r.width && !r.height) continue;
 
       // Anything crossing the viewport edge. A horizontal body scroll on a phone
-      // is always a bug; the only legitimate sideways scrollers are opt-in.
-      if (r.right > W + 1 || r.left < -1) {
+      // is always a bug; the only legitimate sideways scrollers are opt-in — an
+      // element inside an ancestor that itself scrolls horizontally on purpose
+      // (overflow-x: auto/scroll with real overflow, e.g. the date strip, the
+      // category strip, or an admin table wrapper) is expected to extend past
+      // the viewport edge, since that's what makes it reachable by scrolling.
+      // Only flag elements that overflow the viewport with no such ancestor —
+      // that is the real "stray horizontal body scroll" bug this check exists
+      // to catch.
+      if ((r.right > W + 1 || r.left < -1) && !hasScrollableAncestor(el)) {
         add('offscreen-x', el, el.textContent, `left=${Math.round(r.left)} right=${Math.round(r.right)} viewport=${W}`);
       }
 
