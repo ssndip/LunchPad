@@ -12,11 +12,13 @@ import {
   BarChart2,
   Terminal,
   Loader2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Language } from '../../translations';
 
 import { useTranslation } from '../../hooks/useTranslation';
+import { Sheet } from '../shared/Sheet';
 
 interface ManagerDashboardProps {
   activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
@@ -47,6 +49,22 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     { id: 'parser_rules', icon: Terminal, label: t('navigation.parser_rules') },
     { id: 'settings', icon: Settings, label: t('navigation.system_settings') },
   ];
+
+  // Four is what fits at 390px without truncating: five cells leave 78px each,
+  // and the longest short label ("Поръчки") needs about 52px at text-[10px].
+  const PRIMARY_TABS = ['menu', 'orders', 'history', 'cards'] as const;
+
+  const shortLabels: Record<string, string> = {
+    menu: t('navigation.menu_short'),
+    orders: t('navigation.orders_short'),
+    history: t('navigation.history_short'),
+    cards: t('navigation.cards_short'),
+  };
+
+  const primaryItems = menuItems.filter((i) => (PRIMARY_TABS as readonly string[]).includes(i.id));
+  const secondaryItems = menuItems.filter((i) => !(PRIMARY_TABS as readonly string[]).includes(i.id));
+
+  const [moreOpen, setMoreOpen] = React.useState(false);
 
   // Desktop Side Navigation
   const DesktopNav = () => (
@@ -214,14 +232,19 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   }, []);
 
   const PhoneBottomNav = () => (
-    <nav ref={setPhoneNavRef} className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]">
+    <nav
+      ref={setPhoneNavRef}
+      data-testid="phone-bottom-nav"
+      className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]"
+    >
       <div className="flex w-full justify-around items-center h-[72px] px-1 relative">
-        {menuItems.filter(i => i.id !== 'settings').map((item) => {
+        {primaryItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id as any)}
+              aria-current={isActive ? 'page' : undefined}
               className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
             >
               <div className={`p-1 transition-all z-10 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
@@ -231,15 +254,27 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                 <motion.div
                   layoutId="mobile-nav-pill"
                   className="absolute inset-x-2 inset-y-2 bg-neutral-900/5 rounded-2xl z-0 pointer-events-none"
-                  transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
                 />
               )}
-              <span className={`text-[9px] font-bold z-10 truncate w-full text-center transition-colors ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
-                {item.label}
+              <span className={`text-[10px] font-bold z-10 text-center transition-colors ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                {shortLabels[item.id]}
               </span>
             </button>
           );
         })}
+
+        <button
+          onClick={() => setMoreOpen(true)}
+          className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
+        >
+          <div className={`p-1 transition-all z-10 ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
+            <MoreHorizontal className="w-5 h-5 flex-shrink-0" />
+          </div>
+          <span className={`text-[10px] font-bold z-10 text-center transition-colors ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
+            {t('navigation.more')}
+          </span>
+        </button>
       </div>
     </nav>
   );
@@ -282,26 +317,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Setting & Logout Buttons (visible entirely on Mobile so they don't clog bottom bar) */}
-            <div className="flex md:hidden items-center gap-1.5 mr-1 border-r border-neutral-200 pr-2">
-              <button 
-                onClick={() => onTabChange('settings')} 
-                className={`p-2 rounded-full transition-all active:scale-95 ${activeTab === 'settings' ? 'bg-neutral-900 text-white shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-600'}`}
-                aria-label={t('navigation.system_settings')}
-                title={t('navigation.system_settings')}
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={onLogout} 
-                className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-500 transition-all active:scale-95"
-                aria-label={t('navigation.logout')}
-                title={t('navigation.logout')}
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-
             <span className="hidden sm:inline text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">
               {lang === 'bg' ? 'Български' : 'English'}
             </span>
@@ -329,6 +344,42 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       </main>
 
       <PhoneBottomNav />
+
+      <Sheet isOpen={moreOpen} onClose={() => setMoreOpen(false)} title={t('navigation.more')}>
+        <div className="flex flex-col gap-1">
+          {secondaryItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onTabChange(item.id as any);
+                  setMoreOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 touch-target-h rounded-xl transition-all active:scale-[0.98] ${
+                  isActive ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
+                <span className="font-bold text-sm text-left">{item.label}</span>
+              </button>
+            );
+          })}
+
+          <div className="h-px bg-neutral-100 my-2" />
+
+          <button
+            onClick={() => {
+              setMoreOpen(false);
+              onLogout();
+            }}
+            className="w-full flex items-center gap-3 px-4 touch-target-h text-red-500 rounded-xl hover:bg-red-50 transition-all font-bold text-sm active:scale-[0.98]"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span>{t('navigation.logout')}</span>
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 };
