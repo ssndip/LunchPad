@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Language } from '../../translations';
-import { useResponsive } from '../../hooks/useResponsive';
 
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -38,7 +37,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 }) => {
   const { t, lang } = useTranslation();
   const isSyncing = useStore(s => s.isSyncing);
-  const { isPhone, isTablet, isDesktop } = useResponsive();
 
   const menuItems = [
     { id: 'menu', icon: MenuIcon, label: t('navigation.menu_management') },
@@ -184,8 +182,39 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   };
 
   // Phone Bottom Navigation
+  //
+  // PhoneBottomNav is declared inside this component's body, so it gets a new
+  // function identity on every render of ManagerDashboard — React treats
+  // `<PhoneBottomNav />` as a different component type each time and
+  // unmounts/remounts the <nav> node, discarding whatever was attached to it.
+  // A `useRef` + `useEffect(..., [])` pair would observe the very first node
+  // and then silently go stale the next time the parent re-renders, freezing
+  // --phone-nav-h at its first value. A callback ref does not have that
+  // problem: React invokes it with the node on every attach and with `null`
+  // on every detach, so the observer is torn down and rebuilt in step with
+  // the remount cycle instead of surviving past it.
+  const phoneNavObserverRef = React.useRef<ResizeObserver | null>(null);
+
+  const setPhoneNavRef = React.useCallback((node: HTMLElement | null) => {
+    phoneNavObserverRef.current?.disconnect();
+    phoneNavObserverRef.current = null;
+
+    if (!node) {
+      document.documentElement.style.removeProperty('--phone-nav-h');
+      return;
+    }
+
+    const publish = () =>
+      document.documentElement.style.setProperty('--phone-nav-h', `${node.offsetHeight}px`);
+    publish();
+
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    phoneNavObserverRef.current = observer;
+  }, []);
+
   const PhoneBottomNav = () => (
-    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]">
+    <nav ref={setPhoneNavRef} className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]">
       <div className="flex w-full justify-around items-center h-[72px] px-1 relative">
         {menuItems.filter(i => i.id !== 'settings').map((item) => {
           const isActive = activeTab === item.id;
@@ -220,7 +249,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       <DesktopNav />
       
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden flex flex-col relative w-full pb-[env(safe-area-inset-bottom)] md:pb-0 mb-16 md:mb-0">
+      <main className="flex-1 overflow-hidden flex flex-col relative w-full phone-nav-spacer">
         <TabletNav />
         
         {/* Top Header Shell (Visible on all breakpoints, but adjusted for mobile) */}
@@ -283,7 +312,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </header>
 
         {/* Dynamic Content — scrolls internally */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 hide-scrollbar-on-mobile relative z-10">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10 relative z-10">
           <AnimatePresence>
             <motion.div
               key={activeTab}

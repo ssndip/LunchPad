@@ -12,6 +12,11 @@
   --fluid-2xl: clamp(24px, 4vw, 32px);
   /* App sizing limits */
   --app-max-width: 1440px;
+  /* Measured at runtime by ManagerDashboard's PhoneBottomNav. The fallback
+     covers first paint and any render without a ResizeObserver. The height is
+     deliberately not written down anywhere else: a second hardcoded copy is
+     what let the content spacer drift out of step with the nav. */
+  --phone-nav-h: 72px;
 }
 
 @media (min-width: 768px) {
@@ -93,6 +98,22 @@
      beneath it. */
   .inset-safe-top-14 {
     top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+
+  /* Reserves space in the dashboard's scroll container for the fixed phone
+     bottom nav, sized from the --phone-nav-h the nav measures itself into
+     (see :root). The env() term is belt-and-braces for the :root fallback
+     path only — the nav already pads itself by the safe-area inset, so a
+     measured --phone-nav-h already includes it. Zeroed out at md and up,
+     where the phone nav is not rendered, so tablet/desktop keep their normal
+     layout. */
+  .phone-nav-spacer {
+    padding-bottom: calc(var(--phone-nav-h, 72px) + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    .phone-nav-spacer {
+      padding-bottom: 0;
+    }
   }
 
   /* Minimum comfortable touch size, in px on purpose.
