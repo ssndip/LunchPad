@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, CreditCard, Loader2, AlertCircle, Clock, Calendar, ChevronLeft, Receipt, ChevronRight } from 'lucide-react';
+import { CreditCard, Loader2, AlertCircle, Clock, Calendar, ChevronLeft, Receipt, ChevronRight } from 'lucide-react';
 import { UserProfile, Order } from '../../types';
 import * as api from '../../api';
 import { formatDate, formatDateTime } from '../../utils/dateFormatter';
+import { Sheet } from '../shared/Sheet';
 
 interface UserHistoryModalProps {
   isOpen: boolean;
@@ -185,7 +186,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     <p className="text-sm font-bold text-neutral-900">
                       {formatDate(order.timestamp)}
                     </p>
-                    <p className="text-[10px] text-neutral-400 mt-0.5 max-w-[200px] truncate">
+                    <p className="text-[10px] text-neutral-400 mt-0.5 max-w-full sm:max-w-[200px] truncate">
                       {order.items.map(i => i.name).join(', ')}
                     </p>
                   </div>
@@ -214,176 +215,139 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 260 }}
-            className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+    <Sheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('kiosk.user_history_title')}
+      maxWidth="max-w-2xl"
+    >
+      <p className="text-[10px] text-neutral-400 uppercase tracking-[0.2em] font-bold mb-6">
+        {t('kiosk.user_history_subtitle')}
+      </p>
+
+      {/* RFID Input Area - always present if no profile */}
+      {!profile && (
+        <div className="mb-8">
+          <div
+            className={`flex items-center gap-4 px-6 py-5 rounded-3xl border-2 transition-all ${
+              loading
+                ? 'border-neutral-300 bg-neutral-50'
+                : 'border-dashed border-neutral-200 bg-neutral-50 hover:border-neutral-400'
+            }`}
+            onClick={() => inputRef.current?.focus()}
           >
-            {/* Header */}
-            <div className="bg-neutral-900 text-white px-8 py-8 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase tracking-tighter leading-tight">
-                    {t('kiosk.user_history_title')}
-                  </h2>
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] font-bold mt-1">
-                    {t('kiosk.user_history_subtitle')}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-2xl transition-colors"
-                aria-label={t('modals.close')}
-                title={t('modals.close')}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            <CreditCard
+              className={`w-6 h-6 shrink-0 ${loading ? 'animate-pulse text-indigo-500' : 'text-neutral-400'}`}
+            />
+            <input
+              ref={inputRef}
+              value={rfidInput}
+              onChange={(e) => setRfidInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleScan(e.currentTarget.value);
+                }
+              }}
+              placeholder={t('kiosk.user_history_scan_prompt')}
+              className="flex-1 bg-transparent border-none focus:outline-none font-mono text-sm text-neutral-700 placeholder:text-neutral-400"
+              autoComplete="off"
+            />
+            {loading && <Loader2 className="w-5 h-5 animate-spin text-neutral-400 shrink-0" />}
+          </div>
+        </div>
+      )}
 
-            <div className="p-8">
-              {/* RFID Input Area - always present if no profile */}
-              {!profile && (
-                <div className="mb-8">
-                  <div
-                    className={`flex items-center gap-4 px-6 py-5 rounded-3xl border-2 transition-all ${
-                      loading
-                        ? 'border-neutral-300 bg-neutral-50'
-                        : 'border-dashed border-neutral-200 bg-neutral-50 hover:border-neutral-400'
-                    }`}
-                    onClick={() => inputRef.current?.focus()}
-                  >
-                    <CreditCard
-                      className={`w-6 h-6 shrink-0 ${loading ? 'animate-pulse text-indigo-500' : 'text-neutral-400'}`}
-                    />
-                    <input
-                      ref={inputRef}
-                      value={rfidInput}
-                      onChange={(e) => setRfidInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleScan(e.currentTarget.value);
-                        }
-                      }}
-                      placeholder={t('kiosk.user_history_scan_prompt')}
-                      className="flex-1 bg-transparent border-none focus:outline-none font-mono text-sm text-neutral-700 placeholder:text-neutral-400"
-                      autoComplete="off"
-                    />
-                    {loading && <Loader2 className="w-5 h-5 animate-spin text-neutral-400 shrink-0" />}
-                  </div>
-                </div>
-              )}
-
-              {/* Error state */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-4 p-5 bg-red-50 border border-red-200 rounded-3xl mb-8 text-red-700 shadow-sm shadow-red-500/5"
-                >
-                  <AlertCircle className="w-6 h-6 shrink-0" />
-                  <p className="text-sm font-bold">{error}</p>
-                </motion.div>
-              )}
-
-              {/* Profile Context Header - always present if profile exists */}
-              {profile && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 mb-8 shadow-xl shadow-black/10">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500">
-                        {t('cards.owner_name')}
-                      </p>
-                      <h3 className="text-2xl font-black text-white">{profile.ownerName}</h3>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-[10px] font-mono bg-white/10 text-neutral-400 px-2 py-0.5 rounded-lg border border-white/5">
-                          {profile.rfid}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 mb-1">
-                        {t('cards.owed')}
-                      </p>
-                      <span
-                        className={`text-4xl font-black font-mono tracking-tighter ${
-                          Number(profile.balance) > 0 ? 'text-rose-400' : 'text-emerald-400'
-                        }`}
-                      >
-                        €{(Number(profile.balance) || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Sub-view Rendering */}
-              {profile && (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={view}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {view !== 'selection' && (
-                      <button
-                        onClick={() => setView('selection')}
-                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm mb-6 w-fit px-4 py-2 hover:bg-indigo-50 rounded-xl transition-all"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        {t('kiosk.back')}
-                      </button>
-                    )}
-
-                    {view === 'selection' && renderSelection()}
-                    {view === 'last_order' && profile.orders[0] && renderLastOrder(profile.orders[0])}
-                    {view === 'history' && renderHistory(profile.orders)}
-                    
-                    {view === 'last_order' && !profile.orders[0] && (
-                       <p className="text-center text-sm text-neutral-400 italic py-12">
-                         {t('orders.no_orders')}
-                       </p>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              )}
-
-              {/* Initial prompt */}
-              {!loading && !profile && !error && (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-neutral-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-sm border border-neutral-100">
-                    <CreditCard className="w-10 h-10 text-neutral-300" />
-                  </div>
-                  <h4 className="text-lg font-black text-neutral-900 mb-2">
-                    {t('kiosk.user_history_scan_prompt')}
-                  </h4>
-                  <p className="text-neutral-400 text-sm max-w-xs mx-auto">
-                    {t('kiosk.user_history_subtitle')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </motion.div>
+      {/* Error state */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-center gap-4 p-5 bg-red-50 border border-red-200 rounded-3xl mb-8 text-red-700 shadow-sm shadow-red-500/5"
+        >
+          <AlertCircle className="w-6 h-6 shrink-0" />
+          <p className="text-sm font-bold">{error}</p>
         </motion.div>
       )}
-    </AnimatePresence>
+
+      {/* Profile Context Header - always present if profile exists */}
+      {profile && (
+        <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 mb-8 shadow-xl shadow-black/10">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500">
+                {t('cards.owner_name')}
+              </p>
+              <h3 className="text-2xl font-black text-white">{profile.ownerName}</h3>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-[10px] font-mono bg-white/10 text-neutral-400 px-2 py-0.5 rounded-lg border border-white/5">
+                  {profile.rfid}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 mb-1">
+                {t('cards.owed')}
+              </p>
+              <span
+                className={`text-4xl font-black font-mono tracking-tighter ${
+                  Number(profile.balance) > 0 ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                €{(Number(profile.balance) || 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-view Rendering */}
+      {profile && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={view}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {view !== 'selection' && (
+              <button
+                onClick={() => setView('selection')}
+                className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm mb-6 w-fit px-4 py-2 hover:bg-indigo-50 rounded-xl transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {t('kiosk.back')}
+              </button>
+            )}
+
+            {view === 'selection' && renderSelection()}
+            {view === 'last_order' && profile.orders[0] && renderLastOrder(profile.orders[0])}
+            {view === 'history' && renderHistory(profile.orders)}
+            
+            {view === 'last_order' && !profile.orders[0] && (
+               <p className="text-center text-sm text-neutral-400 italic py-12">
+                 {t('orders.no_orders')}
+               </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* Initial prompt */}
+      {!loading && !profile && !error && (
+        <div className="text-center py-12">
+          <div className="w-24 h-24 bg-neutral-50 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-sm border border-neutral-100">
+            <CreditCard className="w-10 h-10 text-neutral-300" />
+          </div>
+          <h4 className="text-lg font-black text-neutral-900 mb-2">
+            {t('kiosk.user_history_scan_prompt')}
+          </h4>
+          <p className="text-neutral-400 text-sm max-w-xs mx-auto">
+            {t('kiosk.user_history_subtitle')}
+          </p>
+        </div>
+      )}
+    </Sheet>
   );
 };
