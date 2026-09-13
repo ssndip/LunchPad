@@ -267,10 +267,10 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           <button
             onClick={() => isEditing ? setEditValues({ ...values, isAdmin: !values.isAdmin }) : startEditing({ ...card, isAdmin: !card.isAdmin })}
             role="switch" aria-checked={values.isAdmin}
-            className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none touch-target-expansion ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+            className={`w-12 h-6 rounded-full transition-all mx-auto relative focus:outline-none touch-target-phone ${values.isAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
             aria-label="Toggle Admin"
           >
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${values.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
+            <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full transition-all ${values.isAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
           </button>
         ),
         balance: (
@@ -296,14 +296,14 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               <button
                 onClick={() => handleSave(card.rfid)}
                 disabled={isSaving}
-                className="p-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 touch-target-expansion"
+                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
                 title={t('modals.save')}
               >
                 {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <div className="flex items-center px-1"><Plus className="w-3.5 h-3.5 rotate-45" style={{transform:'rotate(0deg)'}} /><span className="text-[9px] font-black uppercase ml-0.5">OK</span></div>}
               </button>
               <button
                 onClick={handleCancel}
-                className="p-2 bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors touch-target-expansion"
+                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors"
                 title={t('modals.cancel')}
               >
                 <Trash2 className="w-4 h-4" />
@@ -311,19 +311,19 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             </>
           ) : (
             <>
-              <button onClick={() => setNfcWriteCard(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors touch-target-expansion" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
+              <button onClick={() => setNfcWriteCard(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
                 <Radio className="w-4 h-4" />
               </button>
-              <button onClick={() => onViewStats?.(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors touch-target-expansion" title="View Statistics" aria-label="View Statistics">
+              <button onClick={() => onViewStats?.(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
                 <BarChart2 className="w-4 h-4" />
               </button>
-              <button onClick={() => startEditing(card)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors touch-target-expansion" title={t('modals.edit')} aria-label={t('modals.edit')}>
+              <button onClick={() => startEditing(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
                 <Pencil className="w-4 h-4" />
               </button>
-              <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors touch-target-expansion" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
+              <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
                 <RotateCcw className="w-4 h-4" />
               </button>
-              <button onClick={() => onRemoveCard(card.rfid)} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors touch-target-expansion" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
+              <button onClick={() => onRemoveCard(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
                 <Trash2 className="w-4 h-4" />
               </button>
             </>
@@ -354,7 +354,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
             <button
               onClick={() => handleExport('xlsx')}
-              className="flex items-center gap-2 px-4 py-2 touch-target-h bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
+              className="flex items-center justify-center gap-2 px-4 py-2 touch-target bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
               title={t('cards.export_xlsx')}
             >
               <Download className="w-3.5 h-3.5" />
@@ -362,7 +362,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             </button>
             <button
               onClick={() => handleExport('csv')}
-              className="flex items-center gap-2 px-4 py-2 touch-target-h bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
+              className="flex items-center justify-center gap-2 px-4 py-2 touch-target bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
               title={t('cards.export_csv')}
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -473,7 +473,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1">{t('menu.last_scanned_rfid')}</p>
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-neutral-900">{lastScanned}</span>
-                    <button onClick={() => setNewCardRfid(lastScanned)} className="text-[10px] font-bold text-neutral-900 underline uppercase tracking-widest touch-target-expansion">{t('menu.use')}</button>
+                    <button onClick={() => setNewCardRfid(lastScanned)} className="flex items-center justify-center touch-target-phone text-[10px] font-bold text-neutral-900 underline uppercase tracking-widest">{t('menu.use')}</button>
                   </div>
                 </div>
               )}
@@ -504,7 +504,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                     <button
                       type="button"
                       onClick={() => initializeNfc()}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors touch-target-expansion ${nfcScanning ? 'text-indigo-600 animate-pulse' : ''}`}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center touch-target-phone rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors ${nfcScanning ? 'text-indigo-600 animate-pulse' : ''}`}
                       title={nfcError || (nfcScanning ? 'NFC Scanning Active' : 'Scan NFC tag to auto-fill RFID')}
                       aria-label="Scan NFC tag to auto-fill RFID"
                     >
@@ -544,10 +544,10 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 <button
                   onClick={() => setNewCardIsAdmin(!newCardIsAdmin)}
                   role="switch" aria-checked={newCardIsAdmin}
-                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none touch-target-expansion ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+                  className={`w-12 h-6 rounded-full transition-all relative focus:outline-none touch-target-phone ${newCardIsAdmin ? 'bg-neutral-900' : 'bg-neutral-200'}`}
                   aria-label="Toggle Admin for new card"
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
+                  <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full transition-all ${newCardIsAdmin ? 'left-[1.65rem]' : 'left-0.5'}`} />
                 </button>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">{t('cards.admin_privileges')}</span>
               </div>

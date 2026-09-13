@@ -155,6 +155,13 @@
     .touch-target-h-phone {
       min-height: 44px;
     }
+    /* Same floor, both dimensions, phone-only — for a compact icon button or
+       toggle switch that is fine at its current size with a mouse (desktop)
+       but needs the full 44x44 target once fingers are doing the tapping. */
+    .touch-target-phone {
+      min-width: 44px;
+      min-height: 44px;
+    }
   }
 
   /* No tap highlight on mobile for clean UI */
