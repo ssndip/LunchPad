@@ -381,7 +381,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <span className="text-xs text-neutral-400">€</span>
               <button
                 onClick={handleApplyDeliveryFee}
-                className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+                className="ml-1 p-1 touch-target-phone flex items-center justify-center hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
                 title={t('menu.apply_delivery_tax')}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -403,7 +403,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <span className="text-xs text-neutral-400">€</span>
               <button
                 onClick={handleApplyPackagingFee}
-                className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+                className="ml-1 p-1 touch-target-phone flex items-center justify-center hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
                 title={t('menu.apply_box_fee')}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -509,7 +509,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                              <select
                                value={selectedProfileId}
                                onChange={e => setSelectedProfileId(e.target.value)}
-                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8 touch-target-h-phone"
                                title="Parser Profile"
                              >
                                <option value="none">{t('parser.active_profile') || 'Active Profile'}</option>
@@ -525,7 +525,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                             <select
                               value={selectedPresetId}
                               onChange={e => setSelectedPresetId(e.target.value)}
-                              className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8"
+                              className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-0 p-0 h-8 touch-target-h-phone"
                               title="Format Preset"
                             >
                               <option value="none">{t('parser.no_preset')}</option>
@@ -538,13 +538,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                       </div>
                     )}
                     <div className="flex justify-end gap-3 mt-4">
-                      <button onClick={handleClose} className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
+                      <button onClick={handleClose} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
                         {t('modals.cancel')}
                       </button>
                       <button
                         onClick={handleParse}
                         disabled={!pasteText.trim()}
-                        className="px-8 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all disabled:opacity-40"
+                        className="px-8 py-3 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all disabled:opacity-40"
                       >
                         {t('menu.parse_button') || 'Parse →'}
                       </button>
@@ -609,7 +609,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                         newItems[idx] = updated;
                                         setParsed({ ...parsed, items: newItems });
                                       }}
-                                      className="w-full bg-white border border-neutral-200 rounded-lg px-1.5 py-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                                      className="w-full bg-white border border-neutral-200 rounded-lg px-1.5 py-1 touch-target-h-phone text-[10px] font-bold uppercase tracking-widest text-neutral-600 focus:outline-none focus:border-indigo-400 cursor-pointer"
                                       title={t('menu.category')}
                                     >
                                       {customCategories.map(c => (
@@ -626,7 +626,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                       type="text"
                                       value={item.name}
                                       onChange={(e) => updateParsedItem(idx, 'name', e.target.value)}
-                                      className="w-full bg-white border border-neutral-200 rounded-lg p-1 text-xs font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                      className="w-full bg-white border border-neutral-200 rounded-lg p-1 touch-target-h-phone text-xs font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
                                       title={t('menu.name')}
                                       placeholder={t('menu.name')}
                                     />
@@ -637,7 +637,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                       type="number"
                                       value={item.price}
                                       onChange={(e) => updateParsedItem(idx, 'price', parseFloat(e.target.value))}
-                                      className="w-16 bg-white border border-neutral-200 rounded-lg p-1 text-xs font-mono font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                      className="w-16 bg-white border border-neutral-200 rounded-lg p-1 touch-target-h-phone text-xs font-mono font-bold text-neutral-900 focus:outline-none focus:border-neutral-400"
                                       title={t('menu.price')}
                                       placeholder="0.00"
                                     />
@@ -651,7 +651,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                           : [...(item.tags || []), 'autobox'];
                                         updateParsedItem(idx, 'tags', newTags);
                                       }}
-                                      className={`p-1.5 rounded-lg transition-colors ${hasAutobox ? 'bg-amber-100 text-amber-600' : 'text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'}`}
+                                      className={`p-1.5 touch-target-phone flex items-center justify-center rounded-lg transition-colors ${hasAutobox ? 'bg-amber-100 text-amber-600' : 'text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'}`}
                                       title={t('menu.packaging_fee')}
                                     >
                                       <Package className="w-3.5 h-3.5" />
@@ -661,7 +661,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                   <td className="p-2 text-center align-top">
                                     <button
                                       onClick={() => updateParsedItem(idx, 'hasIncludedSide', !item.hasIncludedSide)}
-                                      className={`p-1.5 rounded-lg transition-colors ${item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600' : 'text-neutral-300 hover:bg-neutral-100'}`}
+                                      className={`p-1.5 touch-target-phone flex items-center justify-center rounded-lg transition-colors ${item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600' : 'text-neutral-300 hover:bg-neutral-100'}`}
                                       title={t('menu.included_side')}
                                     >
                                       <Layers className="w-3.5 h-3.5" />
@@ -682,7 +682,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                       <button
                                         onClick={() => moveParsedItem(idx, 'up')}
                                         disabled={idx === 0}
-                                        className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                        className="p-1.5 touch-target-phone flex items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
                                         title="Move Up"
                                       >
                                         <ArrowUp className="w-3.5 h-3.5" />
@@ -690,14 +690,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                                       <button
                                         onClick={() => moveParsedItem(idx, 'down')}
                                         disabled={idx === parsed.items.length - 1}
-                                        className="p-1.5 text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
+                                        className="p-1.5 touch-target-phone flex items-center justify-center text-neutral-300 hover:text-neutral-600 disabled:opacity-0"
                                         title="Move Down"
                                       >
                                         <ArrowDown className="w-3.5 h-3.5" />
                                       </button>
                                       <button
                                         onClick={() => removeParsedItem(idx)}
-                                        className="p-1.5 text-neutral-300 hover:text-red-500"
+                                        className="p-1.5 touch-target-phone flex items-center justify-center text-neutral-300 hover:text-red-500"
                                         title={t('modals.remove')}
                                       >
                                         <X className="w-3.5 h-3.5" />
@@ -714,17 +714,17 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
 
                     <div className="flex justify-between gap-3">
-                      <button onClick={() => setParsed(null)} className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
+                      <button onClick={() => setParsed(null)} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
                         ← {t('menu.edit_text') || 'Edit Text'}
                       </button>
                       <div className="flex gap-3">
-                        <button onClick={handleClose} className="px-6 py-3 text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
+                        <button onClick={handleClose} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
                           {t('modals.cancel')}
                         </button>
                         <button
                           onClick={handleApply}
                           disabled={parsed.items.length === 0}
-                          className="flex items-center gap-2 px-8 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all disabled:opacity-40"
+                          className="flex items-center gap-2 px-8 py-3 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all disabled:opacity-40"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                           {t('menu.apply_menu') || 'Apply Menu'}
@@ -790,7 +790,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
                     <button
                       onClick={() => handleRestoreBackup(backup.id)}
-                      className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                      className="px-4 py-2 touch-target-h bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
                     >
                       {t('menu.restore') || 'Restore'}
                     </button>
@@ -845,7 +845,7 @@ const MenuNameCell: React.FC<MenuNameCellProps> = ({ item, onUpdateItem }) => {
       onChange={(e) => setLocalName(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 focus:outline-none"
+      className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 touch-target-h focus:outline-none"
     />
   );
 };
@@ -885,7 +885,7 @@ const MenuPriceCell: React.FC<MenuPriceCellProps> = ({ item, onUpdateItem }) => 
       }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
+      className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 touch-target-h focus:outline-none"
     />
   );
 };
@@ -917,7 +917,7 @@ function menuRowCells({
         value={item.category ?? ''}
         aria-label={`Category for ${item.name ?? ''}`}
         onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
-        className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
+        className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 touch-target-h focus:outline-none"
       >
         {customCategories.map(c => (
           <option key={c.id} value={c.id}>
@@ -937,7 +937,7 @@ function menuRowCells({
       <div className="flex flex-col">
         <button
           onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+          className={`w-10 h-10 touch-target-phone flex items-center justify-center rounded-xl transition-all ${
             item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
           }`}
           title={t('menu.included_side') || 'Included Side'}
@@ -958,7 +958,7 @@ function menuRowCells({
     status: (
       <button
         onClick={() => onUpdateItem(item.id, 'available', !item.available)}
-        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
+        className={`px-3 py-1 touch-target-h inline-flex items-center justify-center rounded-full text-xs font-bold uppercase tracking-tighter ${
           item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
         }`}
       >
@@ -976,7 +976,7 @@ interface MenuRowActionsProps {
 const MenuRowActions: React.FC<MenuRowActionsProps> = ({ item, onRemoveItem }) => (
   <button
     onClick={() => onRemoveItem(item.id)}
-    className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+    className="p-2 touch-target-phone flex items-center justify-center text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
     aria-label={`Remove ${item.name ?? ''}`}
   >
     <Trash2 className="w-4 h-4" />
@@ -1008,7 +1008,7 @@ const SideDishSelector: React.FC<{
         <button
           key={item.id}
           onClick={() => handleToggle(item.name)}
-          className="flex items-center gap-2 text-[10px] text-left hover:bg-white p-1 rounded-lg transition-colors group"
+          className="flex items-center gap-2 text-[10px] text-left hover:bg-white p-1 touch-target-h-phone rounded-lg transition-colors group"
         >
           {selected.includes(item.name) ? (
             <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
