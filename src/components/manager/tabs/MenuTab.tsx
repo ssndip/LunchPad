@@ -14,6 +14,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
 import { TabHeader } from '../../shared/TabHeader';
 import { ACTIONS_COLUMN_KEY, DataList, DataListColumn, DataListRow } from '../../shared/DataList';
+import { Sheet } from '../../shared/Sheet';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -423,47 +424,35 @@ export const MenuTab: React.FC<MenuTabProps> = ({
       </div>
 
       {/* ── Paste Modal ── */}
-      <AnimatePresence>
-        {isPasteOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 }, style: { pointerEvents: 'none' } }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.92, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 20, transition: { duration: 0.15 }, style: { pointerEvents: 'none' } }}
-              className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl overflow-hidden"
+      <Sheet
+        isOpen={isPasteOpen}
+        onClose={handleClose}
+        title={t('menu.paste_title')}
+        maxWidth="max-w-3xl"
+        headerAction={
+          <>
+            <button
+              onClick={() => document.getElementById('ocr-upload')?.click()}
+              className="p-3 touch-target bg-neutral-50 text-neutral-600 hover:bg-neutral-100 rounded-xl transition-all border border-neutral-200 shadow-sm flex items-center gap-2 text-xs font-bold"
+              title={t('ocr.upload_image')}
             >
-              <div className="p-8 border-b border-neutral-100 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">{t('menu.paste_title')}</h2>
-                  <p className="text-neutral-500 text-sm">{t('menu.paste_instructions')}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                   <button
-                     onClick={() => document.getElementById('ocr-upload')?.click()}
-                     className="p-3 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 rounded-xl transition-all border border-neutral-200 shadow-sm flex items-center gap-2 text-xs font-bold"
-                     title={t('ocr.upload_image')}
-                   >
-                     <Upload className="w-4 h-4" />
-                     <span className="hidden sm:inline">{t('ocr.upload_image')}</span>
-                   </button>
-                   <input 
-                     id="ocr-upload"
-                     type="file" 
-                     accept="image/*" 
-                     className="hidden" 
-                     onChange={(e) => e.target.files && processFile(e.target.files[0])}
-                     title={t('ocr.upload_image')}
-                   />
-                </div>
-              </div>
-
-              <div className="p-8 space-y-6">
-                {!parsed ? (
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('ocr.upload_image')}</span>
+            </button>
+            <input
+              id="ocr-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files && processFile(e.target.files[0])}
+              title={t('ocr.upload_image')}
+            />
+          </>
+        }
+      >
+        <div className="space-y-6">
+          <p className="text-neutral-500 text-sm -mt-2">{t('menu.paste_instructions')}</p>
+          {!parsed ? (
                   /* ── Phase 1: Paste ── */
                   <>
                     <div 
@@ -744,110 +733,74 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     </div>
                   </>
                 )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Sheet>
 
       {/* Backups Modal */}
-      <AnimatePresence>
-        {isBackupsOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-neutral-100 flex flex-col max-h-[85vh]"
-            >
-              {/* Modal Header */}
-              <div className="p-6 border-b border-neutral-100 flex items-center justify-between bg-neutral-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-neutral-900 text-white rounded-xl flex items-center justify-center">
-                    <History className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">
-                      {t('menu.backups') || 'Menu Backups'}
-                    </h2>
-                    <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider mt-0.5">
-                      {t('menu.backups_desc') || 'Select a historical menu snapshot to restore'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsBackupsOpen(false)}
-                  className="p-2 hover:bg-neutral-200 rounded-full text-neutral-400 hover:text-neutral-900 transition-all active:scale-90"
-                  title={t('modals.close') || 'Close'}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      <Sheet
+        isOpen={isBackupsOpen}
+        onClose={() => setIsBackupsOpen(false)}
+        title={t('menu.backups') || 'Menu Backups'}
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4 min-h-[300px]">
+          <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider -mt-2">
+            {t('menu.backups_desc') || 'Select a historical menu snapshot to restore'}
+          </p>
+          {isLoadingBackups ? (
+            <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3">
+              <Loader2 className="w-10 h-10 animate-spin text-neutral-900" />
+              <span className="text-xs font-black uppercase tracking-widest">{t('kiosk.waiting_for_scan') || 'Loading Backups...'}</span>
+            </div>
+          ) : backups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3 text-center px-8">
+              <History className="w-12 h-12 stroke-[1.5]" />
+              <h3 className="text-sm font-black text-neutral-700 uppercase tracking-tight">{t('menu.no_backups_found') || 'No Backups Available'}</h3>
+              <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                {t('menu.no_backups_desc') || 'Snapshots of your menu are automatically saved here whenever you save or import new menus.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {backups.map((backup) => {
+                const formattedTime = formatDateTime(backup.timestamp);
+                return (
+                  <div
+                    key={backup.id}
+                    className="flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200/50 rounded-2xl transition-all"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-black text-neutral-800">
+                        {formattedTime}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {backup.menuDate && (
+                          <span className="text-[10px] bg-neutral-200 text-neutral-600 font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                            {backup.menuDate}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                          {backup.itemCount} {backup.itemCount === 1 ? t('menu.item') : t('menu.items')}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                          v{backup.menuVersion}
+                        </span>
+                      </div>
+                    </div>
 
-              {/* Modal Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar min-h-[300px]">
-                {isLoadingBackups ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3">
-                    <Loader2 className="w-10 h-10 animate-spin text-neutral-900" />
-                    <span className="text-xs font-black uppercase tracking-widest">{t('kiosk.waiting_for_scan') || 'Loading Backups...'}</span>
+                    <button
+                      onClick={() => handleRestoreBackup(backup.id)}
+                      className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                    >
+                      {t('menu.restore') || 'Restore'}
+                    </button>
                   </div>
-                ) : backups.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-3 text-center px-8">
-                    <History className="w-12 h-12 stroke-[1.5]" />
-                    <h3 className="text-sm font-black text-neutral-700 uppercase tracking-tight">{t('menu.no_backups_found') || 'No Backups Available'}</h3>
-                    <p className="text-xs text-neutral-400 font-medium leading-relaxed">
-                      {t('menu.no_backups_desc') || 'Snapshots of your menu are automatically saved here whenever you save or import new menus.'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-3">
-                    {backups.map((backup) => {
-                      const formattedTime = formatDateTime(backup.timestamp);
-                      return (
-                        <div 
-                          key={backup.id} 
-                          className="flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200/50 rounded-2xl transition-all"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm font-black text-neutral-800">
-                              {formattedTime}
-                            </span>
-                            <div className="flex items-center gap-3">
-                              {backup.menuDate && (
-                                <span className="text-[10px] bg-neutral-200 text-neutral-600 font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                  {backup.menuDate}
-                                </span>
-                              )}
-                              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-                                {backup.itemCount} {backup.itemCount === 1 ? t('menu.item') : t('menu.items')}
-                              </span>
-                              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-                                v{backup.menuVersion}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => handleRestoreBackup(backup.id)}
-                            className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-                          >
-                            {t('menu.restore') || 'Restore'}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Sheet>
     </>
   );
 };
