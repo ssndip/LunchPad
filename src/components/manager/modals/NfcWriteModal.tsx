@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Radio, CheckCircle, AlertCircle, RefreshCw, X, CreditCard } from 'lucide-react';
+import { Radio, CheckCircle, AlertCircle, RefreshCw, CreditCard } from 'lucide-react';
 import { useNfcWriter } from '../../../hooks/useNfcWriter';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Card } from '../../../types';
+import { Sheet } from '../../shared/Sheet';
 
 interface NfcWriteModalProps {
   card: Card | null;
@@ -31,58 +31,22 @@ export const NfcWriteModal: React.FC<NfcWriteModalProps> = ({ card, onClose }) =
     }
   };
 
-  if (!card) return null;
-
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={handleClose}
-          className="absolute inset-0 bg-black/40 backdrop-blur-md"
-        />
-
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20, transition: { duration: 0.15 } }}
-          className="relative bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl border border-neutral-100 overflow-hidden"
-        >
-          {/* Accent bar */}
-          <div
-            className={`absolute top-0 left-0 w-full h-1.5 transition-colors ${
-              writeStatus === 'success'
-                ? 'bg-emerald-500'
-                : writeStatus === 'error'
-                ? 'bg-red-500'
-                : 'bg-indigo-600 animate-pulse'
-            }`}
-          />
-
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-6 right-6 p-2 rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-            aria-label={t('modals.close')}
-          >
-            <X className="w-5 h-5" />
-          </button>
-
+    <Sheet
+      isOpen={!!card}
+      onClose={handleClose}
+      title={t('cards.write_nfc') || 'Program NFC Tag'}
+    >
+      {card && (
+        <>
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
               <Radio className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-neutral-900">
-                {t('cards.write_nfc') || 'Program NFC Tag'}
-              </h3>
-              <p className="text-xs text-neutral-500 font-mono">
-                {card.ownerName} ({card.rfid})
-              </p>
-            </div>
+            <p className="text-xs text-neutral-500 font-mono">
+              {card.ownerName} ({card.rfid})
+            </p>
           </div>
 
           {/* Main Status Area */}
@@ -143,7 +107,7 @@ export const NfcWriteModal: React.FC<NfcWriteModalProps> = ({ card, onClose }) =
           <div className="flex gap-3">
             <button
               onClick={handleClose}
-              className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
+              className="touch-target-h flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
             >
               {writeStatus === 'success' ? t('modals.close') || 'Close' : t('modals.cancel') || 'Cancel'}
             </button>
@@ -151,15 +115,15 @@ export const NfcWriteModal: React.FC<NfcWriteModalProps> = ({ card, onClose }) =
             {writeStatus === 'error' && (
               <button
                 onClick={handleRetry}
-                className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-neutral-100"
+                className="touch-target-h flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-neutral-100"
               >
                 <RefreshCw className="w-4 h-4" />
                 {t('cards.nfc_retry') || 'Retry Write'}
               </button>
             )}
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        </>
+      )}
+    </Sheet>
   );
 };
