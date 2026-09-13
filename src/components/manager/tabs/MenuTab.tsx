@@ -12,6 +12,7 @@ import { getActivePreset, getAllPresets, getAllProfiles, FormatPreset, ParserPro
 import { loadCategorySettings } from '../../../utils/parserLocalSettings';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
+import { TabHeader } from '../../shared/TabHeader';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -324,92 +325,76 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-            {t('navigation.menu_management')}
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base">{t('menu.management_desc')}</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {editingMenu.length > 0 && (
-            <button
-              onClick={() => {
-                confirm({
-                  title: t('modals.remove_item') || 'Reset Menu',
-                  message: t('modals.reset_warning') || 'Are you sure you want to delete all items?',
-                  isDestructive: true,
-                  onConfirm: () => onDeleteAll()
-                });
-              }}
-              className="flex items-center gap-2 px-5 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all text-sm"
-            >
-              <Trash2 className="w-4 h-4" /> {t('menu.delete_all') || 'Delete All'}
-            </button>
-          )}
-          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
-            <Truck className="w-4 h-4 text-neutral-400" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('orders.delivery_fee') || 'Default Fee'}:</span>
-            <input 
-              type="number" 
-              step="0.1" 
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
-              className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
-              title={t('orders.delivery_fee')}
-              placeholder="0.00"
-            />
-            <span className="text-xs text-neutral-400">€</span>
-            <button 
-              onClick={handleApplyDeliveryFee}
-              className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
-              title={t('menu.apply_delivery_tax')}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      <TabHeader
+        title={t('navigation.menu_management')}
+        subtitle={t('menu.management_desc')}
+        primaryAction={{ key: 'add', label: t('menu.add_item') || 'Add Item', icon: Plus, onClick: onAddItem }}
+        secondaryActions={[
+          { key: 'paste', label: t('menu.paste_title') || 'Paste Menu Text', icon: FileText, onClick: () => setIsPasteOpen(true) },
+          { key: 'backups', label: t('menu.backups') || 'Restore Backup', icon: History, onClick: openBackupsModal },
+          {
+            key: 'delete-all',
+            label: t('menu.delete_all') || 'Delete All',
+            icon: Trash2,
+            isDestructive: true,
+            hidden: editingMenu.length === 0,
+            onClick: () =>
+              confirm({
+                title: t('modals.remove_item') || 'Reset Menu',
+                message: t('modals.reset_warning') || 'Are you sure you want to delete all items?',
+                isDestructive: true,
+                onConfirm: () => onDeleteAll(),
+              }),
+          },
+        ]}
+        controls={
+          <>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
+              <Truck className="w-4 h-4 text-neutral-400" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('orders.delivery_fee') || 'Default Fee'}:</span>
+              <input
+                type="number"
+                step="0.1"
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
+                className="w-16 touch-target-h bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+                title={t('orders.delivery_fee')}
+                placeholder="0.00"
+              />
+              <span className="text-xs text-neutral-400">€</span>
+              <button
+                onClick={handleApplyDeliveryFee}
+                className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+                title={t('menu.apply_delivery_tax')}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
-            <Square className="w-4 h-4 text-neutral-400" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('menu.packaging_fee') || 'Box'}:</span>
-            <input 
-              type="number" 
-              step="0.05" 
-              value={packagingFee}
-              onChange={(e) => setPackagingFee(parseFloat(e.target.value) || 0)}
-              className="w-16 bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
-              title={t('menu.packaging_fee')}
-              placeholder="0.00"
-            />
-            <span className="text-xs text-neutral-400">€</span>
-            <button 
-              onClick={handleApplyPackagingFee}
-              className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
-              title={t('menu.apply_box_fee')}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <button
-            onClick={openBackupsModal}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
-          >
-            <History className="w-4 h-4 text-neutral-500" /> {t('menu.backups') || 'Restore Backup'}
-          </button>
-          <button
-            onClick={() => setIsPasteOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-sm shadow-sm"
-          >
-            <FileText className="w-4 h-4" /> {t('menu.paste_title') || 'Paste Menu Text'}
-          </button>
-          <button
-            onClick={onAddItem}
-            className="flex items-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-md shadow-neutral-200"
-          >
-            <Plus className="w-4 h-4" /> {t('menu.add_item') || 'Add Item'}
-          </button>
-        </div>
-      </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm">
+              <Square className="w-4 h-4 text-neutral-400" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">{t('menu.packaging_fee') || 'Box'}:</span>
+              <input
+                type="number"
+                step="0.05"
+                value={packagingFee}
+                onChange={(e) => setPackagingFee(parseFloat(e.target.value) || 0)}
+                className="w-16 touch-target-h bg-transparent border-none focus:ring-0 font-mono font-bold text-sm p-0 focus:outline-none"
+                title={t('menu.packaging_fee')}
+                placeholder="0.00"
+              />
+              <span className="text-xs text-neutral-400">€</span>
+              <button
+                onClick={handleApplyPackagingFee}
+                className="ml-1 p-1 hover:bg-neutral-100 rounded-lg text-indigo-600 transition-colors"
+                title={t('menu.apply_box_fee')}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        }
+      />
 
       {/* Menu Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
