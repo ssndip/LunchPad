@@ -13,6 +13,7 @@ import { loadCategorySettings } from '../../../utils/parserLocalSettings';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
 import { TabHeader } from '../../shared/TabHeader';
+import { ACTIONS_COLUMN_KEY, DataList, DataListColumn, DataListRow } from '../../shared/DataList';
 
 interface MenuTabProps {
   editingMenu: MenuItem[];
@@ -322,6 +323,21 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     setParsed(null);
   };
 
+  const columns: DataListColumn[] = [
+    { key: 'name', label: t('menu.name'), role: 'title' },
+    { key: 'category', label: t('menu.category') },
+    { key: 'price', label: t('menu.price'), align: 'right' },
+    { key: 'side', label: t('menu.included_side') || 'Included Side' },
+    { key: 'status', label: t('menu.status'), role: 'meta' },
+    { key: ACTIONS_COLUMN_KEY, label: t('cards.actions'), align: 'center' },
+  ];
+
+  const rows: DataListRow[] = editingMenu.map((item) => ({
+    key: item.id,
+    cells: menuRowCells({ item, customCategories, getCategoryLabel, onUpdateItem, isSideDishCategoryId, editingMenu, t }),
+    actions: <MenuRowActions item={item} onRemoveItem={onRemoveItem} />,
+  }));
+
   return (
     <>
       {/* Header */}
@@ -398,41 +414,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
       {/* Menu Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[640px]">
-            <thead>
-              <tr>
-                {[t('menu.category'), t('menu.name'), t('menu.price'), t('menu.included_side') || 'Included Side', t('menu.status'), t('cards.actions')].map((h) => (
-                  <th key={h} className="p-5 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {editingMenu.map((item) => (
-                <MenuRow
-                  key={item.id}
-                  item={item}
-                  customCategories={customCategories}
-                  getCategoryLabel={getCategoryLabel}
-                  onUpdateItem={onUpdateItem}
-                  onRemoveItem={onRemoveItem}
-                  isSideDishCategoryId={isSideDishCategoryId}
-                  editingMenu={editingMenu}
-                  t={t}
-                />
-              ))}
-              {editingMenu.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-12 text-center text-neutral-400 italic text-sm">
-                    {t('menu.no_items_yet')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataList
+          columns={columns}
+          rows={rows}
+          emptyMessage={t('menu.no_items_yet')}
+          tableClassName="min-w-[640px]"
+        />
       </div>
 
       {/* ── Paste Modal ── */}
@@ -865,46 +852,64 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   );
 };
 
-interface MenuRowProps {
+interface MenuNameCellProps {
   item: MenuItem;
-  customCategories: any[];
-  getCategoryLabel: (cat: string) => string;
   onUpdateItem: (id: number, field: keyof MenuItem, value: unknown) => void;
-  onRemoveItem: (id: number) => void;
-  isSideDishCategoryId: (cat: string) => boolean;
-  editingMenu: MenuItem[];
-  t: any;
 }
 
-const MenuRow: React.FC<MenuRowProps> = ({
-  item,
-  customCategories,
-  getCategoryLabel,
-  onUpdateItem,
-  onRemoveItem,
-  isSideDishCategoryId,
-  editingMenu,
-  t
-}) => {
+/**
+ * Holds its own draft value so keystrokes don't round-trip through the
+ * parent on every change; commits on blur or Enter. Split out of the old
+ * MenuRow so it can keep using local state — menuRowCells below is a plain
+ * function called from a `.map()`, and functions called that way can't call
+ * hooks themselves.
+ */
+const MenuNameCell: React.FC<MenuNameCellProps> = ({ item, onUpdateItem }) => {
   const [localName, setLocalName] = useState(item.name ?? '');
-  const [localPrice, setLocalPrice] = useState(item.price ?? 0);
 
   // Sync state if item changes from props (e.g. from websocket updates)
   React.useEffect(() => {
     setLocalName(item.name ?? '');
   }, [item.name]);
 
-  React.useEffect(() => {
-    setLocalPrice(item.price ?? 0);
-  }, [item.price]);
-
-  const handleNameBlur = () => {
+  const handleBlur = () => {
     if (localName !== item.name) {
       onUpdateItem(item.id, 'name', localName);
     }
   };
 
-  const handlePriceBlur = () => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={localName}
+      aria-label={`Name for ${localName}`}
+      onChange={(e) => setLocalName(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 focus:outline-none"
+    />
+  );
+};
+
+interface MenuPriceCellProps {
+  item: MenuItem;
+  onUpdateItem: (id: number, field: keyof MenuItem, value: unknown) => void;
+}
+
+const MenuPriceCell: React.FC<MenuPriceCellProps> = ({ item, onUpdateItem }) => {
+  const [localPrice, setLocalPrice] = useState(item.price ?? 0);
+
+  React.useEffect(() => {
+    setLocalPrice(item.price ?? 0);
+  }, [item.price]);
+
+  const handleBlur = () => {
     if (localPrice !== item.price) {
       onUpdateItem(item.id, 'price', localPrice);
     }
@@ -917,94 +922,113 @@ const MenuRow: React.FC<MenuRowProps> = ({
   };
 
   return (
-    <tr className="hover:bg-neutral-50 transition-colors">
-      <td className="p-5">
-        <select
-          value={item.category ?? ''}
-          aria-label={`Category for ${localName}`}
-          onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
-          className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
-        >
-          {customCategories.map(c => (
-            <option key={c.id} value={c.id}>
-              {getCategoryLabel(c.id)}
-            </option>
-          ))}
-          <option value="other">{t('categories.other') || 'Other'}</option>
-        </select>
-      </td>
-      <td className="p-5">
-        <input
-          type="text"
-          value={localName}
-          aria-label={`Name for ${localName}`}
-          onChange={(e) => setLocalName(e.target.value)}
-          onBlur={handleNameBlur}
-          onKeyDown={handleKeyDown}
-          className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 focus:outline-none"
-        />
-      </td>
-      <td className="p-5">
-        <div className="flex items-center gap-1">
-          <span className="text-neutral-400">€</span>
-          <input
-            type="number"
-            value={localPrice === 0 ? '' : localPrice}
-            aria-label={`Price for ${localName}`}
-            onChange={(e) => {
-              const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-              setLocalPrice(isNaN(val) ? 0 : val);
-            }}
-            onBlur={handlePriceBlur}
-            onKeyDown={handleKeyDown}
-            className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
-          />
-        </div>
-      </td>
-      <td className="p-5">
-        <div className="flex flex-col">
-          <button
-            onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
-              item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
-            }`}
-            title={t('menu.included_side') || 'Included Side'}
-          >
-            <Layers className="w-5 h-5" />
-          </button>
-          
-          {item.hasIncludedSide && (
-            <SideDishSelector
-              selected={item.sideChoices || []}
-              available={editingMenu.filter(m => isSideDishCategoryId(m.category))}
-              onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
-              t={t}
-            />
-          )}
-        </div>
-      </td>
-      <td className="p-5">
-        <button
-          onClick={() => onUpdateItem(item.id, 'available', !item.available)}
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
-            item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          }`}
-        >
-          {item.available ? t('menu.active') : t('menu.inactive')}
-        </button>
-      </td>
-      <td className="p-5">
-        <button
-          onClick={() => onRemoveItem(item.id)}
-          className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
-          aria-label={`Remove ${localName}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </td>
-    </tr>
+    <input
+      type="number"
+      value={localPrice === 0 ? '' : localPrice}
+      aria-label={`Price for ${item.name ?? ''}`}
+      onChange={(e) => {
+        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+        setLocalPrice(isNaN(val) ? 0 : val);
+      }}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-20 bg-transparent border-none focus:ring-0 font-mono font-bold p-0 focus:outline-none"
+    />
   );
 };
+
+interface MenuRowCellsArgs {
+  item: MenuItem;
+  customCategories: any[];
+  getCategoryLabel: (cat: string) => string;
+  onUpdateItem: (id: number, field: keyof MenuItem, value: unknown) => void;
+  isSideDishCategoryId: (cat: string) => boolean;
+  editingMenu: MenuItem[];
+  t: any;
+}
+
+/** Builds one row's cells, shared by DataList's table and card layouts. */
+function menuRowCells({
+  item,
+  customCategories,
+  getCategoryLabel,
+  onUpdateItem,
+  isSideDishCategoryId,
+  editingMenu,
+  t,
+}: MenuRowCellsArgs): Record<string, React.ReactNode> {
+  return {
+    name: <MenuNameCell item={item} onUpdateItem={onUpdateItem} />,
+    category: (
+      <select
+        value={item.category ?? ''}
+        aria-label={`Category for ${item.name ?? ''}`}
+        onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
+        className="w-full bg-transparent border-none focus:ring-0 text-neutral-400 text-xs uppercase tracking-widest p-0 focus:outline-none"
+      >
+        {customCategories.map(c => (
+          <option key={c.id} value={c.id}>
+            {getCategoryLabel(c.id)}
+          </option>
+        ))}
+        <option value="other">{t('categories.other') || 'Other'}</option>
+      </select>
+    ),
+    price: (
+      <div className="flex items-center justify-end gap-1">
+        <span className="text-neutral-400">€</span>
+        <MenuPriceCell item={item} onUpdateItem={onUpdateItem} />
+      </div>
+    ),
+    side: (
+      <div className="flex flex-col">
+        <button
+          onClick={() => onUpdateItem(item.id, 'hasIncludedSide', !item.hasIncludedSide)}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+            item.hasIncludedSide ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'bg-neutral-50 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500'
+          }`}
+          title={t('menu.included_side') || 'Included Side'}
+        >
+          <Layers className="w-5 h-5" />
+        </button>
+
+        {item.hasIncludedSide && (
+          <SideDishSelector
+            selected={item.sideChoices || []}
+            available={editingMenu.filter(m => isSideDishCategoryId(m.category))}
+            onChange={(names) => onUpdateItem(item.id, 'sideChoices', names)}
+            t={t}
+          />
+        )}
+      </div>
+    ),
+    status: (
+      <button
+        onClick={() => onUpdateItem(item.id, 'available', !item.available)}
+        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${
+          item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+        }`}
+      >
+        {item.available ? t('menu.active') : t('menu.inactive')}
+      </button>
+    ),
+  };
+}
+
+interface MenuRowActionsProps {
+  item: MenuItem;
+  onRemoveItem: (id: number) => void;
+}
+
+const MenuRowActions: React.FC<MenuRowActionsProps> = ({ item, onRemoveItem }) => (
+  <button
+    onClick={() => onRemoveItem(item.id)}
+    className="p-2 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+    aria-label={`Remove ${item.name ?? ''}`}
+  >
+    <Trash2 className="w-4 h-4" />
+  </button>
+);
 
 const SideDishSelector: React.FC<{
   selected: string[];
