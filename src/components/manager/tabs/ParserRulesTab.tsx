@@ -1041,7 +1041,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                         <div className="grid grid-cols-1 gap-2">
                           <button
                             onClick={() => applyAiSuggestions("SNAPSHOT")}
-                            className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+                            className="w-full touch-target-h bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
                           >
                             <Save className="w-3 h-3" />
                             {t("parser.ai_apply_new")}
@@ -1049,7 +1049,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                           
                           <button
                             onClick={() => applyAiSuggestions("PRESET")}
-                            className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                            className="w-full touch-target-h bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
                           >
                             <FileJson className="w-3 h-3" />
                             {t("parser.ai_save_preset")}
@@ -1057,7 +1057,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
                           <button
                             onClick={() => applyAiSuggestions("ACTIVE")}
-                            className="w-full py-2.5 bg-white border border-indigo-100/50 text-indigo-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50/50 transition-all"
+                            className="w-full touch-target-h bg-white border border-indigo-100/50 text-indigo-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50/50 transition-all"
                           >
                             {t("parser.ai_apply_current")}
                           </button>
@@ -1092,13 +1092,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleSaveCurrentAsProfile()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-md active:scale-95"
+                className="flex items-center gap-2 px-4 touch-target-h bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-md active:scale-95"
               >
                 <Save className="w-3.5 h-3.5" /> {t("parser.save_snapshot")}
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-neutral-200 text-neutral-700 rounded-xl font-bold text-xs hover:bg-neutral-50 transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 touch-target-h bg-white border border-neutral-200 text-neutral-700 rounded-xl font-bold text-xs hover:bg-neutral-50 transition-all active:scale-95"
               >
                 <Upload className="w-3.5 h-3.5" /> {t("parser.import_new")}
               </button>
@@ -1244,7 +1244,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
             </AnimatePresence>
             <button
               onClick={() => handleSaveSettings()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
+              className="flex items-center gap-2 px-5 touch-target-h bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
             >
               <Save className="w-3.5 h-3.5" /> {t("parser.save_settings")}
             </button>
@@ -1253,7 +1253,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
         <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Header row */}
-          <div className="col-span-full grid grid-cols-[1fr_auto_auto] gap-4 px-3 pb-1 border-b border-neutral-100">
+          <div className="col-span-full hidden md:grid grid-cols-[1fr_auto_auto] gap-4 px-3 pb-1 border-b border-neutral-100">
             <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
               {t("menu.category")}
             </span>
@@ -1274,7 +1274,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
             return (
               <div
                 key={key}
-                className={`col-span-full grid grid-cols-[1fr_auto_auto] gap-4 items-center p-3 rounded-2xl border ${colors.bg} ${colors.border}`}
+                className={`col-span-full grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 md:gap-4 md:items-center p-3 rounded-2xl border ${colors.bg} ${colors.border}`}
               >
                 <div className="flex items-center gap-2.5">
                   <span
@@ -1289,32 +1289,42 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                 </div>
 
                 {/* Auto Box Toggle */}
-                <button
-                  onClick={() => toggleCat(key, "autoBox")}
-                  className={`w-24 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                    setting.autoBox
-                      ? "bg-amber-500 text-white border-amber-500 shadow-md"
-                      : "bg-white text-neutral-400 border-neutral-200 hover:border-amber-300"
-                  }`}
-                >
-                  {setting.autoBox
-                    ? `✓ ${t("modals.enable")}`
-                    : t("modals.disable")}
-                </button>
+                <div className="flex items-center justify-between gap-3 md:contents">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1 md:hidden">
+                    <Package className="w-3 h-3" /> {t("parser.auto_box")}
+                  </span>
+                  <button
+                    onClick={() => toggleCat(key, "autoBox")}
+                    className={`touch-target-h-phone w-24 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                      setting.autoBox
+                        ? "bg-amber-500 text-white border-amber-500 shadow-md"
+                        : "bg-white text-neutral-400 border-neutral-200 hover:border-amber-300"
+                    }`}
+                  >
+                    {setting.autoBox
+                      ? `✓ ${t("modals.enable")}`
+                      : t("modals.disable")}
+                  </button>
+                </div>
 
                 {/* Side Dish Toggle */}
-                <button
-                  onClick={() => toggleCat(key, "hasSideDish")}
-                  className={`w-24 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                    setting.hasSideDish
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                      : "bg-white text-neutral-400 border-neutral-200 hover:border-indigo-300"
-                  }`}
-                >
-                  {setting.hasSideDish
-                    ? `✓ ${t("modals.enable")}`
-                    : t("modals.disable")}
-                </button>
+                <div className="flex items-center justify-between gap-3 md:contents">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1 md:hidden">
+                    <Layers className="w-3 h-3" /> {t("parser.side_dish")}
+                  </span>
+                  <button
+                    onClick={() => toggleCat(key, "hasSideDish")}
+                    className={`touch-target-h-phone w-24 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                      setting.hasSideDish
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                        : "bg-white text-neutral-400 border-neutral-200 hover:border-indigo-300"
+                    }`}
+                  >
+                    {setting.hasSideDish
+                      ? `✓ ${t("modals.enable")}`
+                      : t("modals.disable")}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -1837,12 +1847,12 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
               onChange={(e) => setNewPresetName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createPreset()}
               placeholder="New preset name… (e.g. «Restaurant Format 2»)"
-              className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-neutral-400"
+              className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-4 touch-target-h text-xs focus:outline-none focus:border-neutral-400"
             />
             <button
               onClick={createPreset}
               disabled={!newPresetName.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all disabled:opacity-40"
+              className="flex items-center gap-2 px-5 touch-target-h bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all disabled:opacity-40"
             >
               <Plus className="w-3.5 h-3.5" /> {t("parser.create")}
             </button>
@@ -1924,13 +1934,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                   {preset.preprocessRules.map((rule, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-2 text-[10px] font-mono"
+                      className="flex items-start gap-2 text-[10px] font-mono"
                     >
-                      <code className="px-2 py-0.5 bg-red-50 border border-red-100 text-red-700 rounded truncate max-w-[35%]">
+                      <code className="px-2 py-0.5 bg-red-50 border border-red-100 text-red-700 rounded break-all max-w-[45%] md:max-w-[35%]">
                         {rule.find || "(empty)"}
                       </code>
                       <span className="text-neutral-400">→</span>
-                      <code className="px-2 py-0.5 bg-green-50 border border-green-100 text-green-700 rounded truncate max-w-[35%]">
+                      <code className="px-2 py-0.5 bg-green-50 border border-green-100 text-green-700 rounded break-all max-w-[45%] md:max-w-[35%]">
                         {rule.replace || "(remove)"}
                       </code>
                       {rule.isRegex && (
@@ -1952,9 +1962,9 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                       ([itemName, targetCat], i) => (
                         <div
                           key={`remap-${i}`}
-                          className="flex items-center gap-2 text-[10px] font-mono"
+                          className="flex items-start gap-2 text-[10px] font-mono"
                         >
-                          <code className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 rounded truncate max-w-[40%] text-xs font-bold">
+                          <code className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 rounded break-all max-w-[45%] md:max-w-[40%] text-xs font-bold">
                             {itemName}
                           </code>
                           <span className="text-neutral-400">→</span>
@@ -1977,9 +1987,9 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                       ([originalName, newName], i) => (
                         <div
                           key={`rename-${i}`}
-                          className="flex items-center gap-2 text-[10px] font-mono"
+                          className="flex items-start gap-2 text-[10px] font-mono"
                         >
-                          <code className="px-2 py-0.5 bg-neutral-100 border border-neutral-200 text-neutral-600 rounded truncate max-w-[40%] text-xs line-through">
+                          <code className="px-2 py-0.5 bg-neutral-100 border border-neutral-200 text-neutral-600 rounded break-all max-w-[45%] md:max-w-[40%] text-xs line-through">
                             {originalName}
                           </code>
                           <span className="text-neutral-400">→</span>
