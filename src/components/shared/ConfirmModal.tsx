@@ -29,6 +29,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const { t } = useTranslation();
   const actualCancelLabel = cancelLabel || t('modals.cancel');
   const [inputValue, setInputValue] = React.useState('');
+  const promptInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (config?.isPrompt) {
@@ -44,7 +45,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   return (
-    <Sheet isOpen={!!config} onClose={onClose} title={config?.title}>
+    <Sheet isOpen={!!config} onClose={onClose} title={config?.title} initialFocusRef={promptInputRef}>
       {config && (
         <>
           <div className="flex items-center gap-4 mb-6">
@@ -67,8 +68,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           {config.isPrompt && (
             <div className="mb-8">
               <input
+                ref={promptInputRef}
                 type="text"
-                autoFocus
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={config.placeholder}

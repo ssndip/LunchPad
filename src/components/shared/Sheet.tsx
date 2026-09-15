@@ -15,6 +15,13 @@ interface SheetProps {
   children: React.ReactNode;
   /** Accessible name to use when there is no `title`. Ignored when `title` is set. */
   ariaLabel?: string;
+  /**
+   * Element to focus on open instead of the first focusable element in the
+   * panel. Ignored if its `current` is null at open time (e.g. content that
+   * only renders in some states), in which case the default first-focusable
+   * behaviour applies.
+   */
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 /** Elements a keyboard user can land on inside the panel, for initial focus and the Tab trap. */
@@ -37,6 +44,7 @@ export const Sheet: React.FC<SheetProps> = ({
   maxWidth = 'max-w-md',
   children,
   ariaLabel,
+  initialFocusRef,
 }) => {
   const { isPhone } = useResponsive();
   const { t } = useTranslation();
@@ -56,11 +64,16 @@ export const Sheet: React.FC<SheetProps> = ({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const panel = panelRef.current;
-    const focusable = panel ? panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) : null;
-    if (focusable && focusable.length > 0) {
-      focusable[0].focus();
+    const preferred = initialFocusRef?.current;
+    if (preferred) {
+      preferred.focus();
     } else {
-      panel?.focus();
+      const focusable = panel ? panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) : null;
+      if (focusable && focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        panel?.focus();
+      }
     }
 
     const previousOverflow = document.body.style.overflow;
@@ -73,7 +86,11 @@ export const Sheet: React.FC<SheetProps> = ({
         toRestore.focus();
       }
     };
-  }, [isOpen]);
+    // `initialFocusRef` is a ref object, stable across renders by definition
+    // (only its `.current` changes, which doesn't need to re-run this), so
+    // including it here doesn't reintroduce the inline-onClose re-run
+    // problem the comment above describes.
+  }, [isOpen, initialFocusRef]);
 
   // Escape-to-close and the Tab trap legitimately need the current
   // `onClose`, so this effect is keyed on it. Re-running it on every render

@@ -134,6 +134,31 @@ describe('Sheet', () => {
     expect(screen.getByText('Second')).toHaveFocus();
   });
 
+  it('focuses initialFocusRef on open instead of the first focusable element', () => {
+    const InputHolder: React.FC = () => {
+      const ref = React.useRef<HTMLInputElement>(null);
+      return (
+        <Sheet isOpen onClose={vi.fn()} ariaLabel="Body only" initialFocusRef={ref}>
+          <button>First</button>
+          <input ref={ref} placeholder="preferred" />
+          <button>Last</button>
+        </Sheet>
+      );
+    };
+    render(<InputHolder />);
+    expect(screen.getByPlaceholderText('preferred')).toHaveFocus();
+  });
+
+  it('falls back to the first focusable element when initialFocusRef is not provided', () => {
+    render(
+      <Sheet isOpen onClose={vi.fn()} ariaLabel="Body only">
+        <button>First</button>
+        <input placeholder="not preferred" />
+      </Sheet>
+    );
+    expect(screen.getByText('First')).toHaveFocus();
+  });
+
   it('restores focus to the previously focused element on close', () => {
     const trigger = document.createElement('button');
     trigger.textContent = 'Open sheet';
