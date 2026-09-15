@@ -228,13 +228,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       {/* RFID Input Area - always present if no profile */}
       {!profile && (
         <div className="mb-8">
-          <div
+          <label
             className={`flex items-center gap-4 px-6 py-5 rounded-3xl border-2 transition-all ${
               loading
                 ? 'border-neutral-300 bg-neutral-50'
                 : 'border-dashed border-neutral-200 bg-neutral-50 hover:border-neutral-400'
             }`}
-            onClick={() => inputRef.current?.focus()}
           >
             <CreditCard
               className={`w-6 h-6 shrink-0 ${loading ? 'animate-pulse text-indigo-500' : 'text-neutral-400'}`}
@@ -254,7 +253,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               autoComplete="off"
             />
             {loading && <Loader2 className="w-5 h-5 animate-spin text-neutral-400 shrink-0" />}
-          </div>
+          </label>
         </div>
       )}
 
