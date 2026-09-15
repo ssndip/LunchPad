@@ -8,6 +8,7 @@ import { usePWA } from '../../../hooks/usePWA';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { CategoryManagement } from './settings/CategoryManagement';
 import { triggerHaptic } from '../../../utils/haptics';
+import { TabHeader } from '../../shared/TabHeader';
 
 interface SettingsTabProps {
   adminWhitelistEnabled: boolean;
@@ -189,16 +190,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div title={t('navigation.system_settings')}>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">{t('navigation.system_settings')}</h1>
-          <p className="text-neutral-500 text-sm md:text-base">{t('settings.global_desc')}</p>
-        </div>
-      </div>
+      <TabHeader title={t('navigation.system_settings')} subtitle={t('settings.global_desc')} />
 
       <div className="max-w-2xl space-y-6 pb-20">
         {/* Localization & Info */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100 mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
@@ -245,7 +241,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <div className="relative">
                   <button title={t('settings.language')}
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center justify-between w-[200px] px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-2xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
+                    className="flex items-center justify-between w-full sm:w-[200px] px-4 touch-target-h bg-neutral-50 border border-neutral-200 rounded-2xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
                   >
                     <div className="flex items-center gap-2">
                       <Globe className="w-4 h-4 text-neutral-400" />
@@ -268,7 +264,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute bottom-full mb-2 left-0 w-[240px] bg-white border border-neutral-100 rounded-3xl shadow-2xl z-50 overflow-hidden p-2"
+                          className="absolute bottom-full mb-2 left-0 right-0 sm:right-auto sm:w-[240px] bg-white border border-neutral-100 rounded-3xl shadow-2xl z-50 overflow-hidden p-2"
                         >
                           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                             {availableLanguages.map((l) => (
@@ -359,7 +355,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* PWA & Kiosk Settings */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center"><Smartphone className="w-6 h-6 text-violet-600" /></div>
             <div>
@@ -454,7 +450,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
 
         {/* Pre-identification Toggle */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><CreditCard className="w-6 h-6 text-neutral-900" /></div>
@@ -511,7 +507,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Public Access Protection */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -566,7 +562,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       value={localPublicAccessCode}
                       onChange={(e) => setLocalPublicAccessCode(e.target.value)}
                       placeholder="e.g. 1234"
-                      className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 text-sm font-semibold"
+                      className="flex-1 px-4 touch-target-h rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 text-sm font-semibold"
                     />
                     <button
                       onClick={() => onUpdateSettings(
@@ -593,7 +589,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                         localPublicAccessCode,
                         globalAccess
                       )}
-                      className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all shadow-sm"
+                      className="px-4 touch-target-h bg-neutral-900 text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-all shadow-sm"
                     >
                       {t('settings.save_code') || 'Save'}
                     </button>
@@ -605,7 +601,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Ordering toggle */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center"><Plus className="w-6 h-6 text-neutral-900" /></div>
@@ -619,7 +615,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Test mode */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center"><Zap className="w-6 h-6 text-indigo-600" /></div>
@@ -633,7 +629,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Kiosk Timing and Operating Hours */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
@@ -746,7 +742,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           )}
         </div>
         {/* Admin Whitelist */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center"><CheckCircle2 className="w-6 h-6 text-amber-600" /></div>
@@ -820,7 +816,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* System Announcement */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center"><Info className="w-6 h-6 text-blue-600" /></div>
             <div>
@@ -863,7 +859,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* AI Integration */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center"><Sparkles className="w-6 h-6 text-indigo-600" /></div>
             <div>
@@ -1000,7 +996,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Change PIN */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center"><Settings className="w-6 h-6 text-red-600" /></div>
             <div>
@@ -1055,7 +1051,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         />
 
         {/* System Backup & Restore (Full Data Portability) */}
-        <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden relative">
+        <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden relative">
           {/* Background Accent */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full blur-3xl -mr-32 -mt-32" />
           
