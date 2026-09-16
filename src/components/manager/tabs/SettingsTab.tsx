@@ -172,18 +172,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const Toggle = ({
     checked, onChange, color = 'bg-neutral-900', label,
   }: { checked: boolean; onChange: () => void; color?: string; label: string }) => {
-    const commonProps = {
-      onClick: onChange,
-      className: `w-16 h-8 rounded-full transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 ${checked ? color : 'bg-neutral-200'}`
-    };
-
-    return checked ? (
-      <button {...commonProps} title={label} aria-label={label} aria-pressed="true">
-        <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-9" />
-      </button>
-    ) : (
-      <button {...commonProps} title={label} aria-label={label} aria-pressed="false">
-        <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm left-1" />
+    // The outer button is the tap target: `touch-target-phone` floors it to
+    // 44x44 below 767px without affecting its desktop size (which shrink-wraps
+    // to the inner track, identical to the old single-element button). Without
+    // `shrink-0` a `flex justify-between` row (the description text pushing
+    // against it) would compress this below its own w-16 on a narrow phone —
+    // that's why several toggles measured under their intended 64px width
+    // before this change. The visible track keeps its original w-16 h-8 size
+    // on an inner element so growing the tap area never inflates the switch.
+    return (
+      <button
+        onClick={onChange}
+        title={label}
+        aria-label={label}
+        aria-pressed={checked ? 'true' : 'false'}
+        className="touch-target-phone shrink-0 flex items-center justify-center relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 rounded-full"
+      >
+        <span className={`w-16 h-8 rounded-full transition-all relative ${checked ? color : 'bg-neutral-200'}`}>
+          <span className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
+        </span>
       </button>
     );
   };
@@ -210,20 +217,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
                   aria-pressed="true"
                   aria-label={t('settings.enable_bgn')}
-                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-900 shadow-lg shadow-neutral-200"
+                  className="touch-target-phone shrink-0 flex items-center justify-center relative focus:outline-none rounded-full"
                 >
-                  <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-[1.65rem]">
-                    <div className="w-1 h-1 bg-neutral-900 rounded-full" />
-                  </div>
+                  <span className="w-14 h-8 rounded-full transition-all relative bg-neutral-900 shadow-lg shadow-neutral-200">
+                    <span className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-[1.65rem]">
+                      <span className="w-1 h-1 bg-neutral-900 rounded-full" />
+                    </span>
+                  </span>
                 </button>
               ) : (
                 <button title={t('settings.enable_bgn')}
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, !bgnEnabled)}
                   aria-pressed="false"
                   aria-label={t('settings.enable_bgn')}
-                  className="w-14 h-8 rounded-full transition-all relative focus:outline-none bg-neutral-200"
+                  className="touch-target-phone shrink-0 flex items-center justify-center relative focus:outline-none rounded-full"
                 >
-                  <div className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-1" />
+                  <span className="w-14 h-8 rounded-full transition-all relative bg-neutral-200">
+                    <span className="absolute top-1 w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center left-1" />
+                  </span>
                 </button>
               )}
           </div>
@@ -331,7 +342,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div className="pt-6 border-t border-neutral-100 flex flex-col sm:flex-row gap-3">
             <button title="Export Data"
               onClick={handleExportTemplate}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all text-xs"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all text-xs"
             >
               <Download className="w-4 h-4" /> {t('cards.export_data')} (JSON)
             </button>
@@ -346,7 +357,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
               title={t('cards.import_file')}
             >
               <Plus className="w-4 h-4" /> {t('cards.import_file')}
@@ -401,7 +412,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <button
                     key={level}
                     onClick={() => changeHapticIntensity(level)}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
+                    className={`touch-target-phone px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
                       hapticIntensity === level
                         ? 'bg-violet-600 text-white shadow-sm shadow-violet-600/10'
                         : 'text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100'
@@ -768,12 +779,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   value={localWhitelist}
                   onChange={(e) => setLocalWhitelist(e.target.value)}
                   placeholder="e.g. 127.0.0.1, localhost, 192.168.1.0/24"
-                  className="flex-1 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
+                  className="flex-1 px-4 py-3 touch-target-h-phone bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
                 />
                 <button title="Update Whitelist"
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, localWhitelist)}
                   disabled={localWhitelist === adminWhitelist}
-                  className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30 whitespace-nowrap"
+                  className="px-6 py-3 touch-target-h-phone bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30 whitespace-nowrap"
                 >
                   {t('settings.update')}
                 </button>
@@ -842,7 +853,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     setLocalAnnouncement('');
                     onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, '');
                   }}
-                  className="px-6 py-3 bg-white border border-neutral-200 text-neutral-500 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 transition-all"
+                  className="px-6 py-3 touch-target-h-phone bg-white border border-neutral-200 text-neutral-500 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 transition-all"
                 >
                   Clear
                 </button>
@@ -850,7 +861,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <button title="Update Announcement"
                 onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, localAnnouncement)}
                 disabled={localAnnouncement === announcement}
-                className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
+                className="px-6 py-3 touch-target-h-phone bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-30"
               >
                 {t('settings.update')}
               </button>
@@ -877,7 +888,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     <button title="Select AI Provider"
                       key={p}
                       onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, p, aiApiKey, preIdentificationEnabled, customCategories, aiModel, aiEndpoint)}
-                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${aiProvider === p ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-neutral-100 text-neutral-400 hover:border-indigo-200 hover:text-indigo-600'}`}
+                      className={`touch-target-h-phone py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${aiProvider === p ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-neutral-100 text-neutral-400 hover:border-indigo-200 hover:text-indigo-600'}`}
                     >
                       {p}
                     </button>
@@ -896,11 +907,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       value={localAiApiKey}
                       onChange={(e) => setLocalAiApiKey(e.target.value)}
                       placeholder="sk-..."
-                      className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
+                      className="w-full px-4 py-3 touch-target-h-phone bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
                     />
-                    <button 
+                    <button
                       onClick={() => setShowAiKey(!showAiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600"
+                      className="touch-target-phone absolute right-0 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center text-neutral-400 hover:text-neutral-600"
                       title={showAiKey ? "Hide API Key" : "Show API Key"}
                       aria-label={showAiKey ? "Hide API Key" : "Show API Key"}
                     >
@@ -910,7 +921,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <button
                     onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, adminWhitelist, announcement, aiProvider, localAiApiKey, preIdentificationEnabled, customCategories, aiModel, aiEndpoint)}
                     disabled={localAiApiKey === aiApiKey}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
+                    className="px-6 py-3 touch-target-h-phone bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 whitespace-nowrap"
                     title={t('settings.update')}
                   >
                     {t('settings.update')}
@@ -986,7 +997,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     alert(`${t('navigation.network_error') || 'Network Error:'} ${err.message}`);
                   }
                 }}
-                className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
+                className="px-4 py-2 touch-target-h-phone bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
                 title={t('settings.verify_ai_connection')}
               >
                 {t('settings.test_connection')}
@@ -1110,7 +1121,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     alert("Export failed: " + err.message);
                   }
                 }}
-                className="flex items-center justify-center gap-3 py-4 bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
+                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
               >
                 <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Export Backup
               </button>
@@ -1156,7 +1167,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     });
                   }
                 }}
-                className="flex items-center justify-center gap-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
+                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
               >
                 <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> Restore Backup
               </button>

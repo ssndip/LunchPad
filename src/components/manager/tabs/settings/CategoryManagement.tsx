@@ -90,7 +90,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         {!editingCatId && (
           <button 
             onClick={handleCreate}
-            className="px-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-md hover:bg-neutral-800 transition-all flex items-center gap-2"
+            className="touch-target-h-phone px-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-md hover:bg-neutral-800 transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" /> Add
           </button>
