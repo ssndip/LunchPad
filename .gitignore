@@ -8,4 +8,8 @@ coverage/
 !.env.example
 data/
 lunchpad.db
+lunchpad.db-wal
+lunchpad.db-shm
 .worktrees/
+backups/
+dev-dist/
