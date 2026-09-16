@@ -24,14 +24,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [view, setView] = useState<'selection' | 'last_order' | 'history'>('selection');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus the hidden input when modal opens
+  // Reset transient state on open. Initial focus is handled by Sheet via
+  // `initialFocusRef` below — no competing timer here.
   useEffect(() => {
     if (isOpen) {
       setProfile(null);
       setError(null);
       setRfidInput('');
       setView('selection');
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
@@ -220,6 +220,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       onClose={onClose}
       title={t('kiosk.user_history_title')}
       maxWidth="max-w-2xl"
+      initialFocusRef={inputRef}
     >
       <p className="text-[10px] text-neutral-400 uppercase tracking-[0.2em] font-bold mb-6">
         {t('kiosk.user_history_subtitle')}
