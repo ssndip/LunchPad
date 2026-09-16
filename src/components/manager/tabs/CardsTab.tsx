@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, Plus, CreditCard, RotateCcw, Pencil, Download, Upload, FileSpreadsheet, BarChart2, Radio } from 'lucide-react';
 import { Card } from '../../../types';
 import { NfcWriteModal } from '../modals/NfcWriteModal';
@@ -7,6 +6,7 @@ import { NfcWriteModal } from '../modals/NfcWriteModal';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useNfcScanner } from '../../../hooks/useNfcScanner';
 import { ACTIONS_COLUMN_KEY, DataList, DataListColumn, DataListRow } from '../../shared/DataList';
+import { Sheet } from '../../shared/Sheet';
 
 interface CardsTabProps {
   cards: Card[];
@@ -393,36 +393,30 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         </div>
       </div>
 
-      <AnimatePresence>
-        {isPasteCardsModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-[32px] w-full max-w-2xl p-8 shadow-2xl"
-            >
-              <h2 className="text-2xl font-bold mb-2">{t('cards.import_cards')}</h2>
-              <p className="text-neutral-500 mb-6 text-sm">{t('cards.import_instructions')}</p>
-              <textarea
-                value={pasteCardsText}
-                onChange={(e) => setPasteCardsText(e.target.value)}
-                placeholder={t('cards.import_placeholder')}
-                className="w-full h-52 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm mb-6 focus:outline-none resize-none"
-              />
-              <div className="flex justify-end gap-4">
-                <button onClick={() => setIsPasteCardsModalOpen(false)} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
-                  {t('modals.cancel')}
-                </button>
-                <button onClick={onBatchAddCards} className="px-8 py-3 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all">
-                  {t('cards.import_cards')}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Sheet
+        isOpen={isPasteCardsModalOpen}
+        onClose={() => setIsPasteCardsModalOpen(false)}
+        title={t('cards.import_cards')}
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-6">
+          <p className="text-neutral-500 text-sm -mt-2">{t('cards.import_instructions')}</p>
+          <textarea
+            value={pasteCardsText}
+            onChange={(e) => setPasteCardsText(e.target.value)}
+            placeholder={t('cards.import_placeholder')}
+            className="w-full h-52 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none resize-none"
+          />
+          <div className="flex justify-end gap-4">
+            <button onClick={() => setIsPasteCardsModalOpen(false)} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
+              {t('modals.cancel')}
+            </button>
+            <button onClick={onBatchAddCards} className="px-8 py-3 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all">
+              {t('cards.import_cards')}
+            </button>
+          </div>
+        </div>
+      </Sheet>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cards table */}
