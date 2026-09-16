@@ -1,15 +1,72 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
+import type { YAxisTickContentProps } from 'recharts';
 import { Loader2, TrendingUp, Clock, Award, Users } from 'lucide-react';
 import * as api from '../../../api';
 import { useStore } from '../../../store/useStore';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useResponsive } from '../../../hooks/useResponsive';
+import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
 
 const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
+
+// A recharts category YAxis renders its tick label as a raw SVG <text> with
+// no built-in truncation: when a label is wider than the axis's allocated
+// `width`, the overflow simply runs past the SVG's edge and is clipped
+// invisibly rather than shown with an ellipsis. Menu item names are long
+// Bulgarian dish names (20-30+ characters) that already overflow the
+// desktop axis width of 100px, and the phone axis narrows to 72px, so
+// without this the phone label would silently lose its start, not just its
+// tail. Measuring with a canvas context and truncating with an ellipsis
+// keeps every label legible instead of letting it vanish off-canvas.
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+function getMeasureContext(): CanvasRenderingContext2D | null {
+  if (measureCtx !== undefined) return measureCtx;
+  if (typeof document === 'undefined') {
+    measureCtx = null;
+    return measureCtx;
+  }
+  measureCtx = document.createElement('canvas').getContext('2d');
+  return measureCtx;
+}
+
+function truncateLabelToWidth(text: string, maxWidth: number, font: string): string {
+  const ctx = getMeasureContext();
+  if (!ctx) return text;
+  ctx.font = font;
+  if (ctx.measureText(text).width <= maxWidth) return text;
+
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const candidate = `${text.slice(0, mid)}…`;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return lo > 0 ? `${text.slice(0, lo)}…` : '…';
+}
+
+const CATEGORY_TICK_FONT = 'bold 10px Inter, system-ui, sans-serif';
+
+/** Builds a YAxis `tick` renderer that truncates the category label to fit
+ * within `maxWidth` px instead of letting recharts clip it off-canvas. */
+const makeCategoryTick = (maxWidth: number) =>
+  function CategoryTick({ x, y, payload }: YAxisTickContentProps) {
+    const label = truncateLabelToWidth(String(payload?.value ?? ''), maxWidth, CATEGORY_TICK_FONT);
+    return (
+      <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fontWeight="bold" fill="#111827">
+        {label}
+      </text>
+    );
+  };
 
 export const AnalyticsTab: React.FC = () => {
   const { t } = useTranslation();
@@ -51,6 +108,29 @@ export const AnalyticsTab: React.FC = () => {
       peakHour: peakHourObj?.hour || 'N/A',
       sortedPeakTimes: sortedPeakTimesObj
     };
+  }, [data]);
+
+  const topSpenderColumns: DataListColumn[] = [
+    { key: 'name', label: t('orders.cardholder') || '', role: 'title' },
+    { key: 'count', label: t('navigation.order_summary') || '', align: 'center' },
+    { key: 'total', label: t('analytics.total_spent') || '', align: 'right' },
+  ];
+
+  const topSpenderRows: DataListRow[] = React.useMemo(() => {
+    if (!data) return [];
+    return data.topCustomers.map((c: any) => ({
+      key: c.rfid,
+      cells: {
+        name: (
+          <>
+            <p className="font-bold text-neutral-900 break-all">{c.name}</p>
+            <p className="text-[10px] text-neutral-400 font-mono break-all">{c.rfid}</p>
+          </>
+        ),
+        count: <span className="font-mono text-neutral-500">{c.count}</span>,
+        total: <span className="font-bold text-neutral-900">€{c.total.toFixed(2)}</span>,
+      },
+    }));
   }, [data]);
 
   if (!data && loading) {
@@ -135,29 +215,11 @@ export const AnalyticsTab: React.FC = () => {
             {/* Top Spenders */}
             <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
               <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.top_spenders')}</h3>
-              <div className="overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 border-b border-neutral-100">
-                      <th className="pb-4">{t('orders.cardholder')}</th>
-                      <th className="pb-4 text-center">{t('navigation.order_summary')}</th>
-                      <th className="pb-4 text-right">{t('analytics.total_spent')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-50">
-                    {data.topCustomers.map((c: any) => (
-                      <tr key={c.rfid} className="group hover:bg-neutral-50 transition-colors">
-                        <td className="py-4">
-                          <p className="font-bold text-neutral-900">{c.name}</p>
-                          <p className="text-[10px] text-neutral-400 font-mono">{c.rfid}</p>
-                        </td>
-                        <td className="py-4 text-center font-mono text-neutral-500">{c.count}</td>
-                        <td className="py-4 text-right font-bold text-neutral-900">€{c.total.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataList
+                columns={topSpenderColumns}
+                rows={topSpenderRows}
+                emptyMessage={t('analytics.no_spenders_found') || ''}
+              />
             </div>
 
             {/* Popular Items */}
@@ -177,7 +239,7 @@ export const AnalyticsTab: React.FC = () => {
                       type="category"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 10, fontWeight: 'bold' }}
+                      tick={makeCategoryTick(isPhone ? 64 : 92)}
                       width={isPhone ? 72 : 100}
                     />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
@@ -204,7 +266,7 @@ export const AnalyticsTab: React.FC = () => {
                       type="category"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 10, fontWeight: 'bold' }}
+                      tick={makeCategoryTick(isPhone ? 64 : 92)}
                       width={isPhone ? 72 : 100}
                     />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />

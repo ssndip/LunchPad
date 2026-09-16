@@ -186,6 +186,7 @@ export const translations = {
       top_spenders: 'Top Spenders',
       total_spent: 'Total Spent',
       summary_report: 'Summary Report',
+      no_spenders_found: 'No customer spending data available.',
     },
     menu: {
       category: 'Category',
@@ -711,6 +712,7 @@ export const translations = {
       top_spenders: 'Най-големи платци',
       total_spent: 'Общо похарчени',
       summary_report: 'Обобщен отчет',
+      no_spenders_found: 'Няма данни за похарчени средства от клиенти.',
     },
     menu: {
       category: 'Категория',
