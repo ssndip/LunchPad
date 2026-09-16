@@ -113,7 +113,7 @@ export const AnalyticsTab: React.FC = () => {
 
   const topSpenderColumns: DataListColumn[] = [
     { key: 'name', label: t('orders.cardholder') || '', role: 'title' },
-    { key: 'count', label: t('navigation.order_summary') || '', align: 'center' },
+    { key: 'count', label: t('analytics.orders_unit') || '', align: 'center' },
     { key: 'total', label: t('analytics.total_spent') || '', align: 'right' },
   ];
 
