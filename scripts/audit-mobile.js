@@ -14,6 +14,10 @@
  *
  * It builds a 390x840 same-origin iframe — the narrowest phone the app targets —
  * and audits inside it, so resizing or docking the real browser window is not needed.
+ *
+ * The dashboard tabs have no URL of their own, so __auditMobile cannot reach
+ * them. Paste scripts/mount-dashboard-tab.js after this file to mount one
+ * directly and audit it with __auditDocument(__tab.doc).
  */
 (() => {
   const PHONE_W = 390;
@@ -58,6 +62,17 @@
     return false;
   }
 
+  // An SVG element's `className` is an SVGAnimatedString, not a string, so
+  // String(el.className) yields "[object SVGAnimatedString]". That never came
+  // up while the audited surfaces were plain HTML, but the analytics tab is
+  // mostly recharts <svg>, and a finding that cannot name the element it found
+  // is not much of a finding.
+  function className(el) {
+    const c = el.className;
+    if (c && typeof c === 'object' && 'baseVal' in c) return String(c.baseVal || '');
+    return String(c || '');
+  }
+
   function audit(doc) {
     const W = doc.documentElement.clientWidth;
     const findings = [];
@@ -65,7 +80,7 @@
       findings.push({
         type,
         tag: el.tagName,
-        cls: String(el.className || '').slice(0, 70),
+        cls: className(el).slice(0, 70),
         text: String(text || '').trim().slice(0, 40),
         detail,
       });
@@ -131,6 +146,12 @@
 
     return findings;
   }
+
+  // Exposed so mount-dashboard-tab.js can run the same detectors against a
+  // document it mounted itself. __auditMobile below builds its own iframe from
+  // a URL, which only reaches surfaces a URL can reach — the dashboard tabs
+  // sit behind a PIN and have no route of their own.
+  window.__auditDocument = audit;
 
   window.__auditMobile = async function (path = '/') {
     document.querySelectorAll('iframe[data-audit-frame]').forEach((f) => f.remove());
