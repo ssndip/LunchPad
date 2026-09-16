@@ -7,11 +7,13 @@ import { Loader2, TrendingUp, Clock, Award, Users } from 'lucide-react';
 import * as api from '../../../api';
 import { useStore } from '../../../store/useStore';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useResponsive } from '../../../hooks/useResponsive';
 
 const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
 
 export const AnalyticsTab: React.FC = () => {
   const { t } = useTranslation();
+  const { isPhone } = useResponsive();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const token = useStore(s => s.token);
@@ -109,9 +111,9 @@ export const AnalyticsTab: React.FC = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {/* Revenue Timeline */}
-            <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-              <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.revenue_timeline')}</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.revenue_timeline')}</h3>
+              <div className="h-64 md:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.timeline}>
                     <defs>
@@ -131,8 +133,8 @@ export const AnalyticsTab: React.FC = () => {
             </div>
 
             {/* Top Spenders */}
-            <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-              <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.top_spenders')}</h3>
+            <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.top_spenders')}</h3>
               <div className="overflow-hidden">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -159,14 +161,25 @@ export const AnalyticsTab: React.FC = () => {
             </div>
 
             {/* Popular Items */}
-            <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-              <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.popular_meals')}</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.popular_meals')}</h3>
+              <div className="h-64 md:h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.popularMeals} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
+                  <BarChart
+                    data={data.popularMeals}
+                    layout="vertical"
+                    margin={isPhone ? { top: 0, right: 8, left: 0, bottom: 0 } : { top: 0, right: 30, left: 40, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
                     <XAxis type="number" axisLine={false} tickLine={false} hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} width={100} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fontWeight: 'bold' }}
+                      width={isPhone ? 72 : 100}
+                    />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="count" fill="#000000" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
@@ -175,14 +188,25 @@ export const AnalyticsTab: React.FC = () => {
             </div>
 
             {/* Popular Sides */}
-            <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-              <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.popular_sides')}</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.popular_sides')}</h3>
+              <div className="h-64 md:h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.popularSides} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
+                  <BarChart
+                    data={data.popularSides}
+                    layout="vertical"
+                    margin={isPhone ? { top: 0, right: 8, left: 0, bottom: 0 } : { top: 0, right: 30, left: 40, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
                     <XAxis type="number" axisLine={false} tickLine={false} hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} width={100} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fontWeight: 'bold' }}
+                      width={isPhone ? 72 : 100}
+                    />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="count" fill="#4F46E5" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
@@ -191,9 +215,9 @@ export const AnalyticsTab: React.FC = () => {
             </div>
 
             {/* Peak Activity Wave */}
-            <div className="bg-white p-8 rounded-[40px] border border-neutral-200 shadow-sm">
-              <h3 className="text-xl font-bold text-neutral-900 mb-8 uppercase tracking-tight">{t('analytics.activity_wave')}</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 mb-4 md:mb-8 uppercase tracking-tight">{t('analytics.activity_wave')}</h3>
+              <div className="h-64 md:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={sortedPeakTimes}>
                     <defs>
