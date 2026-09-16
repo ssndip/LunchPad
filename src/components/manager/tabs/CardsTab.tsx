@@ -7,6 +7,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { useNfcScanner } from '../../../hooks/useNfcScanner';
 import { ACTIONS_COLUMN_KEY, DataList, DataListColumn, DataListRow } from '../../shared/DataList';
 import { Sheet } from '../../shared/Sheet';
+import { TabHeader } from '../../shared/TabHeader';
 
 interface CardsTabProps {
   cards: Card[];
@@ -335,63 +336,30 @@ export const CardsTab: React.FC<CardsTabProps> = ({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-            {t('navigation.card_management')}
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base">{t('cards.management_desc')}</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            accept=".csv, .xlsx, .xls"
-            className="hidden" 
-          />
-          
-          <div className="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
-            <button
-              onClick={() => handleExport('xlsx')}
-              className="flex items-center justify-center gap-2 px-4 py-2 touch-target bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
-              title={t('cards.export_xlsx')}
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">XLSX</span>
-            </button>
-            <button
-              onClick={() => handleExport('csv')}
-              className="flex items-center justify-center gap-2 px-4 py-2 touch-target bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs shadow-sm"
-              title={t('cards.export_csv')}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">CSV</span>
-            </button>
-          </div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".csv, .xlsx, .xls"
+        className="hidden"
+      />
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-5 py-3 touch-target-h bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all text-xs shadow-lg shadow-indigo-100"
-          >
-            <Upload className="w-4 h-4" /> {t('cards.import_file')}
-          </button>
-
-          <button
-            onClick={onResetAllBalances}
-            className="flex items-center gap-2 px-5 py-3 touch-target-h bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all text-xs"
-          >
-            <RotateCcw className="w-4 h-4" /> {t('cards.reset_monthly_balances')}
-          </button>
-
-          <button
-            onClick={() => setIsPasteCardsModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-xs"
-          >
-            <Plus className="w-4 h-4" /> {t('cards.import_cards')}
-          </button>
-        </div>
-      </div>
+      <TabHeader
+        title={t('navigation.card_management')}
+        subtitle={t('cards.management_desc')}
+        primaryAction={{
+          key: 'import-cards',
+          label: t('cards.import_cards') || '',
+          icon: Plus,
+          onClick: () => setIsPasteCardsModalOpen(true),
+        }}
+        secondaryActions={[
+          { key: 'export-xlsx', label: t('cards.export_xlsx') || '', icon: Download, onClick: () => handleExport('xlsx') },
+          { key: 'export-csv', label: t('cards.export_csv') || '', icon: FileSpreadsheet, onClick: () => handleExport('csv') },
+          { key: 'import-file', label: t('cards.import_file') || '', icon: Upload, onClick: () => fileInputRef.current?.click() },
+          { key: 'reset-balances', label: t('cards.reset_monthly_balances') || '', icon: RotateCcw, isDestructive: true, onClick: onResetAllBalances },
+        ]}
+      />
 
       <Sheet
         isOpen={isPasteCardsModalOpen}

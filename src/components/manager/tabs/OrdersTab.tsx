@@ -8,6 +8,7 @@ import { Truck, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { formatDate } from '../../../utils/dateFormatter';
 import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
+import { TabHeader } from '../../shared/TabHeader';
 
 interface OrdersTabProps {
   summaries: DailySummary[];
@@ -229,16 +230,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-            {t('navigation.order_summary')}
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base">
-            {t('orders.performance_subtitle')}
-          </p>
-        </div>
-      </div>
+      <TabHeader
+        title={t('navigation.order_summary')}
+        subtitle={t('orders.performance_subtitle')}
+      />
 
       <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
         <DataList

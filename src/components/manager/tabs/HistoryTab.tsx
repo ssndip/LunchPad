@@ -5,6 +5,7 @@ import { FileText } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { formatDate } from '../../../utils/dateFormatter';
 import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
+import { TabHeader } from '../../shared/TabHeader';
 
 interface Filters {
   startDate: string;
@@ -81,16 +82,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-            {t('navigation.history')}
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base">
-            {t('menu.history_desc')}
-          </p>
-        </div>
-      </div>
+      <TabHeader
+        title={t('navigation.history')}
+        subtitle={t('menu.history_desc')}
+      />
 
       {/* Summary Bar */}
       {Array.isArray(history) && history.length > 0 && (

@@ -10,6 +10,7 @@ import { useStore } from '../../../store/useStore';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useResponsive } from '../../../hooks/useResponsive';
 import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
+import { TabHeader } from '../../shared/TabHeader';
 
 const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -143,16 +144,10 @@ export const AnalyticsTab: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
-            {t('navigation.analytics')}
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base">
-            {t('analytics.analytics_desc')}
-          </p>
-        </div>
-      </div>
+      <TabHeader
+        title={t('navigation.analytics')}
+        subtitle={t('analytics.analytics_desc')}
+      />
 
       {/* Analytics is now global/default view as requested */}
 
