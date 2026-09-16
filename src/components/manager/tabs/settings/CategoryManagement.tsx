@@ -189,8 +189,8 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                     {cat.names['en'] || cat.names['bg'] || Object.values(cat.names)[0] || 'Unnamed'}
                   </h4>
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(cat)} title="Edit category" aria-label={`Edit category ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-indigo-500"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(cat.id)} title="Delete category" aria-label={`Delete category ${cat.names['en'] || cat.id}`} className="text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleEdit(cat)} title="Edit category" aria-label={`Edit category ${cat.names['en'] || cat.id}`} className="touch-target-phone flex items-center justify-center text-neutral-400 hover:text-indigo-500"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(cat.id)} title="Delete category" aria-label={`Delete category ${cat.names['en'] || cat.id}`} className="touch-target-phone flex items-center justify-center text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
                 
