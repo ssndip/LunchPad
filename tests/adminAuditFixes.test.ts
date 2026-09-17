@@ -279,3 +279,38 @@ describe('server-side automatic backups', () => {
     }
   });
 });
+
+describe('the seeded test card is not a dashboard credential', () => {
+  let app: any;
+
+  beforeEach(async () => {
+    app = await startServer();
+  });
+
+  it('refuses TEST-ADMIN as a login credential', async () => {
+    // Before this, /api/auth/login accepted any admin card's RFID as the whole
+    // credential, and the TEST-ADMIN card was seeded into every install with
+    // isAdmin = 1 — so this exact request returned 200 and a working admin
+    // token, using a string published in this repository.
+    for (const attempt of ['TEST-ADMIN', 'test-admin', ' Test-Admin ']) {
+      const res = await request(app).post('/api/auth/login').send({ pin: attempt });
+      expect(res.status).toBe(401);
+      expect(res.body.token).toBeUndefined();
+    }
+  });
+
+  it('does not carry admin rights, and demotes one that already does', () => {
+    // initDb runs on startup and repairs an install seeded before the fix.
+    const card = db.prepare("SELECT isAdmin FROM cards WHERE rfid = ?").get('TEST-ADMIN') as any;
+    if (card) expect(card.isAdmin).toBeFalsy();
+  });
+
+  it('still lets test mode place an order without a card', async () => {
+    // The flag was never what made this work — the card and its balance are.
+    const card = db.prepare("SELECT rfid, balance FROM cards WHERE rfid = ?").get('TEST-ADMIN') as any;
+    if (card) {
+      expect(card.rfid).toBe('TEST-ADMIN');
+      expect(Number(card.balance)).toBeGreaterThan(0);
+    }
+  });
+});

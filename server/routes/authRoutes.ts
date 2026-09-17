@@ -21,6 +21,13 @@ router.post("/login", adminWhitelistGuard, (req, res) => {
 
   // 2. Check Admin Card RFID
   const cleanRfid = String(pin).trim().replace(/[^\x20-\x7E]/g, '').toLowerCase();
+
+  // The seeded test card's RFID is a constant in this repository, so it must
+  // never be a credential even if an operator marks it as an admin by hand.
+  if (cleanRfid === 'test-admin') {
+    return res.status(401).json({ error: "Invalid PIN or Admin Card" });
+  }
+
   const adminCard = db.prepare("SELECT * FROM cards WHERE LOWER(rfid) = ? AND isAdmin = 1").get(cleanRfid) as any;
 
   if (adminCard) {

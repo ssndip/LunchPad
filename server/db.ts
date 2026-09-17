@@ -235,10 +235,32 @@ export const seedInitialData = () => {
   }
 
   // Seed Test Admin
-  const existingAdmin = db.prepare("SELECT * FROM cards WHERE rfid = ?").get("TEST-ADMIN");
-  if (!existingAdmin) {
+  //
+  // This card exists so test mode can place an order without a physical card.
+  // It was seeded into every install with isAdmin = 1, and /api/auth/login
+  // accepts any admin card's RFID as the entire credential — so posting the
+  // string "TEST-ADMIN", a constant published in this repository, minted a
+  // valid admin token on any deployment. Verified before this change: the
+  // login returned 200 with a token that then read /api/cards.
+  //
+  // Two things close it. The card is no longer an admin: ordering never needed
+  // that flag, only a balance. And it is only seeded where test mode is
+  // plausible, rather than on every production install.
+  const existingTestCard = db.prepare("SELECT rfid, isAdmin FROM cards WHERE rfid = ?").get("TEST-ADMIN") as
+    { rfid: string; isAdmin: number } | undefined;
+
+  if (existingTestCard) {
+    // An install seeded before this change still carries the admin flag.
+    if (existingTestCard.isAdmin) {
+      db.prepare("UPDATE cards SET isAdmin = 0 WHERE rfid = ?").run("TEST-ADMIN");
+      console.warn(
+        "[DB] Demoted the seeded TEST-ADMIN card: it carried admin rights, which made " +
+        "its published RFID a working dashboard credential.",
+      );
+    }
+  } else if (process.env.NODE_ENV !== 'production') {
     db.prepare("INSERT INTO cards (rfid, ownerName, balance, isAdmin, lastUpdated) VALUES (?, ?, ?, ?, ?)")
-      .run("TEST-ADMIN", "Test Administrator", 999.00, 1, new Date().toISOString());
+      .run("TEST-ADMIN", "Test Administrator", 999.00, 0, new Date().toISOString());
     console.log("[DB] Seeded TEST-ADMIN card for RFID-less ordering");
   }
 
