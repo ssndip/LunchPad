@@ -18,8 +18,13 @@
  *   2. Open that origin in Chrome — the SAME origin, not a different port
  *   3. Paste scripts/audit-mobile.js into the console, then this file
  *   4. await __mountTab()               // AnalyticsTab at 390px, by default
+ *      await __mountTab({ preset: 'menu', width: 768 })
  *      __auditDocument(__tab.doc)       // the audit-mobile detectors
  *      await __tabResize(1024)          // check the desktop path still works
+ *
+ * Presets: analytics, menu, orders, history, cards, settings, parser. Each
+ * supplies the tab's props from a fixture, so none of them needs a login, an
+ * admin-whitelisted IP, or a reachable API.
  *
  * Everything below is a scar. See the notes on each step.
  */
@@ -70,11 +75,214 @@
     summary: { totalRevenue: 1284.75, totalOrders: 167, avgOrderValue: 7.69, uniqueCustomers: 41 },
   };
 
+  /**
+   * A menu fixture with the shapes that actually stress a layout: long
+   * Bulgarian names, an item with side choices, one unavailable item, one
+   * carrying a packaging fee. MenuItem is the full src/types.ts shape —
+   * basePrice, tags and extraFees are required, and MenuTab reads all three.
+   */
+  const MENU_FIXTURE = [
+    ['Пикантни парти бутчета с гарнитура от печени картофи', 'Main Dishes', 4.8],
+    ['Мусака по домашному с кисело мляко', 'Main Dishes', 4.2],
+    ['Свинска пържола на скара', 'Main Dishes', 5.5],
+    ['Пилешка супа', 'Soups', 1.8],
+    ['Таратор', 'Soups', 1.5],
+    ['Картофено пюре с масло и подправки', 'Side Dishes', 2.1],
+    ['Салата Шопска', 'Side Dishes', 2.4],
+  ].map(([name, category, price], i) => ({
+    id: 1775317128191 + i,
+    name,
+    description: i === 0 ? 'С гарнитура по избор и сос барбекю' : '',
+    basePrice: price,
+    price: i === 2 ? price + 0.3 : price,
+    available: i !== 4,
+    category,
+    tags: i === 0 ? ['bbq'] : [],
+    extraFees: i === 2 ? [{ type: 'packaging', amount: 0.3 }] : [],
+    packagingFee: i === 2 ? 0.3 : undefined,
+    requiresSideChoice: i === 0,
+    sideChoices: i === 0 ? ['Картофено пюре', 'Ориз с зеленчуци', 'Салата Шопска'] : undefined,
+    hasIncludedSide: i === 1,
+    date: null,
+  }));
+
+  const CARDS_FIXTURE = [
+    { rfid: 'A1B2C3D4E5', ownerName: 'Александър Константинов-Петров', balance: 41.25, isAdmin: false, hasPin: true },
+    { rfid: '0F9E8D7C6B', ownerName: 'Мария Георгиева', balance: -3.4, isAdmin: false, hasPin: false },
+    { rfid: '11223344AA', ownerName: 'Иван Иванов', balance: 0, isAdmin: true, hasPin: true },
+    { rfid: '5566778899', ownerName: 'Test User', balance: 12.8, isAdmin: false, hasPin: false },
+  ];
+
+  const pad = (n) => String(n).padStart(2, '0');
+
+  const SUMMARIES_FIXTURE = Array.from({ length: 9 }, (_, i) => {
+    const d = new Date(2026, 8, 17 - i);
+    return {
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      totalSales: 128.4 - i * 9.3,
+      orderCount: 24 - i,
+      uniqueUserCount: 17 - i,
+      feeDistributed: i === 2,
+      distributedAmount: i === 2 ? 4.5 : 0,
+    };
+  });
+
+  const HISTORY_FIXTURE = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(2026, 8, 17 - (i % 6));
+    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const c = CARDS_FIXTURE[i % CARDS_FIXTURE.length];
+    const items = MENU_FIXTURE.slice(i % 3, (i % 3) + 2 + (i % 2)).map((m) => ({
+      ...m,
+      quantity: 1 + (i % 2),
+      side: m.requiresSideChoice ? 'Картофено пюре' : undefined,
+    }));
+    return {
+      id: 4000 + i,
+      rfid: c.rfid,
+      ownerName: c.ownerName,
+      items,
+      totalPrice: +items.reduce((s, it) => s + it.price * it.quantity, 0).toFixed(2),
+      timestamp: `${date}T${pad(11 + (i % 3))}:${pad((i * 7) % 60)}:00.000Z`,
+      date,
+      status: 'completed',
+    };
+  });
+
+  /**
+   * Every callback prop is a no-op: this harness is for looking at a layout,
+   * not for exercising behaviour, and a missing handler throws on render for
+   * the tabs that call one during their first commit.
+   */
+  const noop = () => {};
+  const asyncNoop = async () => {};
+
   const PRESETS = {
     analytics: {
       module: '/src/components/manager/tabs/AnalyticsTab.tsx',
       exportName: 'AnalyticsTab',
       routes: { '/api/analytics': ANALYTICS_FIXTURE },
+    },
+    menu: {
+      module: '/src/components/manager/tabs/MenuTab.tsx',
+      exportName: 'MenuTab',
+      routes: { '/api/menu/backups': [] },
+      props: () => ({
+        editingMenu: MENU_FIXTURE,
+        onAddItem: noop,
+        onUpdateItem: noop,
+        onRemoveItem: noop,
+        onDeleteAll: noop,
+        onApplyMenu: noop,
+        confirm: noop,
+      }),
+    },
+    orders: {
+      module: '/src/components/manager/tabs/OrdersTab.tsx',
+      exportName: 'OrdersTab',
+      routes: {},
+      props: () => ({
+        summaries: SUMMARIES_FIXTURE,
+        expandedDate: SUMMARIES_FIXTURE[1].date,
+        dailyDetails: [
+          { category: 'Main Dishes', name: 'Пикантни парти бутчета с гарнитура от печени картофи', quantity: 7, price: 4.8, total: 33.6 },
+          { category: 'Soups', name: 'Пилешка супа', quantity: 5, price: 1.8, total: 9 },
+          { category: 'Side Dishes', name: 'Картофено пюре с масло и подправки', quantity: 4, price: 2.1, total: 8.4 },
+        ],
+        dailySides: [
+          { name: 'Картофено пюре', quantity: 6 },
+          { name: 'Ориз с зеленчуци', quantity: 3 },
+        ],
+        onExpandDate: noop,
+        onCopySummary: noop,
+        confirm: noop,
+      }),
+    },
+    history: {
+      module: '/src/components/manager/tabs/HistoryTab.tsx',
+      exportName: 'HistoryTab',
+      routes: {},
+      props: () => ({
+        history: HISTORY_FIXTURE,
+        filters: { startDate: '2026-09-01', endDate: '2026-09-17', rfid: '', ownerName: '' },
+        onFilterChange: noop,
+        onApplyFilters: noop,
+      }),
+    },
+    cards: {
+      module: '/src/components/manager/tabs/CardsTab.tsx',
+      exportName: 'CardsTab',
+      routes: {},
+      props: () => ({
+        cards: CARDS_FIXTURE,
+        onUpdateSingleCard: async () => true,
+        onRemoveCard: noop,
+        onResetCardBalance: noop,
+        onResetAllBalances: noop,
+        onAddManualCard: noop,
+        onBatchAddCards: noop,
+        newCardRfid: '',
+        setNewCardRfid: noop,
+        newCardOwner: '',
+        setNewCardOwner: noop,
+        newCardIsAdmin: false,
+        setNewCardIsAdmin: noop,
+        newCardPin: '',
+        setNewCardPin: noop,
+        lastScanned: null,
+        isScanning: false,
+        setIsScanning: noop,
+        pasteCardsText: '',
+        setPasteCardsText: noop,
+        isPasteCardsModalOpen: false,
+        setIsPasteCardsModalOpen: noop,
+        onViewStats: noop,
+      }),
+    },
+    settings: {
+      module: '/src/components/manager/tabs/SettingsTab.tsx',
+      exportName: 'SettingsTab',
+      routes: {},
+      props: () => ({
+        adminWhitelistEnabled: true,
+        orderButtonEnabled: true,
+        testModeEnabled: false,
+        kioskModeEnabled: true,
+        allowPWAInstall: true,
+        bgnEnabled: true,
+        preIdentificationEnabled: false,
+        adminWhitelist: '127.0.0.1, ::1, localhost, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12',
+        announcement: 'Наско , кога ше пием бира?!',
+        aiProvider: 'gemini',
+        aiApiKey: '',
+        aiModel: 'gemini-2.5-flash',
+        aiEndpoint: '',
+        kioskAutoTiming: true,
+        kioskOpenTime: '07:30',
+        kioskCloseTime: '10:30',
+        kioskCloseDay: 5,
+        newPin: '',
+        setNewPin: noop,
+        confirmPin: '',
+        setConfirmPin: noop,
+        pinUpdateStatus: 'idle',
+        availableLanguages: [{ code: 'bg', name: 'Български' }, { code: 'en', name: 'English' }],
+        onImportLanguage: asyncNoop,
+        onDeleteLanguage: asyncNoop,
+        publicAccessRequired: false,
+        publicAccessCode: '',
+        globalAccess: false,
+        onUpdateSettings: noop,
+        onUpdatePin: noop,
+        onInstallApp: noop,
+        confirm: noop,
+        customCategories: [],
+      }),
+    },
+    parser: {
+      module: '/src/components/manager/tabs/ParserRulesTab.tsx',
+      exportName: 'ParserRulesTab',
+      routes: { '/api/parser/profiles': [], '/api/parser/fixtures': [], '/api/parser/logs': [] },
+      props: () => ({ confirm: noop }),
     },
   };
 
@@ -174,15 +382,49 @@
 
     // Hide the real app rather than letting two React trees fight over the
     // page, and mount into a container that reproduces the dashboard's own
-    // scroll area and padding (ManagerDashboard.tsx: `overflow-y-auto p-4 lg:p-10`).
+    // shell, because a tab's usable width is not the viewport width.
+    //
+    // ManagerDashboard renders `<DesktopNav />` — an `<aside class="hidden
+    // lg:flex w-80 shrink-0">` — as a SIBLING of the scroll area, so from
+    // 1024px up the content gets the viewport minus 320px, and then minus
+    // `lg:p-10`'s 80px. At a 1024px viewport that is 624px of content, which
+    // is NARROWER than the 736px the same tab gets at 768px, where the nav is
+    // a top bar instead. A harness without the spacer reports 928px there and
+    // makes the tightest real layout in the app look like the roomiest.
+    //
+    // It never mattered before because this file only ever ran at phone
+    // width, where neither the aside nor `lg:p-10` is active.
     const doc = w.document;
     const appRoot = doc.getElementById('root');
     if (appRoot) appRoot.style.display = 'none';
     doc.getElementById('harness-out')?.remove();
     const host = doc.createElement('div');
     host.id = 'harness-out';
-    host.style.cssText = 'position:fixed;inset:0;overflow-y:auto;background:#FAFAFA';
-    host.innerHTML = '<div id="harness-mount" class="p-4 lg:p-10"></div>';
+    host.style.cssText = 'position:fixed;inset:0;display:flex;background:#FAFAFA';
+    /**
+     * The spacer's own rule is hand-written rather than `hidden lg:block`,
+     * because tailwind.config.js only scans `./index.html` and `./src/**`.
+     * A class used nowhere but this file is purged from the compiled CSS, so
+     * `lg:block` resolves to nothing, the spacer stays `hidden` at every
+     * width, and the harness quietly goes back to reporting the full viewport
+     * as content width — the exact wrong number this spacer exists to fix.
+     * `w-80` happens to survive (ManagerDashboard uses it); `lg:block` does
+     * not. Do not "tidy" this back into Tailwind classes.
+     */
+    doc.getElementById('harness-shell-css')?.remove();
+    const shellCss = doc.createElement('style');
+    shellCss.id = 'harness-shell-css';
+    shellCss.textContent =
+      '[data-harness-sidebar]{display:none;width:320px;flex:0 0 auto;' +
+      'background:#fff;border-right:1px solid #F3F4F6}' +
+      '@media (min-width:1024px){[data-harness-sidebar]{display:block}}';
+    doc.head.appendChild(shellCss);
+
+    host.innerHTML =
+      '<div data-harness-sidebar></div>' +
+      '<div class="flex-1 min-w-0 overflow-y-auto">' +
+      '<div id="harness-mount" class="p-4 lg:p-10 max-w-[var(--app-max-width)] mx-auto"></div>' +
+      '</div>';
     doc.body.appendChild(host);
 
     /**
@@ -194,6 +436,16 @@
      * `if (!token) return`, so without one the surface sits on its loading
      * spinner forever and reports as "renders nothing".
      */
+    /**
+     * Props are handed over on the frame's window rather than serialized into
+     * the script source below: every preset's handlers are functions, and
+     * JSON.stringify drops them, which is indistinguishable from a tab that
+     * crashed on a missing callback. Plain objects and arrays cross the realm
+     * boundary intact — the tabs test arrays with Array.isArray, which is
+     * cross-realm safe, never `instanceof Array`, which is not.
+     */
+    w.__TAB_PROPS = preset.props ? preset.props() : {};
+
     w.__MOUNT = null;
     const script = doc.createElement('script');
     script.type = 'module';
@@ -206,7 +458,7 @@ try {
   const React = ReactNS.default || ReactNS;
   const createRoot = RDC.createRoot || (RDC.default && RDC.default.createRoot);
   useStore.setState({ token: 'harness-token' });
-  createRoot(document.getElementById('harness-mount')).render(React.createElement(Tab));
+  createRoot(document.getElementById('harness-mount')).render(React.createElement(Tab, window.__TAB_PROPS || {}));
   window.__MOUNT = { ok: true };
 } catch (e) {
   window.__MOUNT = { ok: false, err: (e && e.stack) || String(e) };
