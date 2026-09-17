@@ -124,6 +124,24 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
+      // Answer for any Host header, so the dev server can be reached through
+      // the reverse proxy in front of it (APP_URL) and not just on localhost.
+      // Vite otherwise 403s every request whose Host it does not recognise,
+      // including the HTML document — which looks like the whole app is down,
+      // while an already-open tab keeps working from the service worker's
+      // precache of the last `dist/` build and hides the fact.
+      //
+      // Dev only, and it cannot leak into production: server.ts mounts Vite's
+      // middleware exclusively when NODE_ENV is neither "production" nor
+      // "test", and the production image serves static files out of dist/ with
+      // vite left behind in devDependencies. Nothing here affects who may
+      // reach the admin dashboard — that is adminWhitelistGuard plus the PIN,
+      // both of which run on every request regardless of this setting.
+      //
+      // What it does give up is Vite's own host check, which exists to blunt
+      // DNS rebinding against a developer's machine. Accepted deliberately:
+      // this dev server is meant to be reachable at a real hostname.
+      allowedHosts: true,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
