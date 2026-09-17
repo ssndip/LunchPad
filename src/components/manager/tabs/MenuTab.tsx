@@ -845,7 +845,15 @@ const MenuNameCell: React.FC<MenuNameCellProps> = ({ item, onUpdateItem }) => {
       onChange={(e) => setLocalName(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-full bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 touch-target-h focus:outline-none"
+      // min-w matters as much as w-full here. An <input> contributes no
+      // preferred width to an auto-layout table — `w-full` resolves against a
+      // column width that is itself being derived from the content — so the
+      // name column collapsed to its minimum while the plain-text columns took
+      // 128-150px each. Measured in Chrome: 34px of usable width at a 768px
+      // viewport and 36px at 1024px, rendering "Пикантни парти бутчета..." as
+      // "Пика". The floor gives the column something to ask for, and names are
+      // the one field in this table nobody can identify a row without.
+      className="w-full min-w-[10rem] bg-transparent border-none focus:ring-0 font-bold text-neutral-900 p-0 touch-target-h focus:outline-none"
     />
   );
 };
