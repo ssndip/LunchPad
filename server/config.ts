@@ -68,7 +68,12 @@ export const parseTrustProxy = (raw?: string): boolean | number | string => {
 
 // --- Settings Object (Ensures live bindings across modules) ---
 export const settings = {
-  adminWhitelistEnabled: true,
+  // Off by default: a new install is reachable from anywhere, and an admin
+  // turns the whitelist on from Settings once they know which networks should
+  // keep access. See the seeding block below for what this means for the very
+  // first boot — in particular that it leaves the default PIN as the only
+  // thing standing in front of the dashboard.
+  adminWhitelistEnabled: false,
   orderButtonEnabled: true,
   testModeEnabled: false,
   menuVersion: 1,
@@ -197,8 +202,20 @@ export const initSettings = () => {
 
   const whitelistEnabled = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_whitelist_enabled") as { value: string } | undefined;
   if (!whitelistEnabled) {
-    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist_enabled", "1");
-    settings.adminWhitelistEnabled = true;
+    // Seeded off, so the dashboard is reachable remotely out of the box and an
+    // admin restricts it deliberately rather than having to get onto the LAN
+    // to do the initial setup at all.
+    //
+    // This only ever applies to a database that has no row yet. An existing
+    // install keeps whatever it was set to — changing this value does not
+    // reopen a deployment where someone already turned the whitelist on.
+    //
+    // On a first boot it does mean the PIN is the only thing in front of the
+    // dashboard, and until one is set that PIN is DEFAULT_ADMIN_PIN. The
+    // warning further down fires for exactly that case; it is worth heeding on
+    // a host that is reachable from outside the building.
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("admin_whitelist_enabled", "0");
+    settings.adminWhitelistEnabled = false;
   } else {
     settings.adminWhitelistEnabled = whitelistEnabled.value === "1";
   }
