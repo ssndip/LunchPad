@@ -7,6 +7,15 @@ import { formatDate, formatDateTime } from '../../../utils/dateFormatter';
 
 interface HistoryReportProps {
   orders: Order[];
+  /**
+   * The server capped the query behind these orders.
+   *
+   * This report is the most likely thing to be printed or forwarded, and its
+   * headline figures are computed from the rows it was handed — so a capped
+   * result produced an authoritative-looking total for a subset of the period
+   * with nothing on the page to say so.
+   */
+  truncated?: boolean;
   filters: {
     startDate: string;
     endDate: string;
@@ -15,7 +24,7 @@ interface HistoryReportProps {
   onClose: () => void;
 }
 
-export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, onClose }) => {
+export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, truncated = false, onClose }) => {
   const { t } = useTranslation();
   const totalSpent = orders.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
   const avgOrder = orders.length > 0 ? totalSpent / orders.length : 0;
@@ -109,6 +118,11 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({ orders, filters, o
               <div className="bg-white border-2 border-neutral-100 p-6 rounded-3xl shadow-sm">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2 font-black">{t('analytics.total_spending')}</p>
                 <p className="text-3xl font-black text-neutral-900">€{totalSpent.toFixed(2)}</p>
+                {truncated && (
+                  <p className="mt-2 text-[10px] font-bold text-amber-700 leading-snug">
+                    {t('analytics.history_truncated')}
+                  </p>
+                )}
               </div>
               <div className="bg-white border-2 border-neutral-100 p-6 rounded-3xl shadow-sm">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2 font-black">{t('analytics.avg_transaction')}</p>

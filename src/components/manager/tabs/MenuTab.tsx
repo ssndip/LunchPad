@@ -51,8 +51,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     try {
       const data = await api.fetchMenuBackups(token);
       setBackups(data);
-    } catch (err) {
-      console.error('Failed to load menu backups', err);
+    } catch (err: any) {
+      confirm({
+        title: t('menu.Error'),
+        message: err?.message || t('menu.backups_load_failed'),
+        isDestructive: true,
+        confirmText: t('menu.OK'),
+        onConfirm: () => {},
+      });
     } finally {
       setIsLoadingBackups(false);
     }
@@ -73,8 +79,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             confirmText: 'OK',
             onConfirm: () => {}
           });
-        } catch (err) {
-          console.error('Failed to restore menu backup', err);
+        } catch (err: any) {
+          confirm({
+            title: t('menu.Error'),
+            message: err?.message || t('menu.restore_failed'),
+            isDestructive: true,
+            confirmText: t('menu.OK'),
+            onConfirm: () => {},
+          });
         }
       }
     });
@@ -155,8 +167,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         confirmText: 'OK',
         onConfirm: () => {}
       });
-    } catch (err) {
-      console.error('Failed to update packaging fee', err);
+    } catch (err: any) {
+      confirm({
+        title: t('menu.Error'),
+        message: err?.message || t('menu.packaging_fee_failed'),
+        isDestructive: true,
+        confirmText: t('menu.OK'),
+        onConfirm: () => {},
+      });
     }
   };
 
@@ -170,8 +188,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         confirmText: 'OK',
         onConfirm: () => {}
       });
-    } catch (err) {
-      console.error('Failed to update delivery fee', err);
+    } catch (err: any) {
+      confirm({
+        title: t('menu.Error'),
+        message: err?.message || t('menu.delivery_fee_failed'),
+        isDestructive: true,
+        confirmText: t('menu.OK'),
+        onConfirm: () => {},
+      });
     }
   };
 
@@ -266,15 +290,26 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         body: JSON.stringify({ imageData: base64Image })
       });
       
-      const data = await response.json();
-      if (data.text) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.text) {
         setPasteText(prev => prev ? prev + '\n' + data.text : data.text);
       } else {
-        alert(data.error || t('ocr.error'));
+        confirm({
+          title: t('menu.Error'),
+          message: data.error || t('ocr.error'),
+          isDestructive: true,
+          confirmText: t('menu.OK'),
+          onConfirm: () => {},
+        });
       }
     } catch (err) {
-      console.error('OCR failed', err);
-      alert(t('ocr.error'));
+      confirm({
+        title: t('menu.Error'),
+        message: t('ocr.error'),
+        isDestructive: true,
+        confirmText: t('menu.OK'),
+        onConfirm: () => {},
+      });
     } finally {
       setIsOcrLoading(false);
     }

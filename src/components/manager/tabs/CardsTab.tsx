@@ -35,6 +35,7 @@ interface CardsTabProps {
   isPasteCardsModalOpen: boolean;
   setIsPasteCardsModalOpen: (v: boolean) => void;
   onViewStats?: (rfid: string) => void;
+  confirm?: (config: any) => void;
 }
 
 export const CardsTab: React.FC<CardsTabProps> = ({
@@ -61,8 +62,25 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   newCardPin,
   setNewCardPin,
   onViewStats,
+  confirm,
 }) => {
   const { t } = useTranslation();
+
+  /** Reports a problem through the app's modal, falling back to alert(). */
+  const reportProblem = React.useCallback((message: string) => {
+    if (confirm) {
+      confirm({
+        title: t('menu.Error'),
+        message,
+        isDestructive: true,
+        confirmText: t('menu.OK'),
+        onConfirm: () => {},
+      });
+    } else {
+      alert(message);
+    }
+  }, [confirm, t]);
+
   const managerRfidRef = useRef<HTMLInputElement>(null);
   const [editingRfid, setEditingRfid] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<Partial<Card>>({});
@@ -170,7 +188,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       Name: c.ownerName,
       PIN: c.hasPin ? 'SET' : '',
       IsAdmin: c.isAdmin ? 'Yes' : 'No',
-      Balance: c.balance.toFixed(2)
+      Balance: (Number(c.balance) || 0).toFixed(2)
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -208,11 +226,10 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         if (mappedCards.length > 0) {
           onBatchAddCards(mappedCards);
         } else {
-          alert(t('cards.import_error'));
+          reportProblem(t('cards.import_error'));
         }
-      } catch (err) {
-        console.error('Import failed', err);
-        alert(t('cards.import_error'));
+      } catch (err: any) {
+        reportProblem(err?.message || t('cards.import_error'));
       }
     };
     reader.readAsBinaryString(file);

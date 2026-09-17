@@ -129,6 +129,9 @@ export const initDb = () => {
       createdAt TEXT
     );
 
+    -- Unused. The parse-failure logging that wrote here was removed along
+    -- with the endpoints that read it; the table is left in place so an
+    -- existing install keeps whatever it already recorded.
     CREATE TABLE IF NOT EXISTS parser_logs (
       id TEXT PRIMARY KEY,
       timestamp TEXT,

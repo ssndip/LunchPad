@@ -1,7 +1,7 @@
 import React from 'react';
 import { Order, PersistedOrderItem } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { FileText } from 'lucide-react';
+import { AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { formatDate } from '../../../utils/dateFormatter';
 import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
@@ -10,12 +10,15 @@ import { TabHeader } from '../../shared/TabHeader';
 interface Filters {
   startDate: string;
   endDate: string;
+  /** Matched against both the RFID and the owner's name by /api/history. */
   rfid: string;
-  ownerName: string;
 }
 
 interface HistoryTabProps {
   history: Order[];
+  /** The server capped the result, so the figures below cover only what is shown. */
+  truncated?: boolean;
+  loading?: boolean;
   filters: Filters;
   onFilterChange: (key: keyof Filters, value: string) => void;
   onApplyFilters: () => void;
@@ -23,6 +26,8 @@ interface HistoryTabProps {
 
 export const HistoryTab: React.FC<HistoryTabProps> = ({
   history,
+  truncated = false,
+  loading = false,
   filters,
   onFilterChange,
   onApplyFilters,
@@ -86,6 +91,15 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
         title={t('navigation.history')}
         subtitle={t('menu.history_desc')}
       />
+
+      {truncated && (
+        <div className="flex items-start gap-3 mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-800 font-medium leading-relaxed">
+            {t('analytics.history_truncated')}
+          </p>
+        </div>
+      )}
 
       {/* Summary Bar */}
       {Array.isArray(history) && history.length > 0 && (
@@ -159,8 +173,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
           <div className="flex items-end">
             <button
               onClick={onApplyFilters}
-              className="w-full py-2.5 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-lg shadow-neutral-200"
+              disabled={loading}
+              className="w-full py-2.5 touch-target-h bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-sm shadow-lg shadow-neutral-200 disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {t('filters.apply')}
             </button>
           </div>

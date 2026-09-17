@@ -138,7 +138,19 @@ export const incrementMenuVersion = () => {
   return settings.menuVersion;
 };
 
+/**
+ * Why `verifyAdminPin` last refused, when the reason was a configuration
+ * problem rather than a wrong PIN.
+ *
+ * The refusal below is correct, but it only ever reached the server console —
+ * the dashboard said "Invalid PIN or Admin Card", so a new operator following
+ * the setup had no way to learn that the fix is to set ADMIN_PIN or re-enable
+ * the whitelist. The login route reads this to explain itself.
+ */
+export let lastPinRefusalReason: string | null = null;
+
 export const verifyAdminPin = (pin: string): boolean => {
+  lastPinRefusalReason = null;
   try {
     const adminPinRecord = db.prepare("SELECT value FROM settings WHERE key = ?").get("admin_pin") as { value: string } | undefined;
     if (adminPinRecord && adminPinRecord.value) {
@@ -168,6 +180,11 @@ export const verifyAdminPin = (pin: string): boolean => {
     // whitelist back on. It exists so that shipping the whitelist off by
     // default cannot, on its own, publish an unprotected dashboard.
     if (!settings.adminWhitelistEnabled && effectivePin === DEFAULT_ADMIN_PIN) {
+      lastPinRefusalReason =
+        "Admin login is disabled until this install is configured: the PIN is still the " +
+        "factory default and the admin whitelist is off, which together would leave the " +
+        "dashboard open to anyone who can reach this host. Set ADMIN_PIN to a PIN of your " +
+        "own, or re-enable the admin whitelist, then restart and log in.";
       console.warn(
         "[Auth] Refused an admin login: the PIN is still the default and the " +
           "admin whitelist is off, which would leave the dashboard open to " +

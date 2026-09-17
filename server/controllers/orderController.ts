@@ -254,6 +254,18 @@ export const fetchSummaryDetails = (req: Request, res: Response, next: NextFunct
   }
 };
 
+/**
+ * Most rows a single history query returns.
+ *
+ * The cap was 100 and invisible: the dashboard's summary bar (total spent,
+ * average transaction, unique users) is computed from the rows it received, so
+ * a month's filter quietly produced figures for its most recent 100 orders and
+ * presented them as the total. The client compares the result length against
+ * its own HISTORY_LIMIT (src/api.ts) to tell the admin the view is capped, so
+ * the two constants must stay in step.
+ */
+export const HISTORY_LIMIT = 500;
+
 export const fetchHistory = (req: Request, res: Response, next: NextFunction) => {
   const { startDate, endDate, rfid, ownerName } = req.query;
   let sql = "SELECT * FROM orders WHERE 1=1";
@@ -275,7 +287,7 @@ export const fetchHistory = (req: Request, res: Response, next: NextFunction) =>
     params.push(`%${escapedOwnerName}%`);
   }
 
-  sql += " ORDER BY timestamp DESC LIMIT 100";
+  sql += ` ORDER BY timestamp DESC LIMIT ${HISTORY_LIMIT}`;
   try {
     const orders = db.prepare(sql).all(...params) as any[];
     res.json(orders.map(o => {

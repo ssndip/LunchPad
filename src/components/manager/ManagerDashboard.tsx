@@ -20,6 +20,218 @@ import { Language } from '../../translations';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Sheet } from '../shared/Sheet';
 
+interface NavProps {
+  menuItems: { id: string; icon: React.ComponentType<{ className?: string }>; label: string }[];
+  activeTab: string;
+  onTabChange: (tab: any) => void;
+  onLogout: () => void;
+  t: (key: string) => string;
+}
+
+interface PhoneNavProps {
+  primaryItems: NavProps['menuItems'];
+  secondaryItems: NavProps['menuItems'];
+  shortLabels: Record<string, string>;
+  activeTab: string;
+  onTabChange: (tab: any) => void;
+  onMore: () => void;
+  navRef: (node: HTMLElement | null) => void;
+  t: (key: string) => string;
+}
+
+/**
+ * Desktop side navigation.
+ *
+ * These three shells used to live inside ManagerDashboard's body. A component
+ * declared there gets a new function identity on every render, which React
+ * treats as a different component type: it unmounts the old subtree and mounts
+ * a fresh one, discarding its state and its DOM. TabletNav kept its scroll
+ * position and fade flags in exactly that discarded state, so on a tablet the
+ * nav jumped back to the start whenever anything in the store changed. At
+ * module scope the type is stable and the state survives.
+ */
+const DesktopNav: React.FC<NavProps> = ({ menuItems, activeTab, onTabChange, onLogout, t }) => (
+  <aside className="hidden lg:flex w-80 bg-white border-r border-neutral-100 flex-col shrink-0 z-40">
+    <div className="p-8 pb-6">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white shadow-md">
+          <ShoppingBag className="w-5 h-5" />
+        </div>
+        <h2 className="text-2xl font-black uppercase tracking-tighter">LunchPad</h2>
+      </div>
+      <p className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest ml-1">
+        {t('navigation.dashboard')}
+      </p>
+    </div>
+
+    <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      {menuItems.map((item) => {
+        const isActive = activeTab === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id as any)}
+            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group active:scale-95 ${
+              isActive
+                ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-200 invert-0'
+                : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
+              <span className="font-bold text-sm">{item.label}</span>
+            </div>
+            {isActive && <ChevronRight className="w-4 h-4 opacity-50" />}
+          </button>
+        );
+      })}
+    </nav>
+
+    <div className="p-6 border-t border-neutral-50">
+      <button
+        onClick={onLogout}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-red-500 rounded-xl hover:bg-red-50 transition-all font-bold text-sm active:scale-95"
+      >
+        <LogOut className="w-5 h-5" />
+        <span>{t('navigation.logout')}</span>
+      </button>
+    </div>
+  </aside>
+);
+
+/** Tablet top navigation: a horizontally scrolling strip with edge fades. */
+const TabletNav: React.FC<NavProps> = ({ menuItems, activeTab, onTabChange, onLogout, t }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [showLeftFade, setShowLeftFade] = React.useState(false);
+  const [showRightFade, setShowRightFade] = React.useState(false);
+
+  const handleScroll = React.useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setShowLeftFade(scrollLeft > 5);
+    setShowRightFade(scrollLeft < scrollWidth - clientWidth - 5);
+  }, []);
+
+  React.useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    handleScroll();
+    container.addEventListener('scroll', handleScroll);
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(container);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [handleScroll]);
+
+  return (
+    <div className="hidden md:flex lg:hidden w-full relative border-b border-neutral-100 bg-white z-40">
+      {/* Left Fade */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
+        style={{ opacity: showLeftFade ? 1 : 0 }}
+      />
+      {/* Right Fade */}
+      <div 
+        className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
+        style={{ opacity: showRightFade ? 1 : 0 }}
+      />
+
+      <div 
+        ref={scrollRef}
+        className="w-full flex overflow-x-auto no-scrollbar items-center px-4 h-16 gap-4"
+      >
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-8 h-8 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
+            <ShoppingBag className="w-4 h-4" />
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {menuItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id as any)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap active:scale-95 ${
+                  isActive
+                    ? 'bg-neutral-900 text-white shadow-md'
+                    : 'text-neutral-500 hover:bg-neutral-50'
+                }`}
+              >
+                <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
+                <span className="font-bold text-xs">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="ml-auto flex items-center pl-4 border-l border-neutral-100 shrink-0">
+          <button
+            onClick={onLogout}
+            className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+            aria-label={t('navigation.logout')}
+            title={t('navigation.logout')}
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PhoneBottomNav: React.FC<PhoneNavProps> = ({
+  primaryItems, secondaryItems, shortLabels, activeTab, onTabChange, onMore, navRef, t,
+}) => (
+  <nav
+    ref={navRef}
+    data-testid="phone-bottom-nav"
+    className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]"
+  >
+    <div className="flex w-full justify-around items-center h-[72px] px-1 relative">
+      {primaryItems.map((item) => {
+        const isActive = activeTab === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id as any)}
+            aria-current={isActive ? 'page' : undefined}
+            className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
+          >
+            <div className={`p-1 transition-all z-10 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+            </div>
+            {isActive && (
+              <motion.div
+                layoutId="mobile-nav-pill"
+                className="absolute inset-x-2 inset-y-2 bg-neutral-900/5 rounded-2xl z-0 pointer-events-none"
+                transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+              />
+            )}
+            <span className={`text-[10px] font-bold z-10 text-center transition-colors ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+              {shortLabels[item.id]}
+            </span>
+          </button>
+        );
+      })}
+
+      <button
+        onClick={onMore}
+        className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
+      >
+        <div className={`p-1 transition-all z-10 ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
+          <MoreHorizontal className="w-5 h-5 flex-shrink-0" />
+        </div>
+        <span className={`text-[10px] font-bold z-10 text-center transition-colors ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
+          {t('navigation.more')}
+        </span>
+      </button>
+    </div>
+  </nav>
+);
+
 interface ManagerDashboardProps {
   activeTab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules';
   onTabChange: (tab: 'menu' | 'orders' | 'history' | 'cards' | 'settings' | 'analytics' | 'parser_rules') => void;
@@ -66,139 +278,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
   const [moreOpen, setMoreOpen] = React.useState(false);
 
-  // Desktop Side Navigation
-  const DesktopNav = () => (
-    <aside className="hidden lg:flex w-80 bg-white border-r border-neutral-100 flex-col shrink-0 z-40">
-      <div className="p-8 pb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white shadow-md">
-            <ShoppingBag className="w-5 h-5" />
-          </div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter">LunchPad</h2>
-        </div>
-        <p className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest ml-1">
-          {t('navigation.dashboard')}
-        </p>
-      </div>
-
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-        {menuItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id as any)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group active:scale-95 ${
-                isActive
-                  ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-200 invert-0'
-                  : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
-                <span className="font-bold text-sm">{item.label}</span>
-              </div>
-              {isActive && <ChevronRight className="w-4 h-4 opacity-50" />}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="p-6 border-t border-neutral-50">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-red-500 rounded-xl hover:bg-red-50 transition-all font-bold text-sm active:scale-95"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>{t('navigation.logout')}</span>
-        </button>
-      </div>
-    </aside>
-  );
-
-  // Tablet Top Navigation
-  const TabletNav = () => {
-    const scrollRef = React.useRef<HTMLDivElement>(null);
-    const [showLeftFade, setShowLeftFade] = React.useState(false);
-    const [showRightFade, setShowRightFade] = React.useState(false);
-
-    const handleScroll = React.useCallback(() => {
-      const container = scrollRef.current;
-      if (!container) return;
-      const { scrollLeft, scrollWidth, clientWidth } = container;
-      setShowLeftFade(scrollLeft > 5);
-      setShowRightFade(scrollLeft < scrollWidth - clientWidth - 5);
-    }, []);
-
-    React.useEffect(() => {
-      const container = scrollRef.current;
-      if (!container) return;
-      handleScroll();
-      container.addEventListener('scroll', handleScroll);
-      const resizeObserver = new ResizeObserver(handleScroll);
-      resizeObserver.observe(container);
-      return () => {
-        container.removeEventListener('scroll', handleScroll);
-        resizeObserver.disconnect();
-      };
-    }, [handleScroll]);
-
-    return (
-      <div className="hidden md:flex lg:hidden w-full relative border-b border-neutral-100 bg-white z-40">
-        {/* Left Fade */}
-        <div 
-          className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
-          style={{ opacity: showLeftFade ? 1 : 0 }}
-        />
-        {/* Right Fade */}
-        <div 
-          className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none transition-opacity duration-200 z-50"
-          style={{ opacity: showRightFade ? 1 : 0 }}
-        />
-
-        <div 
-          ref={scrollRef}
-          className="w-full flex overflow-x-auto no-scrollbar items-center px-4 h-16 gap-4"
-        >
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-neutral-900 rounded-xl flex items-center justify-center text-white">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {menuItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap active:scale-95 ${
-                    isActive
-                      ? 'bg-neutral-900 text-white shadow-md'
-                      : 'text-neutral-500 hover:bg-neutral-50'
-                  }`}
-                >
-                  <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
-                  <span className="font-bold text-xs">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="ml-auto flex items-center pl-4 border-l border-neutral-100 shrink-0">
-            <button
-              onClick={onLogout}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-              aria-label={t('navigation.logout')}
-              title={t('navigation.logout')}
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Phone Bottom Navigation
   //
   // PhoneBottomNav is declared inside this component's body, so it gets a new
@@ -231,61 +310,13 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
     phoneNavObserverRef.current = observer;
   }, []);
 
-  const PhoneBottomNav = () => (
-    <nav
-      ref={setPhoneNavRef}
-      data-testid="phone-bottom-nav"
-      className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-3xl border-t border-white/60 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_50px_rgba(0,0,0,0.1)]"
-    >
-      <div className="flex w-full justify-around items-center h-[72px] px-1 relative">
-        {primaryItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id as any)}
-              aria-current={isActive ? 'page' : undefined}
-              className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
-            >
-              <div className={`p-1 transition-all z-10 ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-              </div>
-              {isActive && (
-                <motion.div
-                  layoutId="mobile-nav-pill"
-                  className="absolute inset-x-2 inset-y-2 bg-neutral-900/5 rounded-2xl z-0 pointer-events-none"
-                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-                />
-              )}
-              <span className={`text-[10px] font-bold z-10 text-center transition-colors ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
-                {shortLabels[item.id]}
-              </span>
-            </button>
-          );
-        })}
-
-        <button
-          onClick={() => setMoreOpen(true)}
-          className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 transition-transform"
-        >
-          <div className={`p-1 transition-all z-10 ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
-            <MoreHorizontal className="w-5 h-5 flex-shrink-0" />
-          </div>
-          <span className={`text-[10px] font-bold z-10 text-center transition-colors ${secondaryItems.some((i) => i.id === activeTab) ? 'text-neutral-900' : 'text-neutral-400'}`}>
-            {t('navigation.more')}
-          </span>
-        </button>
-      </div>
-    </nav>
-  );
-
   return (
     <div className="h-[100dvh] w-[100vw] overflow-hidden bg-[#F8F9FA] flex flex-col lg:flex-row text-neutral-900 font-sans fixed-viewport">
-      <DesktopNav />
+      <DesktopNav menuItems={menuItems} activeTab={activeTab} onTabChange={onTabChange} onLogout={onLogout} t={t} />
       
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden flex flex-col relative w-full phone-nav-spacer">
-        <TabletNav />
+        <TabletNav menuItems={menuItems} activeTab={activeTab} onTabChange={onTabChange} onLogout={onLogout} t={t} />
         
         {/* Top Header Shell (Visible on all breakpoints, but adjusted for mobile) */}
         <header className="h-16 lg:h-20 bg-white/80 backdrop-blur-md border-b border-neutral-100 shrink-0 flex items-center justify-between px-4 lg:px-10 z-30 sticky top-0">
@@ -344,7 +375,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </div>
       </main>
 
-      <PhoneBottomNav />
+      <PhoneBottomNav
+        primaryItems={primaryItems}
+        secondaryItems={secondaryItems}
+        shortLabels={shortLabels}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        onMore={() => setMoreOpen(true)}
+        navRef={setPhoneNavRef}
+        t={t}
+      />
 
       <Sheet isOpen={moreOpen} onClose={() => setMoreOpen(false)} title={t('navigation.more')}>
         <div className="flex flex-col gap-1">

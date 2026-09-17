@@ -37,7 +37,6 @@ export interface OrderSlice {
     startDate: string;
     endDate: string;
     rfid: string;
-    ownerName: string;
   };
   offlineQueue: OfflineOrder[];
   /**
@@ -110,7 +109,6 @@ export const createOrderSlice: StateCreator<AppState, [], [], OrderSlice> = (set
     startDate: '',
     endDate: '',
     rfid: '',
-    ownerName: '',
   },
   offlineQueue: readPersistedArray('lunchpad_offline_queue'),
   failedOrders: readPersistedArray<FailedOrder>('lunchpad_failed_orders'),

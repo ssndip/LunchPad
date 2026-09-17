@@ -50,6 +50,13 @@ import {
 import { formatDate, formatDateTime } from "../../../utils/dateFormatter";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { suggestParserRules, getParserFixtures } from "../../../api";
+import {
+  ParserConfig,
+  pushParserConfig,
+  readLocalParserConfig,
+  syncParserConfig,
+  writeLocalParserConfig,
+} from "../../../utils/parserSync";
 import { useStore } from "../../../store/useStore";
 import { ParseResult } from "../../../utils/menuParser";
 import { formatPrice } from '../../../utils/formatPrice';
@@ -180,6 +187,14 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   const [fixtures, setFixtures] = useState<any[]>([]);
   const [regressionResults, setRegressionResults] = useState<any[]>([]);
 
+  // ── Server sync ──
+  // Until the first reconciliation finishes, local edits must not be pushed:
+  // an auto-push fired from the initial render would overwrite the server with
+  // whatever this browser happened to hold.
+  const [syncReady, setSyncReady] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncConflict, setSyncConflict] = useState<{ local: ParserConfig; server: ParserConfig } | null>(null);
+
   const token = useStore((s) => s.token);
   const aiApiKey = useStore((s) => s.aiApiKey);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -195,17 +210,104 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
   };
 
   // ── Bootstrap ──
+  /**
+   * Reads a JSON array out of localStorage, tolerating anything that is not
+   * one. These two reads used to be bare `JSON.parse` calls inside the effect
+   * below, so a truncated or hand-edited value threw during mount — and with
+   * only the app-level ErrorBoundary in place that blanked the whole
+   * dashboard, not just this tab.
+   */
+  const readStoredList = <T,>(key: string): T[] | null => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as T[]) : null;
+    } catch {
+      console.warn(`[ParserRules] Ignoring unreadable ${key} in localStorage`);
+      return null;
+    }
+  };
+
   useEffect(() => {
     setSettings(loadCategorySettings());
-    const rawPr = localStorage.getItem(PRESETS_KEY);
-    if (rawPr) setPresets(JSON.parse(rawPr));
-    const rawProfiles = localStorage.getItem(PROFILES_KEY);
-    if (rawProfiles) setProfiles(JSON.parse(rawProfiles));
+    const storedPresets = readStoredList<FormatPreset>(PRESETS_KEY);
+    if (storedPresets) setPresets(storedPresets);
+    const storedProfiles = readStoredList<ParserProfile>(PROFILES_KEY);
+    if (storedProfiles) setProfiles(storedProfiles);
 
     if (token) {
       getParserFixtures(token).then(setFixtures).catch(console.error);
     }
   }, [token]);
+
+  /** Applies a configuration to both this browser and the component's state. */
+  const adoptConfig = React.useCallback((config: ParserConfig) => {
+    writeLocalParserConfig(config);
+    setSettings(config.settings);
+    setPresets(config.presets);
+    setProfiles(config.profiles);
+  }, []);
+
+  // Reconcile this browser against the server once, on entering the tab.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    (async () => {
+      const outcome = await syncParserConfig(token);
+      if (cancelled) return;
+
+      switch (outcome.kind) {
+        case 'pulled':
+          adoptConfig(outcome.config);
+          break;
+        case 'conflict':
+          // Deliberately left unresolved. Both sides hold real work, and
+          // choosing for the admin would silently destroy one of them.
+          setSyncConflict({ local: outcome.local, server: outcome.server });
+          break;
+        case 'failed':
+          setSyncError(outcome.error);
+          break;
+      }
+
+      // A conflict keeps write-through switched off until it is settled, so
+      // an incidental edit cannot decide the outcome by itself.
+      if (outcome.kind !== 'conflict') setSyncReady(true);
+    })();
+
+    return () => { cancelled = true; };
+  }, [token, adoptConfig]);
+
+  // Write through to the server whenever the configuration changes. Doing it
+  // here rather than at each of the dozen-odd localStorage writes on this tab
+  // means no future write path can forget to sync.
+  useEffect(() => {
+    if (!token || !syncReady) return;
+    const timer = setTimeout(() => {
+      pushParserConfig(token, readLocalParserConfig())
+        .then(() => setSyncError(null))
+        .catch((err: any) => setSyncError(err?.message || 'Could not save to the server'));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [token, syncReady, settings, presets, profiles]);
+
+  const resolveConflict = async (keep: 'local' | 'server') => {
+    if (!token || !syncConflict) return;
+    try {
+      if (keep === 'local') {
+        await pushParserConfig(token, syncConflict.local);
+      } else {
+        adoptConfig(syncConflict.server);
+      }
+      setSyncConflict(null);
+      setSyncReady(true);
+      setSyncError(null);
+    } catch (err: any) {
+      setSyncError(err?.message || 'Could not save to the server');
+    }
+  };
 
   const runRegressionTests = (newPreset: FormatPreset) => {
     const results = fixtures.map(f => {
@@ -225,16 +327,23 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
   // ── Category Settings ──
   const toggleCat = (key: string, field: "autoBox" | "hasSideDish") => {
-    setSettings((prev) => ({
-      ...prev,
-      categories: {
-        ...prev.categories,
-        [key]: {
-          ...prev.categories[key],
-          [field]: !prev.categories[key]?.[field],
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        categories: {
+          ...prev.categories,
+          [key]: {
+            ...prev.categories[key],
+            [field]: !prev.categories[key]?.[field],
+          },
         },
-      },
-    }));
+      };
+      // Persisted here rather than only on Save: the preset selector on this
+      // same panel writes through immediately, so a toggle that silently
+      // evaporated on navigating away was the odd one out.
+      saveCategorySettings(updated);
+      return updated;
+    });
   };
 
   const handleSaveSettings = () => {
@@ -539,7 +648,13 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
         saveProfiles([newProfile, ...profiles]);
       } catch (err) {
-        alert("Failed to import: Invalid JSON or format.");
+        confirm({
+          title: t('menu.Error'),
+          message: t('parser.import_failed'),
+          isDestructive: true,
+          confirmText: t('menu.OK'),
+          onConfirm: () => {},
+        });
       }
     };
     reader.readAsText(file);
@@ -679,6 +794,8 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
     }
     setPresets(updated);
     localStorage.setItem(PRESETS_KEY, JSON.stringify(updated));
+    const changed = updated.find((p) => p.id === targetId);
+    if (changed) runRegressionTests(changed);
     return { updatedPresets: updated, activeId: targetId };
   };
 
@@ -846,6 +963,50 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Both this browser and the server hold rules, and they differ. Rather
+          than pick one silently, the choice is put in front of the admin —
+          and write-through stays off until they make it. */}
+      {syncConflict && (
+        <div className="p-5 bg-amber-50 border border-amber-200 rounded-3xl">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-sm text-amber-900 mb-1">{t('parser.sync_conflict_title')}</h4>
+              <p className="text-xs text-amber-800 leading-relaxed mb-4">
+                {t('parser.sync_conflict_desc', {
+                  localPresets: String(syncConflict.local.presets.length),
+                  localProfiles: String(syncConflict.local.profiles.length),
+                  serverPresets: String(syncConflict.server.presets.length),
+                  serverProfiles: String(syncConflict.server.profiles.length),
+                })}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => resolveConflict('local')}
+                  className="px-5 py-2.5 touch-target-h-phone bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all"
+                >
+                  {t('parser.sync_keep_local')}
+                </button>
+                <button
+                  onClick={() => resolveConflict('server')}
+                  className="px-5 py-2.5 touch-target-h-phone bg-white border border-amber-300 text-amber-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all"
+                >
+                  {t('parser.sync_keep_server')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {syncError && !syncConflict && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
+          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-red-800 font-medium leading-relaxed">
+            {t('parser.sync_failed')} {syncError}
+          </p>
+        </div>
+      )}
       {/* ══ SECTION -1: AI Auto-Teacher ══ */}
       <div className="bg-white rounded-[32px] border border-neutral-100 shadow-sm overflow-hidden">
         <div className="p-6">

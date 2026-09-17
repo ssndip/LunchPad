@@ -30,6 +30,7 @@ import {
   setGlobalAccessConfig
 } from "../config";
 import { kioskOpen } from "./statusController";
+import { isWhitelisted, validateWhitelist } from "../middleware/whitelist";
 
 /** The settings projection returned to the dashboard. */
 const currentSettings = () => ({ 
@@ -161,6 +162,7 @@ const SETTING_SPECS: SettingSpec[] = [
   { name: 'bgnEnabled', dbKey: 'bgn_enabled', type: 'boolean', apply: (v) => setBgnEnabledConfig(v),
     message: () => simpleUpdate({ bgnEnabled: settings.bgnEnabled }) },
   { name: 'adminWhitelist', dbKey: 'admin_whitelist', type: 'string', apply: (v) => setAdminWhitelistConfig(v), adminOnly: true,
+    check: validateWhitelist,
     message: () => simpleUpdate({ adminWhitelist: settings.adminWhitelist }) },
   { name: 'announcement', dbKey: 'announcement', type: 'string', apply: (v) => setAnnouncementConfig(v),
     message: () => simpleUpdate({ announcement: settings.announcement }) },
@@ -218,6 +220,26 @@ export const updateSettings = (req: Request, res: Response, next: NextFunction) 
       if (problem) {
         return res.status(400).json({ error: problem });
       }
+    }
+
+    // 1b. Refuse a change that would lock the caller out.
+    //
+    // The whitelist guard runs on /api/auth/login, so a bad list is not felt
+    // until the current 8h token expires — by which point nobody can get back
+    // in to fix it without shell access to the server. Checking the requesting
+    // admin's own address against the list they are about to commit turns that
+    // into an error message they can act on.
+    const willEnable = body.adminWhitelistEnabled !== undefined
+      ? body.adminWhitelistEnabled
+      : settings.adminWhitelistEnabled;
+    const nextList = body.adminWhitelist !== undefined ? body.adminWhitelist : settings.adminWhitelist;
+    const touchesWhitelist = body.adminWhitelistEnabled !== undefined || body.adminWhitelist !== undefined;
+
+    if (touchesWhitelist && willEnable && req.ip && !isWhitelisted(req.ip, nextList)) {
+      return res.status(400).json({
+        error: `This would lock you out: your address (${req.ip}) does not match the whitelist. `
+          + `Add it before enabling the whitelist.`,
+      });
     }
 
     // 2. Persist as one unit, so a failure part-way leaves nothing applied.

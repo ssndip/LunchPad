@@ -78,12 +78,15 @@ export const AnalyticsTab: React.FC = () => {
   
   // Analytics is now global/default view as requested
 
+  const [error, setError] = useState<string | null>(null);
+
   const loadData = useCallback(() => {
     if (!token) return;
     setLoading(true);
+    setError(null);
     api.fetchAnalytics(token, {}) // Always global
       .then(setData)
-      .catch(console.error)
+      .catch((err: any) => setError(err?.message || 'Failed to load analytics'))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -94,10 +97,11 @@ export const AnalyticsTab: React.FC = () => {
   const { topMeal, topSide, peakHour, sortedPeakTimes } = React.useMemo(() => {
     if (!data) return { topMeal: 'N/A', topSide: 'N/A', peakHour: 'N/A', sortedPeakTimes: [] };
 
-    const topMealObj = [...data.popularMeals].sort((a, b) => b.count - a.count)[0];
-    const topSideObj = [...data.popularSides].sort((a, b) => b.count - a.count)[0];
-    const peakHourObj = [...data.peakTimes].sort((a, b) => b.count - a.count)[0];
-    const sortedPeakTimesObj = [...data.peakTimes].sort((a, b) => {
+    const list = (value: any): any[] => (Array.isArray(value) ? value : []);
+    const topMealObj = [...list(data.popularMeals)].sort((a, b) => b.count - a.count)[0];
+    const topSideObj = [...list(data.popularSides)].sort((a, b) => b.count - a.count)[0];
+    const peakHourObj = [...list(data.peakTimes)].sort((a, b) => b.count - a.count)[0];
+    const sortedPeakTimesObj = [...list(data.peakTimes)].sort((a, b) => {
       const hA = parseInt(a.hour) || 0;
       const hB = parseInt(b.hour) || 0;
       return hA - hB;
@@ -118,7 +122,7 @@ export const AnalyticsTab: React.FC = () => {
   ];
 
   const topSpenderRows: DataListRow[] = React.useMemo(() => {
-    if (!data) return [];
+    if (!data || !Array.isArray(data.topCustomers)) return [];
     return data.topCustomers.map((c: any) => ({
       key: c.rfid,
       cells: {
@@ -129,7 +133,7 @@ export const AnalyticsTab: React.FC = () => {
           </>
         ),
         count: <span className="font-mono text-neutral-500">{c.count}</span>,
-        total: <span className="font-bold text-neutral-900">€{c.total.toFixed(2)}</span>,
+        total: <span className="font-bold text-neutral-900">€{(Number(c.total) || 0).toFixed(2)}</span>,
       },
     }));
   }, [data]);
@@ -153,26 +157,36 @@ export const AnalyticsTab: React.FC = () => {
 
 
       {!data ? (
-        <div className="p-12 text-center text-neutral-400 font-bold">{t('analytics.failed_load')}</div>
+        <div className="p-12 flex flex-col items-center gap-4 text-center">
+          <p className="text-neutral-400 font-bold">{error || t('analytics.failed_load')}</p>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {t('analytics.retry')}
+          </button>
+        </div>
       ) : (
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <StatCard 
               label={t('analytics.total_revenue')}
-              value={`€${data.summary.totalRevenue.toFixed(2)}`}
+              value={`€${(Number(data.summary?.totalRevenue) || 0).toFixed(2)}`}
               icon={<TrendingUp className="w-4 h-4 text-emerald-600" />}
-              subValue={`${data.summary.totalOrders} ${t('analytics.total_orders_label')}`}
+              subValue={`${data.summary?.totalOrders ?? 0} ${t('analytics.total_orders_label')}`}
             />
             <StatCard 
               label={t('analytics.avg_order_value')}
-              value={`€${data.summary.avgOrderValue.toFixed(2)}`}
+              value={`€${(Number(data.summary?.avgOrderValue) || 0).toFixed(2)}`}
               icon={<Award className="w-4 h-4 text-violet-600" />}
               subValue={t('analytics.per_transaction')}
             />
             <StatCard 
               label={t('analytics.unique_users')}
-              value={data.summary.uniqueCustomers}
+              value={data.summary?.uniqueCustomers ?? 0}
               icon={<Users className="w-4 h-4 text-blue-600" />}
               subValue={t('analytics.active_in_period')}
             />

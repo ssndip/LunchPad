@@ -10,6 +10,32 @@ import { CategoryManagement } from './settings/CategoryManagement';
 import { triggerHaptic } from '../../../utils/haptics';
 import { TabHeader } from '../../shared/TabHeader';
 
+const Toggle = ({
+  checked, onChange, color = 'bg-neutral-900', label,
+}: { checked: boolean; onChange: () => void; color?: string; label: string }) => {
+  // The outer button is the tap target: `touch-target-phone` floors it to
+  // 44x44 below 767px without affecting its desktop size (which shrink-wraps
+  // to the inner track, identical to the old single-element button). Without
+  // `shrink-0` a `flex justify-between` row (the description text pushing
+  // against it) would compress this below its own w-16 on a narrow phone —
+  // that's why several toggles measured under their intended 64px width
+  // before this change. The visible track keeps its original w-16 h-8 size
+  // on an inner element so growing the tap area never inflates the switch.
+  return (
+    <button
+      onClick={onChange}
+      title={label}
+      aria-label={label}
+      aria-pressed={checked ? 'true' : 'false'}
+      className="touch-target-phone shrink-0 flex items-center justify-center relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 rounded-full"
+    >
+      <span className={`w-16 h-8 rounded-full transition-all relative ${checked ? color : 'bg-neutral-200'}`}>
+        <span className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
+      </span>
+    </button>
+  );
+};
+
 interface SettingsTabProps {
   adminWhitelistEnabled: boolean;
   orderButtonEnabled: boolean;
@@ -98,6 +124,73 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [localPublicAccessCode, setLocalPublicAccessCode] = React.useState(publicAccessCode);
   const [showAiKey, setShowAiKey] = React.useState(false);
 
+  // ── Server-side automatic backups ──
+  const [serverBackups, setServerBackups] = React.useState<import('../../../api').SystemBackupFile[] | null>(null);
+  const [loadingBackups, setLoadingBackups] = React.useState(false);
+  const [restoringBackup, setRestoringBackup] = React.useState<string | null>(null);
+
+  const report = React.useCallback((title: string, message: string, bad = true) => {
+    confirm?.({ title, message, isDestructive: bad, confirmText: t('menu.OK'), onConfirm: () => {} });
+  }, [confirm, t]);
+
+  const loadServerBackups = React.useCallback(async () => {
+    const token = sessionStorage.getItem('token');
+    if (!token) return;
+    setLoadingBackups(true);
+    try {
+      const api = await import('../../../api');
+      setServerBackups(await api.listSystemBackups(token));
+    } catch (err: any) {
+      setServerBackups([]);
+      report(t('menu.Error'), err?.message || t('settings.server_backups_failed'));
+    } finally {
+      setLoadingBackups(false);
+    }
+  }, [report, t]);
+
+  React.useEffect(() => { loadServerBackups(); }, [loadServerBackups]);
+
+  /**
+   * Restores a snapshot, then waits for the server to come back.
+   *
+   * The server exits after swapping its database file, so there is a window
+   * where nothing answers. Reloading immediately would just show a dead page,
+   * and claiming success without checking would be a lie when no supervisor is
+   * configured to restart the process.
+   */
+  const restoreServerBackup = (filename: string) => {
+    confirm?.({
+      title: t('settings.backup_wipe_title'),
+      message: t('settings.server_backup_restore_warning', { filename }),
+      isDestructive: true,
+      confirmText: t('settings.backup_wipe_confirm'),
+      onConfirm: async () => {
+        const token = sessionStorage.getItem('token');
+        if (!token) return;
+        setRestoringBackup(filename);
+        try {
+          const api = await import('../../../api');
+          await api.restoreSystemBackupFile(token, filename);
+          const backUp = await api.waitForServer();
+          if (backUp) {
+            window.location.reload();
+            return;
+          }
+          report(t('menu.Error'), t('settings.server_backup_no_restart'));
+        } catch (err: any) {
+          report(t('menu.Error'), err?.message || t('settings.server_backup_restore_failed'));
+        } finally {
+          setRestoringBackup(null);
+        }
+      },
+    });
+  };
+
+  const formatSize = (bytes: number): string =>
+    bytes >= 1024 * 1024
+      ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+
   const [hapticIntensity, setHapticIntensity] = React.useState(() => {
     return localStorage.getItem('lunchpad_haptic_intensity') || 'default';
   });
@@ -161,38 +254,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onConfirm: () => {}
           });
         } else {
-          alert("Failed to parse language file");
+          console.error('Failed to parse language file', err);
         }
       }
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const Toggle = ({
-    checked, onChange, color = 'bg-neutral-900', label,
-  }: { checked: boolean; onChange: () => void; color?: string; label: string }) => {
-    // The outer button is the tap target: `touch-target-phone` floors it to
-    // 44x44 below 767px without affecting its desktop size (which shrink-wraps
-    // to the inner track, identical to the old single-element button). Without
-    // `shrink-0` a `flex justify-between` row (the description text pushing
-    // against it) would compress this below its own w-16 on a narrow phone —
-    // that's why several toggles measured under their intended 64px width
-    // before this change. The visible track keeps its original w-16 h-8 size
-    // on an inner element so growing the tap area never inflates the switch.
-    return (
-      <button
-        onClick={onChange}
-        title={label}
-        aria-label={label}
-        aria-pressed={checked ? 'true' : 'false'}
-        className="touch-target-phone shrink-0 flex items-center justify-center relative focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 rounded-full"
-      >
-        <span className={`w-16 h-8 rounded-full transition-all relative ${checked ? color : 'bg-neutral-200'}`}>
-          <span className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${checked ? 'left-9' : 'left-1'}`} />
-        </span>
-      </button>
-    );
   };
 
   return (
@@ -758,8 +825,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center"><CheckCircle2 className="w-6 h-6 text-amber-600" /></div>
               <div>
-                <h3 className="text-xl font-bold text-neutral-900">Admin Access Whitelist</h3>
-                <p className="text-sm text-neutral-500 italic">Restrict administrative access to specific IPs or hostnames</p>
+                <h3 className="text-xl font-bold text-neutral-900">{t('settings.whitelist_title')}</h3>
+                <p className="text-sm text-neutral-500 italic">{t('settings.whitelist_desc')}</p>
               </div>
             </div>
             <Toggle 
@@ -772,13 +839,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Whitelisted Hosts & IP Ranges</label>
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.whitelist_label')}</label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={localWhitelist}
                   onChange={(e) => setLocalWhitelist(e.target.value)}
-                  placeholder="e.g. 127.0.0.1, localhost, 192.168.1.0/24"
+                  placeholder="e.g. 127.0.0.1, 192.168.1.0/24, fd00::/8"
                   className="flex-1 px-4 py-3 touch-target-h-phone bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
                 />
                 <button title="Update Whitelist"
@@ -795,24 +862,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                 <div className="space-y-3">
+                  {/* This panel used to promise that hostnames worked and that the
+                      whole local network was allowed whatever the list said.
+                      Neither was true: an entry is only ever compared against a
+                      numeric peer address, and only 127.0.0.1/::1 are implicit.
+                      Following the old advice produced a list that matched
+                      nothing and locked the admin out. */}
                   <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                    Localhost and local network access are allowed by default. Use comma-separated values for multiple entries.
+                    {t('settings.whitelist_hint')}
                   </p>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     <div>
-                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Examples:</p>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">{t('settings.whitelist_examples')}</p>
                       <ul className="text-[11px] text-amber-700/80 space-y-1 font-mono">
-                        <li>• 192.168.1.5 <span className="text-[9px] opacity-70">(Single IP)</span></li>
-                        <li>• 10.0.0.0/24 <span className="text-[9px] opacity-70">(Subnet)</span></li>
-                        <li>• office.local <span className="text-[9px] opacity-70">(Hostname)</span></li>
+                        <li>• 192.168.1.5 <span className="text-[9px] opacity-70">({t('settings.whitelist_single_ip')})</span></li>
+                        <li>• 10.0.0.0/24 <span className="text-[9px] opacity-70">({t('settings.whitelist_subnet')})</span></li>
+                        <li>• fd00::/8 <span className="text-[9px] opacity-70">({t('settings.whitelist_ipv6')})</span></li>
                       </ul>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Defaults Included:</p>
-                      <p className="text-[11px] text-amber-700/80 font-mono">
-                        127.0.0.1, localhost, ::1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
-                      </p>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">{t('settings.whitelist_always')}</p>
+                      <p className="text-[11px] text-amber-700/80 font-mono">127.0.0.1, ::1</p>
                     </div>
                   </div>
                 </div>
@@ -821,7 +892,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             
             <p className="text-[10px] text-neutral-400 italic flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
-              Changes take effect immediately for the next login attempt.
+              {t('settings.whitelist_effect')}
             </p>
           </div>
         </div>
@@ -832,13 +903,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center"><Info className="w-6 h-6 text-blue-600" /></div>
             <div>
               <h3 className="text-xl font-bold text-neutral-900">{t('settings.announcement') || 'System Announcement'}</h3>
-              <p className="text-sm text-neutral-500 italic">Displayed on the Kiosk for all users</p>
+              <p className="text-sm text-neutral-500 italic">{t('settings.announcement_desc')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Message Content</label>
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.announcement_label')}</label>
               <textarea
                 value={localAnnouncement}
                 onChange={(e) => setLocalAnnouncement(e.target.value)}
@@ -978,8 +1049,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
               <button
                 onClick={async () => {
+                  // These four used to be blocking alert() dialogs, which the
+                  // rest of the dashboard had already moved away from.
+                  const report = (title: string, message: string, bad = true) =>
+                    confirm?.({
+                      title,
+                      message,
+                      isDestructive: bad,
+                      confirmText: t('menu.OK'),
+                      onConfirm: () => {},
+                    });
+
                   if (!aiApiKey && aiProvider !== 'ollama') {
-                    alert(t('settings.please_save_api_key'));
+                    report(t('menu.Error'), t('settings.please_save_api_key'));
                     return;
                   }
                   try {
@@ -987,14 +1069,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
                     });
-                    const data = await res.json();
-                    if (data.success) {
-                      alert(data.message);
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                      report(t('modals.confirm'), data.message, false);
                     } else {
-                      alert(`${t('navigation.connection_failed') || 'Connection Failed:'} ${data.error}`);
+                      report(t('menu.Error'), `${t('navigation.connection_failed')} ${data.error || res.status}`);
                     }
                   } catch (err: any) {
-                    alert(`${t('navigation.network_error') || 'Network Error:'} ${err.message}`);
+                    report(t('menu.Error'), `${t('navigation.network_error')} ${err.message}`);
                   }
                 }}
                 className="px-4 py-2 touch-target-h-phone bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
@@ -1071,8 +1153,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <Share className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">System Backup & Restore</h3>
-              <p className="text-sm text-neutral-500 font-medium">Protect and migrate your entire database</p>
+              <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">{t('settings.backup_title')}</h3>
+              <p className="text-sm text-neutral-500 font-medium">{t('settings.backup_desc')}</p>
             </div>
           </div>
 
@@ -1087,16 +1169,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                   <span className="text-[10px] text-neutral-500 flex items-center gap-1">
-                    <CreditCard className="w-3 h-3 text-indigo-400" /> Cards & Balances
+                    <CreditCard className="w-3 h-3 text-indigo-400" /> {t('settings.backup_includes_cards')}
                   </span>
                   <span className="text-[10px] text-neutral-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-indigo-400" /> Order History
+                    <Clock className="w-3 h-3 text-indigo-400" /> {t('settings.backup_includes_history')}
                   </span>
                   <span className="text-[10px] text-neutral-500 flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-indigo-400" /> AI Parser Rules
+                    {/* True as of the parser-config sync: the rules used to
+                        live only in each browser's localStorage, so this line
+                        promised something a backup never actually contained. */}
+                    <Zap className="w-3 h-3 text-indigo-400" /> {t('settings.backup_includes_parser')}
                   </span>
                   <span className="text-[10px] text-neutral-500 flex items-center gap-1">
-                    <Settings className="w-3 h-3 text-indigo-400" /> App Config
+                    <Settings className="w-3 h-3 text-indigo-400" /> {t('settings.backup_includes_config')}
                   </span>
                 </div>
               </div>
@@ -1118,21 +1203,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     link.click();
                     URL.revokeObjectURL(url);
                   } catch (err: any) {
-                    alert("Export failed: " + err.message);
+                    confirm?.({
+                      title: t('menu.Error'),
+                      message: err?.message || t('settings.backup_export_failed'),
+                      isDestructive: true,
+                      confirmText: t('menu.OK'),
+                      onConfirm: () => {},
+                    });
                   }
                 }}
                 className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
               >
-                <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Export Backup
+                <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> {t('settings.backup_export')}
               </button>
 
               <button title="Import System Backup"
                 onClick={() => {
                   if (confirm) {
                     confirm({
-                      title: "Warning: Data Wipe",
-                      message: "Restoring a backup will DELETE all current cards, orders, and settings. This cannot be undone. Are you sure?",
-                      confirmText: "Yes, Restore Everything",
+                      title: t('settings.backup_wipe_title'),
+                      message: t('settings.backup_wipe_warning'),
+                      isDestructive: true,
+                      confirmText: t('settings.backup_wipe_confirm'),
                       onConfirm: () => {
                         const input = document.createElement('input');
                         input.type = 'file';
@@ -1145,19 +1237,27 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                             try {
                               const content = evt.target?.result as string;
                               const bundle = JSON.parse(content);
-                              const token = sessionStorage.getItem('token') || '';
                               const { importSystemBackup } = await import('../../../api');
-                              const res = await importSystemBackup(token, bundle);
-                              if (res.success) {
-                                confirm({
-                                  title: "Success",
-                                  message: `System restored successfully! The application will now reload.`,
-                                  confirmText: "Reload Now",
-                                  onConfirm: () => window.location.reload()
-                                });
+                              const res = await importSystemBackup(sessionStorage.getItem('token') || '', bundle);
+                              if (!res?.success) {
+                                // Previously fell through silently, so a refused
+                                // restore looked identical to nothing happening.
+                                throw new Error(res?.error || t('settings.backup_restore_failed'));
                               }
+                              confirm({
+                                title: t('modals.confirm'),
+                                message: t('settings.backup_restore_success'),
+                                confirmText: t('settings.backup_reload'),
+                                onConfirm: () => window.location.reload()
+                              });
                             } catch (err: any) {
-                              alert("Restore failed: " + err.message);
+                              confirm({
+                                title: t('menu.Error'),
+                                message: err?.message || t('settings.backup_restore_failed'),
+                                isDestructive: true,
+                                confirmText: t('menu.OK'),
+                                onConfirm: () => {},
+                              });
                             }
                           };
                           reader.readAsText(file);
@@ -1169,13 +1269,85 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 }}
                 className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
               >
-                <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> Restore Backup
+                <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('settings.backup_restore')}
               </button>
             </div>
           </div>
           <p className="text-center text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
-            Recommended before every major system update
+            {t('settings.backup_recommend')}
           </p>
+
+          {/* The server's own rolling snapshots. These were being taken and
+              pruned all along, and were listable and restorable over the API,
+              but no screen ever showed them — so the only recovery path an
+              admin had was a file they had remembered to export by hand. */}
+          <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-neutral-900">{t('settings.server_backups_title')}</h3>
+                  <p className="text-sm text-neutral-500 italic">{t('settings.server_backups_desc')}</p>
+                </div>
+              </div>
+              <button
+                onClick={loadServerBackups}
+                disabled={loadingBackups}
+                title={t('settings.server_backups_refresh')}
+                aria-label={t('settings.server_backups_refresh')}
+                className="touch-target-phone shrink-0 flex items-center justify-center p-2 rounded-xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 transition-all disabled:opacity-40"
+              >
+                {loadingBackups
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Download className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {serverBackups === null || loadingBackups ? (
+              <div className="py-8 flex justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-neutral-300" />
+              </div>
+            ) : serverBackups.length === 0 ? (
+              <p className="py-8 text-center text-xs text-neutral-400 font-bold">
+                {t('settings.server_backups_empty')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {serverBackups.map((backup) => (
+                  <div
+                    key={backup.filename}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-neutral-900">
+                        {new Date(backup.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-neutral-400 font-mono truncate">
+                        {backup.filename} · {formatSize(backup.sizeBytes)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => restoreServerBackup(backup.filename)}
+                      disabled={restoringBackup !== null}
+                      className="shrink-0 px-5 py-2.5 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-red-300 hover:text-red-600 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {restoringBackup === backup.filename && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {restoringBackup === backup.filename
+                        ? t('settings.server_backup_restoring')
+                        : t('settings.backup_restore')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-5 text-[10px] text-neutral-400 italic flex items-start gap-1.5">
+              <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+              {t('settings.server_backups_note')}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1242,7 +1414,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
             <Globe className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-neutral-900">Import Language</h3>
+            <h3 className="text-xl font-bold text-neutral-900">{t('settings.import_language')}</h3>
             <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mt-1">
               Configuration required
             </p>
@@ -1251,7 +1423,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Language Code</label>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.language_code')}</label>
             <input
               type="text"
               autoFocus
@@ -1264,7 +1436,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">Language Name</label>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2">{t('settings.language_name')}</label>
             <input
               type="text"
               value={name}

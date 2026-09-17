@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, ArrowRight, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 import * as api from '../../api';
+import { useStore } from '../../store/useStore';
 
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -12,6 +13,7 @@ interface ManagerLoginProps {
 
 export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack }) => {
   const { t } = useTranslation();
+  const sessionExpired = useStore(s => s.sessionExpired);
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,15 +76,27 @@ export const ManagerLogin: React.FC<ManagerLoginProps> = ({ onLogin, onBack }) =
             <p className="text-neutral-500 text-sm font-medium">
               {t('navigation.enter_pin_desc')}
             </p>
+            {sessionExpired && (
+              <div className="mt-5 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 border border-amber-100 rounded-2xl">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <p className="text-xs text-amber-800 font-bold text-left">
+                  {t('navigation.session_expired')}
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
               <input
                 type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                aria-label={t('navigation.enter_pin_desc')}
                 value={pin}
                 autoFocus
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 className="w-full h-20 text-center text-4xl font-black tracking-[0.5em] bg-neutral-50 rounded-3xl border-2 border-neutral-100 focus:border-neutral-900 transition-all focus:outline-none placeholder:tracking-normal placeholder:text-neutral-200"
               />

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import { verifyAdminPin, settings } from "../config";
+import { verifyAdminPin, settings, lastPinRefusalReason } from "../config";
 import { db } from "../db";
 import { adminWhitelistGuard } from "../middleware/whitelist";
 
@@ -28,7 +28,12 @@ router.post("/login", adminWhitelistGuard, (req, res) => {
     return res.json({ success: true, token });
   }
 
-  res.status(401).json({ error: "Invalid PIN or Admin Card" });
+  // Same 401 as any other failed login — the status drives rate limiting and
+  // the client's retry handling, and this is still a login that did not
+  // succeed. Only the message changes: a refusal caused by the install's own
+  // configuration used to be reported as "Invalid PIN or Admin Card", which
+  // sent the operator off to retype a PIN that was never going to work.
+  res.status(401).json({ error: lastPinRefusalReason || "Invalid PIN or Admin Card" });
 });
 
 /**

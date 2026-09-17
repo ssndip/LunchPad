@@ -2,7 +2,12 @@ import express from "express";
 import net from "net";
 import jwt from "jsonwebtoken";
 import { verifyAdminPin, settings } from "../config";
-import { isWhitelisted } from "./whitelist";
+import { isPrivateAddress } from "./whitelist";
+
+// Re-exported from its new home. `isPrivateAddress` moved to whitelist.ts so
+// that the whitelist guard could reuse it without the two modules importing
+// each other; existing callers still reach it here.
+export { isPrivateAddress } from "./whitelist";
 import { db } from "../db";
 
 export const isLocalOrigin = (origin?: string): boolean => {
@@ -35,48 +40,6 @@ export const isLocalOrigin = (origin?: string): boolean => {
 };
 
 
-
-/**
- * Address ranges a kiosk can legitimately sit on. Deliberately a fixed list
- * rather than `settings.adminWhitelist`, which an admin may have widened to
- * include public addresses so they can reach the dashboard from off-site.
- */
-const PRIVATE_RANGES = "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 127.0.0.0/8";
-
-/**
- * The IPv6 equivalents of the ranges above.
- *
- * `isWhitelisted` only understands exact matches and IPv4 CIDR, so before this
- * every IPv6 address except the loopback `::1` was treated as remote. On a
- * network handing out IPv6 — which many consumer routers do by default, and
- * which the kiosk will prefer once it has one — `requireLocalOrAuth` then
- * refused the kiosk its own card list, and the kiosk could not identify a
- * cardholder at all. Matched on the leading bits, which is all these ranges are:
- *
- *   fe80::/10  link-local, what an interface configures with no router
- *   fc00::/7   unique local (fc00::/8 and fd00::/8), the site-local range
- */
-const isPrivateIPv6 = (ip: string): boolean => {
-  const address = ip.toLowerCase().split('%')[0]; // strip any %eth0 zone index
-  if (address === "::1" || address === "::") return true;
-
-  // fe80::/10 — the first 10 bits are 1111111010, so the second hextet's top
-  // six bits must be 10xxxx: fe80 through febf.
-  if (/^fe[89ab][0-9a-f]:/.test(address)) return true;
-
-  // fc00::/7 — fc.. and fd.. .
-  if (/^f[cd][0-9a-f]{2}:/.test(address)) return true;
-
-  return false;
-};
-
-export const isPrivateAddress = (ip?: string): boolean => {
-  if (!ip) return false;
-  const normalized = ip.replace(/^::ffff:/, "");
-  if (normalized === "::1") return true;
-  if (normalized.includes(":")) return isPrivateIPv6(normalized);
-  return isWhitelisted(normalized, PRIVATE_RANGES);
-};
 
 /**
  * Guard for the kiosk endpoints that expose cardholder data — the active RFID
