@@ -29,6 +29,7 @@ const base = {
   testModeEnabled: false,
   orderButtonEnabled: true,
   onOrder: vi.fn(),
+  onPinOrder: vi.fn(),
   onClearCart: vi.fn(),
   onChangeSide: vi.fn(),
   t,
@@ -111,5 +112,47 @@ describe('KioskOrderBar', () => {
     const rfidInput = screen.getByPlaceholderText('cards.scan_to_register');
     expect(rfidInput).toBeInTheDocument();
     expect(rfidInput.className).toContain('touch-target-h');
+  });
+});
+
+/**
+ * Ordering with a PIN is the path for a customer who has no card in hand.
+ * KioskOrderPanel carries it on tablet and desktop; the phone bar replaced
+ * that panel below md (KioskView renders one or the other, never both) and
+ * did not bring the PIN affordance across, which left the phone with no way
+ * to order at all without a card: `orderDisabled` already covers
+ * `!testModeEnabled && !rfid`, so the only enabled control was the expand
+ * toggle.
+ */
+describe('KioskOrderBar PIN ordering', () => {
+  it('offers a PIN order button without expanding the bar', () => {
+    const onPinOrder = vi.fn();
+    render(<KioskOrderBar {...base} onPinOrder={onPinOrder} />);
+    fireEvent.click(screen.getByLabelText('kiosk.pin_order'));
+    expect(onPinOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps PIN ordering available when no card has been scanned', () => {
+    const onPinOrder = vi.fn();
+    render(<KioskOrderBar {...base} rfid="" onPinOrder={onPinOrder} />);
+    const pin = screen.getByLabelText('kiosk.pin_order');
+    expect(pin).toBeEnabled();
+    fireEvent.click(pin);
+    expect(onPinOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables PIN ordering while the kiosk is closed', () => {
+    render(<KioskOrderBar {...base} computedKioskOpen={false} />);
+    expect(screen.getByLabelText('kiosk.pin_order')).toBeDisabled();
+  });
+
+  it('still allows PIN ordering while the kiosk is closed in test mode', () => {
+    render(<KioskOrderBar {...base} computedKioskOpen={false} testModeEnabled />);
+    expect(screen.getByLabelText('kiosk.pin_order')).toBeEnabled();
+  });
+
+  it('hides the PIN button mid-scan, when a card is already being read', () => {
+    render(<KioskOrderBar {...base} isScanning />);
+    expect(screen.queryByLabelText('kiosk.pin_order')).not.toBeInTheDocument();
   });
 });

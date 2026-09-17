@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Loader2,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { CartItem } from '../../types';
 import { formatPrice } from '../../utils/formatPrice';
@@ -26,6 +27,13 @@ interface KioskOrderBarProps {
   testModeEnabled: boolean;
   orderButtonEnabled: boolean;
   onOrder: () => void;
+  /**
+   * Opens the PIN pad, for a customer ordering without a card. Mandatory:
+   * `orderDisabled` below already covers `!testModeEnabled && !rfid`, so
+   * without this the bar has no enabled path to an order at all when nobody
+   * has scanned.
+   */
+  onPinOrder: () => void;
   onClearCart: () => void;
   onChangeSide: (item: CartItem) => void;
   t: (key: string) => string;
@@ -42,6 +50,7 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
   testModeEnabled,
   orderButtonEnabled,
   onOrder,
+  onPinOrder,
   onClearCart,
   onChangeSide,
   t,
@@ -161,6 +170,32 @@ export const KioskOrderBar: React.FC<KioskOrderBarProps> = ({
                 )}
                 {testModeEnabled && !rfid ? 'Test Order' : t('kiosk.place_order')}
               </button>
+
+              {/* PIN ordering, for a customer with no card. Sits beside the
+                  order button rather than inside the collapsible region for
+                  the same reason that one does: without a card the order
+                  button is disabled, so if this were behind the expand toggle
+                  the bar would present no enabled way to buy anything.
+
+                  Icon-only, because the collapsed pill is a single row at
+                  390px and a labelled button does not fit beside the order
+                  button there. It carries its own accessible name.
+
+                  Hidden mid-scan: a card is already being read, so the
+                  cardless path is about to stop being the relevant one, and
+                  the panel this restores parity with hides it then too. */}
+              {!isScanning && (
+                <button
+                  type="button"
+                  onClick={onPinOrder}
+                  disabled={!computedKioskOpen && !testModeEnabled}
+                  title={t('kiosk.pin_order')}
+                  aria-label={t('kiosk.pin_order')}
+                  className="px-3 touch-target shrink-0 rounded-xl border-2 border-neutral-900 bg-white text-neutral-900 font-bold flex items-center justify-center transition-all active:scale-95 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:border-neutral-200 disabled:text-neutral-300"
+                >
+                  <Lock className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Expanded region: item list, clear button and the RFID field.

@@ -557,6 +557,10 @@ export const KioskView: React.FC<KioskViewProps> = ({
           testModeEnabled={testModeEnabled}
           orderButtonEnabled={orderButtonEnabled && !isMenuOutdated && !isReadOnly}
           onOrder={handleOrderSubmit}
+          // The same handler KioskOrderPanel gets below. PinPadModal is
+          // rendered once for the whole view, not per layout, so the phone bar
+          // needed nothing but this line to reach it.
+          onPinOrder={handlePinOrder}
           onClearCart={onClearCart}
           onChangeSide={handleUpdateSide}
           t={t}
