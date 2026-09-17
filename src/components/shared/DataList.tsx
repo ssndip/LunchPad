@@ -70,6 +70,22 @@ const handleActivationKeyDown =
  * Cells must arrive without <td> layout classes: this component owns padding
  * and alignment in both modes.
  *
+ * Horizontal cell padding is 16px, not the 24px `p-6` the hand-written tables
+ * used, while the vertical 24px stays. 24px on each side of every cell is
+ * 48px per column before a single character of content — 288px of a
+ * six-column table — and that is spent where it is scarcest. Measured in
+ * Chrome: MenuTab's table needed 798px inside a 609px content area at a
+ * 1024px viewport, and CardsTab's needed 956px inside the 682px its
+ * `lg:col-span-2` column gives it at 1440px. Only the horizontal value moves,
+ * so row height and the airy look are unchanged.
+ *
+ * Deliberately one value at every width rather than a `md:`/`xl:` ramp: the
+ * dashboard's content area does not grow with the viewport. DesktopNav's
+ * `w-80` aside appears at lg and `p-4` becomes `lg:p-10` at the same
+ * breakpoint, so content DROPS from 991px at a 1023px viewport to 689px at
+ * 1024px. A breakpoint-keyed padding ramp would give the narrowest band the
+ * roomiest padding.
+ *
  * See `ACTIONS_COLUMN_KEY` above for the actions-column convention: no
  * consumer supplies the buttons twice, and DataList — not the consumer — is
  * responsible for keeping the table and the card in agreement about whether
@@ -105,7 +121,7 @@ export const DataList: React.FC<DataListProps> = ({
                 <th
                   key={col.key}
                   onClick={col.sortable ? col.onSort : undefined}
-                  className={`p-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100 ${alignClass(col.align)} ${
+                  className={`px-4 py-6 font-serif italic text-xs uppercase tracking-widest text-neutral-400 border-b border-neutral-100 ${alignClass(col.align)} ${
                     col.sortable ? 'cursor-pointer hover:text-neutral-900 transition-colors' : ''
                   }`}
                 >
@@ -140,7 +156,7 @@ export const DataList: React.FC<DataListProps> = ({
                   }`}
                 >
                   {effectiveColumns.map((col) => (
-                    <td key={col.key} className={`p-6 ${alignClass(col.align)}`}>
+                    <td key={col.key} className={`px-4 py-6 ${alignClass(col.align)}`}>
                       {col.key === ACTIONS_COLUMN_KEY ? row.actions : row.cells[col.key]}
                     </td>
                   ))}
