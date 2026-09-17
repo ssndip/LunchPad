@@ -3,12 +3,17 @@ import request from 'supertest';
 import { appPromise } from '../server';
 import { localDateString } from '../server/utils/localTime';
 
+// An admin PIN of this suite's own. Logging in with DEFAULT_ADMIN_PIN is
+// refused while the admin whitelist is off (see verifyAdminPin), which is
+// the state a fresh test database starts in.
+process.env.ADMIN_PIN = '424242';
+
 let app: any;
 let token: string;
 
 beforeAll(async () => {
   app = await appPromise;
-  const res = await request(app).post('/api/auth/login').send({ pin: '0000' });
+  const res = await request(app).post('/api/auth/login').send({ pin: '424242' });
   token = res.body.token;
 });
 

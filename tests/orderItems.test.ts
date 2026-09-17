@@ -20,6 +20,11 @@ import { startServer } from '../server';
 
 process.env.NODE_ENV = 'test';
 
+// An admin PIN of this suite's own. Logging in with DEFAULT_ADMIN_PIN is
+// refused while the admin whitelist is off (see verifyAdminPin), which is
+// the state a fresh test database starts in.
+process.env.ADMIN_PIN = '424242';
+
 const RFID = '1234567890';
 const SOUP = { id: 1, name: 'Пилешка супа', price: 1.8, available: true, category: 'Супи' };
 const SALAD = { id: 2, name: 'Зелева салата', price: 2.5, available: true, category: 'Салати' };
@@ -47,7 +52,7 @@ const order = (items: { id: number; side?: string }[]) =>
 
 beforeAll(async () => {
   app = await startServer();
-  token = (await request(app).post('/api/auth/login').send({ pin: '0000' })).body.token;
+  token = (await request(app).post('/api/auth/login').send({ pin: '424242' })).body.token;
 });
 
 beforeEach(async () => {

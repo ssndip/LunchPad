@@ -32,9 +32,14 @@ import { isPrivateAddress } from '../server/middleware/auth';
 
 process.env.NODE_ENV = 'test';
 
+// An admin PIN of this suite's own. Logging in with DEFAULT_ADMIN_PIN is
+// refused while the admin whitelist is off (see verifyAdminPin), which is
+// the state a fresh test database starts in.
+process.env.ADMIN_PIN = '424242';
+
 const adminToken = async (app: any): Promise<string> => {
   db.prepare("DELETE FROM settings WHERE key = ?").run("admin_pin");
-  const res = await request(app).post('/api/auth/login').send({ pin: '0000' });
+  const res = await request(app).post('/api/auth/login').send({ pin: '424242' });
   return res.body.token;
 };
 

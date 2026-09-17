@@ -15,9 +15,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { startServer } from '../server';
 import { db } from '../server/db';
-import { verifyAdminPin } from '../server/config';
+import { verifyAdminPin, settings } from '../server/config';
 
 process.env.NODE_ENV = 'test';
+
+// An admin PIN of this suite's own. The default PIN is refused while the
+// admin whitelist is off (verifyAdminPin's combination guard), and a fresh
+// test database seeds the whitelist off, so any login here needs a real one.
+process.env.ADMIN_PIN = '424242';
 
 /** Clear any admin PIN so `verifyAdminPin` exercises its default-PIN fallback. */
 const clearStoredAdminPin = () => {
@@ -36,9 +41,19 @@ describe('admin PIN fallback', () => {
     else process.env.ADMIN_PIN = originalAdminPin;
   });
 
-  it('accepts 0000 when no PIN has been configured (intended default)', () => {
+  it('accepts 0000 when no PIN is configured and the whitelist is on', () => {
     delete process.env.ADMIN_PIN;
+    settings.adminWhitelistEnabled = true;
     expect(verifyAdminPin('0000')).toBe(true);
+  });
+
+  it('refuses 0000 when no PIN is configured and the whitelist is off', () => {
+    // The combination guard. A default PIN behind an IP whitelist is a
+    // LAN-only convenience; with the whitelist off it is an open dashboard on
+    // whatever network can reach the host, so the two together are refused.
+    delete process.env.ADMIN_PIN;
+    settings.adminWhitelistEnabled = false;
+    expect(verifyAdminPin('0000')).toBe(false);
   });
 
   it('rejects 0000 once ADMIN_PIN is configured to something else', () => {
@@ -48,14 +63,17 @@ describe('admin PIN fallback', () => {
   });
 
   it('rejects a wrong PIN of the same length as the default', () => {
+    // Whitelist on, so the guard is not what makes this fail — the PIN is.
     delete process.env.ADMIN_PIN;
+    settings.adminWhitelistEnabled = true;
     expect(verifyAdminPin('9999')).toBe(false);
   });
 
   it('rejects the default once an admin has set their own PIN', async () => {
-    delete process.env.ADMIN_PIN;
+    // ADMIN_PIN deliberately left in place: the login below is how the new PIN
+    // gets set, and the guard would refuse a default-PIN login to get there.
     const app = await startServer();
-    const token = (await request(app).post('/api/auth/login').send({ pin: '0000' })).body.token;
+    const token = (await request(app).post('/api/auth/login').send({ pin: '424242' })).body.token;
 
     await request(app)
       .post('/api/settings/pin')
@@ -92,7 +110,7 @@ describe('proxy trust', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .set('X-Forwarded-For', '8.8.8.8')
-      .send({ pin: '0000' });
+      .send({ pin: '424242' });
 
     expect(res.status).toBe(200);
   });
@@ -129,7 +147,7 @@ describe('card endpoints are not public', () => {
     process.env.TRUST_PROXY = 'loopback, uniquelocal';
     clearStoredAdminPin();
     app = await startServer();
-    token = (await request(app).post('/api/auth/login').send({ pin: '0000' })).body.token;
+    token = (await request(app).post('/api/auth/login').send({ pin: '424242' })).body.token;
 
     db.prepare(
       "INSERT OR REPLACE INTO cards (rfid, ownerName, balance, lastUpdated) VALUES (?, ?, ?, ?)"

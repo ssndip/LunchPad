@@ -154,7 +154,30 @@ export const verifyAdminPin = (pin: string): boolean => {
     // install can be logged into. This branch used to also accept "0000"
     // unconditionally, which kept the default working as a second, permanent
     // password even after ADMIN_PIN had been changed.
-    return safeEqual(pin, process.env.ADMIN_PIN || DEFAULT_ADMIN_PIN);
+    const effectivePin = process.env.ADMIN_PIN || DEFAULT_ADMIN_PIN;
+
+    // Refuse the one combination that is an open door: no PIN of anyone's
+    // choosing anywhere (so the password is the published default) AND no IP
+    // restriction (so the whole internet can reach this endpoint). Either
+    // alone is defensible — a default PIN behind a whitelist is a LAN-only
+    // convenience, and an open whitelist with a real PIN is an ordinary
+    // remote login. Together they are not.
+    //
+    // This is deliberately narrow. Setting ADMIN_PIN to anything of your own
+    // clears it, as does storing a PIN from Settings, as does turning the
+    // whitelist back on. It exists so that shipping the whitelist off by
+    // default cannot, on its own, publish an unprotected dashboard.
+    if (!settings.adminWhitelistEnabled && effectivePin === DEFAULT_ADMIN_PIN) {
+      console.warn(
+        "[Auth] Refused an admin login: the PIN is still the default and the " +
+          "admin whitelist is off, which would leave the dashboard open to " +
+          "anyone who can reach this host. Set ADMIN_PIN to a PIN of your own, " +
+          "or re-enable the whitelist, then log in.",
+      );
+      return false;
+    }
+
+    return safeEqual(pin, effectivePin);
   } catch (err) {
     console.error("[Auth] PIN verification error", err);
     return false;

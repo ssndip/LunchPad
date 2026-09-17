@@ -20,6 +20,11 @@ import bcrypt from 'bcryptjs';
 
 process.env.NODE_ENV = 'test';
 
+// An admin PIN of this suite's own. Logging in with DEFAULT_ADMIN_PIN is
+// refused while the admin whitelist is off (see verifyAdminPin), which is
+// the state a fresh test database starts in.
+process.env.ADMIN_PIN = '424242';
+
 let app: any;
 let token = '';
 
@@ -40,7 +45,7 @@ const settingValue = (key: string): string | undefined =>
 beforeAll(async () => {
   app = await startServer();
   db.prepare("DELETE FROM settings WHERE key = ?").run('admin_pin');
-  token = await login('0000');
+  token = await login('424242');
   expect(token).toBeTruthy();
 });
 

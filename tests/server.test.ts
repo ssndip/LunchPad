@@ -10,8 +10,13 @@ describe('Server API tests', () => {
   beforeEach(async () => {
     // Make sure we are in test environment to avoid starting the server
     process.env.NODE_ENV = 'test';
+
+// An admin PIN of this suite's own. Logging in with DEFAULT_ADMIN_PIN is
+// refused while the admin whitelist is off (see verifyAdminPin), which is
+// the state a fresh test database starts in.
+process.env.ADMIN_PIN = '424242';
     app = await startServer();
-    const authLoginRes = await request(app).post('/api/auth/login').send({ pin: '0000' });
+    const authLoginRes = await request(app).post('/api/auth/login').send({ pin: '424242' });
     token = authLoginRes.body.token;
   });
 
