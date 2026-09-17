@@ -489,7 +489,7 @@ export const KioskView: React.FC<KioskViewProps> = ({
       <main className={`flex-1 flex overflow-hidden relative ${useMobileLayout ? 'flex-col' : 'flex-row'}`}>
         {/* Col 1: Categories (Horizontal Top Bar on Mobile & Portrait Tablet, Vertical Sidebar on Desktop & Landscape Tablet) */}
         <div className={`flex shrink-0 bg-white border-neutral-200 ${useMobileLayout ? 'border-b overflow-x-auto no-scrollbar' : 'md:w-[20%] xl:w-40 border-r overflow-y-auto custom-scrollbar'}`}>
-          <KioskCategorySidebar 
+          <KioskCategorySidebar
             categories={categories}
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
@@ -497,6 +497,12 @@ export const KioskView: React.FC<KioskViewProps> = ({
             t={t}
             customCategories={useStore(s => s.customCategories) || []}
             lang={lang}
+            // The same source of truth as the wrapper's own classes directly
+            // above. The sidebar used to derive this itself from `md:flex-col`,
+            // which is true from 768px while useMobileLayout is true up to
+            // 1023px in portrait — so on a portrait tablet this wrapper was a
+            // horizontal scroller wrapping a vertical stack.
+            orientation={useMobileLayout ? 'horizontal' : 'vertical'}
           />
         </div>
 
