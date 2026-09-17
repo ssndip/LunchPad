@@ -386,9 +386,20 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         </div>
       </Sheet>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* One column at every width, not `lg:grid-cols-3` with the table in a
+          `lg:col-span-2`.
+          Two thirds of the content area is less room than it sounds: the
+          dashboard's own area is capped at `--app-max-width` (1440px) and
+          loses DesktopNav's 320px aside plus `lg:p-10`, so that column peaked
+          at 895px — while this six-column table needs 860px and needed 956px
+          before DataList's padding came down. Measured in Chrome, it scrolled
+          sideways at every width up to about 1900px, and ДЕЙСТВИЯ — edit,
+          delete, reset balance, write NFC — was the column parked off-screen.
+          The add-card form follows the table, which is the order this already
+          used below lg. */}
+      <div className="flex flex-col gap-8">
         {/* Cards table */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-4">
           {/* Search Row */}
           <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-neutral-200 shadow-sm">
             <div className="flex-1 relative">
