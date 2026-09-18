@@ -319,7 +319,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <div className="relative">
                   <button title={t('settings.language')}
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center justify-between w-full sm:w-[200px] px-4 touch-target-h bg-neutral-50 border border-neutral-200 rounded-2xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
+                    className="flex items-center justify-between w-full sm:w-[200px] px-4 touch-target-h bg-neutral-50 border border-neutral-200 rounded-xl font-bold text-sm text-neutral-900 hover:border-neutral-900 transition-all focus:outline-none"
                   >
                     <div className="flex items-center gap-2">
                       <Globe className="w-4 h-4 text-neutral-400" />
@@ -342,7 +342,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute bottom-full mb-2 left-0 right-0 sm:right-auto sm:w-[240px] bg-white border border-neutral-100 rounded-3xl shadow-2xl z-50 overflow-hidden p-2"
+                          className="absolute bottom-full mb-2 left-0 right-0 sm:right-auto sm:w-[240px] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden p-2"
                         >
                           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                             {availableLanguages.map((l) => (
@@ -376,7 +376,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                                           onDeleteLanguage(l.code);
                                         }
                                       }}
-                                      className={`p-1.5 rounded-lg transition-all ${pendingLanguage === l.code ? 'hover:bg-white/10 text-white/50 hover:text-white' : 'hover:bg-red-50 text-neutral-400 hover:text-red-500'}`}
+                                      className={`p-1.5 rounded-xl transition-all ${pendingLanguage === l.code ? 'hover:bg-white/10 text-white/50 hover:text-white' : 'hover:bg-red-50 text-neutral-400 hover:text-red-500'}`}
                                     >
                                       <X className="w-4 h-4" />
                                     </button>
@@ -396,7 +396,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, pendingLanguage, bgnEnabled)}
-                    className="px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
+                    className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-200"
                     title="Apply Language Change"
                   >
                     Apply
@@ -409,7 +409,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div className="pt-6 border-t border-neutral-100 flex flex-col sm:flex-row gap-3">
             <button title="Export Data"
               onClick={handleExportTemplate}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all text-xs"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50 transition-all text-xs"
             >
               <Download className="w-4 h-4" /> {t('cards.export_data')} (JSON)
             </button>
@@ -424,7 +424,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all text-xs"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 touch-target-h-phone bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all text-xs"
               title={t('cards.import_file')}
             >
               <Plus className="w-4 h-4" /> {t('cards.import_file')}
@@ -435,7 +435,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {/* PWA & Kiosk Settings */}
         <div className="bg-white p-5 md:p-8 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center"><Smartphone className="w-6 h-6 text-violet-600" /></div>
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center"><Smartphone className="w-6 h-6 text-indigo-600" /></div>
             <div>
               <h3 className="text-xl font-bold text-neutral-900">{t('pwa.title')}</h3>
               <p className="text-sm text-neutral-500 italic">{isStandalone ? 'Running in Standalone Mode' : 'Browser Mode'}</p>
@@ -451,7 +451,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <Toggle 
                 checked={kioskModeEnabled} 
                 onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, !kioskModeEnabled, allowPWAInstall, lang, bgnEnabled)} 
-                color="bg-violet-600"
+                color="bg-indigo-600"
                 label="Toggle Kiosk Mode" 
               />
             </div>
@@ -464,7 +464,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <Toggle 
                 checked={allowPWAInstall} 
                 onChange={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, !allowPWAInstall, lang, bgnEnabled)} 
-                color="bg-violet-600"
+                color="bg-indigo-600"
                 label="Toggle Allow Install" 
               />
             </div>
@@ -481,7 +481,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     onClick={() => changeHapticIntensity(level)}
                     className={`touch-target-phone px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 ${
                       hapticIntensity === level
-                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-600/10'
+                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/10'
                         : 'text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100'
                     }`}
                   >
@@ -494,15 +494,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             {allowPWAInstall && !isStandalone && (isIOS || isAndroid) && (
               <div className="pt-6 border-t border-neutral-100">
                 {(isIOS || (isAndroid && !deferredPrompt)) ? (
-                  <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100">
-                    <div className="flex items-center gap-3 mb-3 text-violet-600">
+                  <div className="bg-neutral-50 p-6 rounded-2xl border border-neutral-200">
+                    <div className="flex items-center gap-3 mb-3 text-indigo-600">
                       <Share className="w-5 h-5" />
                       <h4 className="font-bold text-sm tracking-tight">{isIOS ? t('pwa.ios_install_title') : t('pwa.android_install_title')}</h4>
                     </div>
                     <p className="text-xs text-neutral-500 leading-relaxed italic mb-4">{isIOS ? t('pwa.ios_install_desc') : t('pwa.android_install_desc')}</p>
                     <button
                       onClick={onInstallApp}
-                      className="w-full py-3 bg-white border border-violet-200 text-violet-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-50 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
                       title={t('pwa.how_to_install')}
                     >
                       <Info className="w-4 h-4" />
@@ -514,7 +514,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     title={t('pwa.install_button')}
                     onClick={onInstallApp || installApp}
                     disabled={!canInstall && !onInstallApp}
-                    className="w-full py-4 bg-violet-600 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+                    className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-30"
                   >
                     <Download className="w-5 h-5" />
                     {t('pwa.install_button')}
@@ -640,7 +640,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       value={localPublicAccessCode}
                       onChange={(e) => setLocalPublicAccessCode(e.target.value)}
                       placeholder="e.g. 1234"
-                      className="flex-1 px-4 touch-target-h rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 text-sm font-semibold"
+                      className="flex-1 px-4 touch-target-h rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm font-semibold"
                     />
                     <button
                       onClick={() => onUpdateSettings(
@@ -846,7 +846,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   value={localWhitelist}
                   onChange={(e) => setLocalWhitelist(e.target.value)}
                   placeholder="e.g. 127.0.0.1, 192.168.1.0/24, fd00::/8"
-                  className="flex-1 px-4 py-3 touch-target-h-phone bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm font-mono"
+                  className="flex-1 px-4 py-3 touch-target-h-phone bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm font-mono"
                 />
                 <button title="Update Whitelist"
                   onClick={() => onUpdateSettings(adminWhitelistEnabled, orderButtonEnabled, testModeEnabled, kioskModeEnabled, allowPWAInstall, lang, bgnEnabled, localWhitelist)}
@@ -858,7 +858,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
             </div>
 
-            <div className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100/50">
+            <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-200/50">
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                 <div className="space-y-3">
@@ -914,7 +914,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={localAnnouncement}
                 onChange={(e) => setLocalAnnouncement(e.target.value)}
                 placeholder="Type your announcement here..."
-                className="w-full px-4 py-3 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all focus:outline-none text-sm min-h-[100px] resize-none"
+                className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all focus:outline-none text-sm min-h-[100px] resize-none"
               />
             </div>
             <div className="flex justify-end gap-3">
@@ -1079,7 +1079,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     report(t('menu.Error'), `${t('navigation.network_error')} ${err.message}`);
                   }
                 }}
-                className="px-4 py-2 touch-target-h-phone bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
+                className="px-4 py-2 touch-target-h-phone bg-white border border-indigo-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-all"
                 title={t('settings.verify_ai_connection')}
               >
                 {t('settings.test_connection')}
@@ -1104,7 +1104,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <input
                 id="newPin" type="password" value={newPin} onChange={(e) => setNewPin(e.target.value)}
                 placeholder="****"
-                className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono focus:outline-none"
+                className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all font-mono focus:outline-none"
               />
             </div>
             <div>
@@ -1112,7 +1112,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <input
                 id="confirmPin" type="password" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="****"
-                className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono focus:outline-none"
+                className="w-full px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all font-mono focus:outline-none"
               />
             </div>
              {newPin && confirmPin && newPin !== confirmPin && (
@@ -1149,7 +1149,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full blur-3xl -mr-32 -mt-32" />
           
           <div className="flex items-center gap-4 mb-8 relative">
-            <div className="w-14 h-14 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-100">
+            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
               <Share className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -1158,7 +1158,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           </div>
 
-          <div className="bg-neutral-50 p-7 rounded-[32px] border border-neutral-100 mb-6 relative">
+          <div className="bg-neutral-50 p-7 rounded-2xl border border-neutral-200 mb-6 relative">
             <div className="flex items-start gap-4 mb-6">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-neutral-100">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
@@ -1212,7 +1212,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     });
                   }
                 }}
-                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
+                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-white border border-neutral-200 text-neutral-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm group"
               >
                 <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> {t('settings.backup_export')}
               </button>
@@ -1267,7 +1267,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     });
                   }
                 }}
-                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
+                className="flex items-center justify-center gap-3 py-4 touch-target-h-phone bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
               >
                 <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('settings.backup_restore')}
               </button>
@@ -1405,7 +1405,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="relative bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl border border-neutral-100 overflow-hidden"
+        className="relative bg-white rounded-[28px] w-full max-w-md p-8 shadow-2xl border border-neutral-200 overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-neutral-900" />
         
@@ -1430,7 +1430,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="e.g. fr, de, es"
-              className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all placeholder:text-neutral-300 shadow-inner"
               required
             />
           </div>
@@ -1442,7 +1442,7 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. French, German"
-              className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-all placeholder:text-neutral-300 shadow-inner"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-5 py-4 text-sm font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all placeholder:text-neutral-300 shadow-inner"
               required
             />
           </div>
@@ -1451,14 +1451,14 @@ const LanguageImportModal = ({ data, onClose, onImport, t }: { data: any, onClos
             <button title={t('modals.cancel')}
               type="button"
               onClick={onClose}
-              className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
+              className="flex-1 py-3.5 px-6 rounded-xl bg-neutral-100 text-neutral-600 font-bold hover:bg-neutral-200 transition-all text-sm"
             >
               {t('modals.cancel')}
             </button>
             <button title="Import Language"
               type="submit"
               disabled={!code || !name || isImporting}
-              className="flex-1 py-3.5 px-6 rounded-2xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 text-sm disabled:opacity-30 flex items-center justify-center gap-2"
+              className="flex-1 py-3.5 px-6 rounded-xl bg-neutral-900 text-white font-bold hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 text-sm disabled:opacity-30 flex items-center justify-center gap-2"
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Import</>}
             </button>
