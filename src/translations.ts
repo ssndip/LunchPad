@@ -38,6 +38,7 @@ export const translations = {
       unsupported: 'Vision not supported',
     },
     parser: {
+      rules_desc: 'Configure how pasted menu text is turned into items',
       category_settings: 'Category Settings',
       category_settings_desc: 'Toggle autobox and side-dish detection per category',
       save_settings: 'Save Settings',
@@ -624,6 +625,7 @@ export const translations = {
       unsupported: 'AI Vision не се поддържа',
     },
     parser: {
+      rules_desc: 'Настройте как поставеният текст на менюто се превръща в артикули',
       category_settings: 'Настройки на категориите',
       category_settings_desc: 'Включване на автоматична кутийка и засичане на гарнитури по категории',
       save_settings: 'Запази настройките',

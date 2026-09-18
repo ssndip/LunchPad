@@ -60,6 +60,7 @@ import {
 import { useStore } from "../../../store/useStore";
 import { ParseResult } from "../../../utils/menuParser";
 import { formatPrice } from '../../../utils/formatPrice';
+import { TabHeader } from '../../shared/TabHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -963,6 +964,15 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* The only dashboard tab that rendered no title at all — it opened
+          straight onto its first section, so it read as a fragment of the
+          page rather than a tab of it. Its sections own their own actions,
+          so the header carries the title and nothing else. */}
+      <TabHeader
+        title={t('navigation.parser_rules')}
+        subtitle={t('parser.rules_desc')}
+      />
+
       {/* Both this browser and the server hold rules, and they differ. Rather
           than pick one silently, the choice is put in front of the admin —
           and write-through stays off until they make it. */}

@@ -145,6 +145,20 @@ describe('admin UI token scale', () => {
     expect(describeHits(file, hits)).toEqual([]);
   });
 
+  it.each(TABS)('%s renders its title through TabHeader', file => {
+    // ParserRulesTab shipped with no title element at all — not a hand-rolled
+    // one that had drifted, simply none — so it opened onto its first section
+    // and read as a fragment of the page rather than a tab of it. Every other
+    // tab was migrated onto the shared header; this is what keeps the seventh
+    // from being forgotten again, and any eighth from arriving without one.
+    const source = read(file);
+
+    expect(source, `${file} should import TabHeader`).toMatch(
+      /import \{[^}]*\bTabHeader\b[^}]*\} from ['"][^'"]*shared\/TabHeader['"]/,
+    );
+    expect(source, `${file} should render <TabHeader`).toContain('<TabHeader');
+  });
+
   it('keeps the card radius identical across tabs', () => {
     // The clearest cross-tab mismatch: Menu's list card was rounded-3xl while
     // every Settings section was rounded-[28px] md:rounded-[40px].
