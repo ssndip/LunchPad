@@ -27,7 +27,8 @@ import {
   setKioskCloseDayConfig,
   setPublicAccessRequiredConfig,
   setPublicAccessCodeConfig,
-  setGlobalAccessConfig
+  setGlobalAccessConfig,
+  DEFAULT_ADMIN_PIN
 } from "../config";
 import { kioskOpen } from "./statusController";
 import { isWhitelisted, validateWhitelist } from "../middleware/whitelist";
@@ -276,6 +277,16 @@ export const updatePin = (req: Request, res: Response, next: NextFunction) => {
     }
     if (!/^\d{4,6}$/.test(newPin)) {
       return res.status(400).json({ error: "PIN must be between 4 and 6 digits and contain only numbers" });
+    }
+    // Storing the factory default is the one PIN that must be refused here.
+    // `verifyAdminPin` guards the default only on the no-PIN-stored fallback
+    // path, so persisting "0000" would satisfy that lookup and retire the
+    // guard for good — leaving the published default working as a real
+    // credential even with the admin whitelist off.
+    if (newPin === DEFAULT_ADMIN_PIN) {
+      return res.status(400).json({
+        error: `"${DEFAULT_ADMIN_PIN}" is the factory default PIN and cannot be used. Choose a different PIN.`
+      });
     }
     hashAndSetAdminPin(newPin);
     res.json({ success: true });

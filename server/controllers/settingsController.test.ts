@@ -5,6 +5,7 @@ import * as config from '../config';
 
 vi.mock('../config', () => ({
   hashAndSetAdminPin: vi.fn(),
+  DEFAULT_ADMIN_PIN: '0000',
 }));
 
 describe('settingsController', () => {
@@ -48,6 +49,19 @@ describe('settingsController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({ error: "Invalid PIN" });
+      expect(config.hashAndSetAdminPin).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should refuse the factory default PIN', () => {
+      mockReq.body = { newPin: '0000' };
+
+      updatePin(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: '"0000" is the factory default PIN and cannot be used. Choose a different PIN.'
+      });
       expect(config.hashAndSetAdminPin).not.toHaveBeenCalled();
       expect(mockNext).not.toHaveBeenCalled();
     });
