@@ -95,6 +95,35 @@ describe('admin UI token scale', () => {
     expect(describeHits(file, hits)).toEqual([]);
   });
 
+  it.each(TABS)('%s keeps form controls on the control radius', file => {
+    // The radius test above enforces WHICH radii exist, not which role each one
+    // belongs to, so a button at rounded-2xl — the well and icon-chip radius —
+    // passed it while still being wrong. Four of them did, across three tabs.
+    //
+    // For an element written as a tag this is decidable: a <button>, <input>,
+    // <textarea> or <select> is a control, whatever its className says. The
+    // className may sit a few lines below the tag, so the scan reads forward to
+    // the end of the opening tag.
+    const lines = read(file).split('\n');
+    const hits: string[] = [];
+
+    lines.forEach((line, i) => {
+      const tag = /<(button|input|textarea|select)\b/.exec(line);
+      if (!tag) return;
+
+      let opening = '';
+      for (let j = i; j < Math.min(i + 14, lines.length); j++) {
+        opening += lines[j];
+        if (/\/?>\s*$/.test(lines[j].trimEnd())) break;
+      }
+      if (opening.includes('rounded-2xl')) {
+        hits.push(`${file}:${i + 1} <${tag[1]}> uses rounded-2xl, not rounded-xl`);
+      }
+    });
+
+    expect(hits).toEqual([]);
+  });
+
   it('keeps the card radius identical across tabs', () => {
     // The clearest cross-tab mismatch: Menu's list card was rounded-3xl while
     // every Settings section was rounded-[28px] md:rounded-[40px].

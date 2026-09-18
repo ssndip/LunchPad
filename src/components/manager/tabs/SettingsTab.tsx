@@ -1124,7 +1124,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <button title={t('settings.update_pin')}
               onClick={onUpdatePin}
               disabled={pinUpdateStatus === 'loading' || !newPin || newPin !== confirmPin || !/^\d{4,6}$/.test(newPin)}
-              className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all shadow-lg flex items-center justify-center gap-2 ${
+              className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm transition-all shadow-lg flex items-center justify-center gap-2 ${
                 pinUpdateStatus === 'success' ? 'bg-green-600 text-white' : pinUpdateStatus === 'error' ? 'bg-red-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50'
               }`}
             >

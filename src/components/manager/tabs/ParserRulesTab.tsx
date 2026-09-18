@@ -1029,7 +1029,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
               <button
                 onClick={handleAiSuggest}
                 disabled={isAiGenerating || !previewText.trim()}
-                className="w-full py-4 flex items-center justify-center gap-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 flex items-center justify-center gap-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isAiGenerating ? (
                   <>
@@ -1567,7 +1567,7 @@ export const ParserRulesTab: React.FC<ParserRulesTabProps> = ({ confirm }) => {
                 value={previewText}
                 onChange={(e) => setPreviewText(e.target.value)}
                 placeholder={`Меню за 09.04.2026\n\nОсновно ястие:\n- Кюфтета 3.20€\n- Татарско кюфте с гарнитура 3.40€\n\nГарнитури:\n200гр 1.50€ + 0.10€ кутийка\n- Шопска салата`}
-                className="w-full h-80 p-5 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200 focus:ring-2 focus:ring-indigo-600 focus:outline-none font-mono text-xs resize-none text-neutral-700 placeholder:text-neutral-300"
+                className="w-full h-80 p-5 bg-neutral-50 rounded-xl border border-dashed border-neutral-200 focus:ring-2 focus:ring-indigo-600 focus:outline-none font-mono text-xs resize-none text-neutral-700 placeholder:text-neutral-300"
               />
               <div className="flex gap-3">
                 <button
