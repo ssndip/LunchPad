@@ -6,7 +6,6 @@ export type WsMessageType =
   | 'PONG'
   | 'MENU_UPDATE'
   | 'NEW_ORDER'
-  | 'ORDER_UPDATE'
   | 'STATUS_UPDATE'
   | 'SETTINGS_UPDATE'
   | 'PWA_SETTINGS_UPDATE'
@@ -78,11 +77,6 @@ export interface NewOrderMessage extends BaseWsMessage {
   data: any;
 }
 
-export interface OrderUpdateMessage extends BaseWsMessage {
-  type: 'ORDER_UPDATE';
-  orders: any[];
-}
-
 export interface StatusUpdateMessage extends BaseWsMessage {
   type: 'STATUS_UPDATE';
   kioskOpen: boolean;
@@ -127,7 +121,6 @@ export type WsMessage =
   | PongMessage 
   | MenuUpdateMessage 
   | NewOrderMessage
-  | OrderUpdateMessage 
   | StatusUpdateMessage 
   | SettingsUpdateMessage
   | PwaSettingsUpdateMessage

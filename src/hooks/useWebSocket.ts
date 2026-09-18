@@ -16,7 +16,6 @@ export interface WsHandlers {
     adminWhitelistEnabled?: boolean;
   }) => void;
   onCardsUpdate: () => void;
-  onOrderUpdate: (orders: any[]) => void;
   onNewOrder: (order: any) => void;
   onPWASettingsUpdate: (data: { kioskModeEnabled?: boolean; allowPWAInstall?: boolean }) => void;
   onLanguagesUpdated: () => void;
@@ -101,10 +100,6 @@ export function useWebSocket(handlers: WsHandlers, token?: string | null) {
 
           case 'NEW_ORDER':
             h.onNewOrder(message.data);
-            break;
-
-          case 'ORDER_UPDATE':
-            h.onOrderUpdate(message.orders);
             break;
 
           case 'CARDS_UPDATE' as any: 

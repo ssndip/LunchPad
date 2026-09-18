@@ -173,9 +173,6 @@ export function useSyncState() {
       if (data.kioskModeEnabled !== undefined) setKioskModeEnabled(data.kioskModeEnabled);
       if (data.allowPWAInstall !== undefined) setAllowPWAInstall(data.allowPWAInstall);
     },
-    onOrderUpdate: (orders) => {
-      setOrders(orders);
-    },
     onNewOrder: (order) => {
       // Instead of manual append, trigger a full fetch to be sure we have the latest
       if (token) api.fetchOrders(token).then(setOrders).catch(console.error);
