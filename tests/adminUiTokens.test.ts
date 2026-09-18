@@ -17,19 +17,19 @@ import path from 'path';
  * Adding a tab to TABS puts it under the same contract.
  */
 
-const TABS = ['SettingsTab.tsx', 'MenuTab.tsx', 'CardsTab.tsx', 'OrdersTab.tsx'];
+const TABS = ['SettingsTab.tsx', 'MenuTab.tsx', 'CardsTab.tsx', 'OrdersTab.tsx', 'ParserRulesTab.tsx'];
 
 const read = (file: string) => {
   const full = path.join(__dirname, '..', 'src', 'components', 'manager', 'tabs', file);
   return fs.readFileSync(full, 'utf-8');
 };
 
-/** Every `rounded-*` occurrence with the 1-based line it sits on. */
+/** Every match with the 1-based line it sits on, and that line's text. */
 const tokensWithLines = (source: string, pattern: RegExp) => {
-  const found: { token: string; line: number }[] = [];
+  const found: { token: string; line: number; text: string }[] = [];
   source.split('\n').forEach((text, i) => {
     for (const match of text.matchAll(pattern)) {
-      found.push({ token: match[0], line: i + 1 });
+      found.push({ token: match[0], line: i + 1, text });
     }
   });
   return found;
@@ -52,9 +52,18 @@ describe('admin UI token scale', () => {
     'rounded-full',    // pill and avatar
   ]);
 
-  it.each(TABS)('%s uses only the four approved radii', file => {
-    const hits = tokensWithLines(read(file), /rounded-(?:\[[^\]]+\]|[a-z0-9]+)/g)
-      .filter(h => !ALLOWED_RADII.has(h.token));
+  it.each(TABS)('%s uses only the approved radii', file => {
+    // The optional suffix matters: a bare `rounded` is Tailwind's 4px, a sixth
+    // value hiding in plain sight. Matching only `rounded-*` let it through,
+    // and ParserRulesTab had eleven of them on badges and buttons.
+    // The trailing guard is a negative lookahead rather than \b: \b fails after
+    // the `]` of `rounded-[28px]`, so the engine backtracks and reports a bare
+    // `rounded` that was never there.
+    const hits = tokensWithLines(read(file), /\brounded(?:-(?:\[[^\]]+\]|[a-z0-9]+))?(?![-\w[])/g)
+      .filter(h => !ALLOWED_RADII.has(h.token))
+      // Inline <code> keeps the tight 4px radius — a pill or a 12px corner
+      // around a snippet of parser syntax reads as a button, not as code.
+      .filter(h => !(h.token === 'rounded' && h.text.includes('<code')));
 
     expect(describeHits(file, hits)).toEqual([]);
   });
