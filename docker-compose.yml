@@ -1,6 +1,16 @@
 services:
   lunchpad:
-    build: .
+    build:
+      context: .
+      args:
+        # Stamped into the version badge and an image label. Left as "local"
+        # for a plain `docker compose build`, which builds the working tree;
+        # scripts/deploy.sh passes the real commit when it deploys origin/main.
+        GIT_COMMIT: ${GIT_COMMIT:-local}
+    # Named explicitly so scripts/deploy.sh can build and tag this image
+    # without depending on the name Compose would otherwise derive from the
+    # directory. Same name Compose was already generating.
+    image: lunchpadgit-lunchpad:latest
     container_name: lunchpad-container
     ports:
       - "3400:3400"

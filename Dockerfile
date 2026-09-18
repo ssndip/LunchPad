@@ -11,8 +11,15 @@ RUN npm ci
 
 COPY . .
 
+# The commit this image was built from. `.git` is excluded from the build
+# context (see .dockerignore), so it cannot be read here and is passed in
+# instead. scripts/deploy.sh supplies it from origin/main; a plain
+# `docker compose build` leaves it "local", which is the honest answer for an
+# image built from someone's working tree.
+ARG GIT_COMMIT=local
+
 # Generate dynamic build version timestamp
-RUN VERSION=$(node -e "import fs from 'fs'; console.log(JSON.parse(fs.readFileSync('./package.json', 'utf8')).version);") && DATE=$(date +'%Y.%m.%d') && echo "export const APP_VERSION = 'v$VERSION ($DATE)';" > src/version.ts
+RUN VERSION=$(node -e "import fs from 'fs'; console.log(JSON.parse(fs.readFileSync('./package.json', 'utf8')).version);") && DATE=$(date +'%Y.%m.%d') && echo "export const APP_VERSION = 'v$VERSION ($DATE $GIT_COMMIT)';" > src/version.ts
 
 RUN npm run build
 
@@ -30,6 +37,14 @@ RUN npm ci --omit=dev
 
 # --- Stage 3: the image that runs ---
 FROM node:20-alpine
+
+# Re-declared because an ARG does not cross stage boundaries. Recorded as a
+# label so the running container can be traced back to a commit without
+# reading the UI: docker inspect -f '{{index .Config.Labels
+# "org.opencontainers.image.revision"}}' lunchpad-container
+ARG GIT_COMMIT=local
+LABEL org.opencontainers.image.revision="$GIT_COMMIT"
+LABEL org.opencontainers.image.source="https://github.com/ssndip/LunchPad"
 
 WORKDIR /app
 
