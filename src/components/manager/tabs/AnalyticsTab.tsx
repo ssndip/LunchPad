@@ -12,7 +12,7 @@ import { useResponsive } from '../../../hooks/useResponsive';
 import { DataList, DataListColumn, DataListRow } from '../../shared/DataList';
 import { TabHeader } from '../../shared/TabHeader';
 
-const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
+const COLORS = ['#111827', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
 
 // A recharts category YAxis renders its tick label as a raw SVG <text> with
 // no built-in truncation: when a label is wider than the axis's allocated
@@ -162,7 +162,7 @@ export const AnalyticsTab: React.FC = () => {
           <button
             onClick={loadData}
             disabled={loading}
-            className="px-6 py-3 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-3 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all disabled:opacity-50 flex items-center gap-2"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {t('analytics.retry')}
@@ -181,7 +181,7 @@ export const AnalyticsTab: React.FC = () => {
             <StatCard 
               label={t('analytics.avg_order_value')}
               value={`€${(Number(data.summary?.avgOrderValue) || 0).toFixed(2)}`}
-              icon={<Award className="w-4 h-4 text-violet-600" />}
+              icon={<Award className="w-4 h-4 text-indigo-600" />}
               subValue={t('analytics.per_transaction')}
             />
             <StatCard 
@@ -207,15 +207,15 @@ export const AnalyticsTab: React.FC = () => {
                   <AreaChart data={data.timeline}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#111827" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#111827" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Area type="monotone" dataKey="revenue" stroke="#000000" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                    <Area type="monotone" dataKey="revenue" stroke="#111827" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -252,7 +252,7 @@ export const AnalyticsTab: React.FC = () => {
                       width={isPhone ? 72 : 100}
                     />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Bar dataKey="count" fill="#000000" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="count" fill="#111827" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -313,7 +313,7 @@ export const AnalyticsTab: React.FC = () => {
 };
 
 const StatCard = ({ icon, label, value, subValue }: any) => (
-  <div className="bg-white p-6 rounded-[32px] border border-neutral-200 shadow-sm">
+  <div className="bg-white p-6 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
     <div className="flex items-center gap-3 mb-4">
       <div className="p-2 bg-neutral-50 rounded-xl">{icon}</div>
       <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{label}</span>

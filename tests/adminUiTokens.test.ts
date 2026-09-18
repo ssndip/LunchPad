@@ -17,7 +17,7 @@ import path from 'path';
  * Adding a tab to TABS puts it under the same contract.
  */
 
-const TABS = ['SettingsTab.tsx', 'MenuTab.tsx', 'CardsTab.tsx', 'OrdersTab.tsx', 'ParserRulesTab.tsx'];
+const TABS = ['SettingsTab.tsx', 'MenuTab.tsx', 'CardsTab.tsx', 'OrdersTab.tsx', 'ParserRulesTab.tsx', 'AnalyticsTab.tsx', 'HistoryTab.tsx'];
 
 const read = (file: string) => {
   const full = path.join(__dirname, '..', 'src', 'components', 'manager', 'tabs', file);
@@ -122,6 +122,27 @@ describe('admin UI token scale', () => {
     });
 
     expect(hits).toEqual([]);
+  });
+
+  it.each(TABS)('%s draws charts from the dashboard palette', file => {
+    // Recharts takes colours as props, not classNames, so nothing above sees
+    // them and Tailwind cannot constrain them. The charts were drawing their
+    // primary series in pure black, which is on no scale the dashboard uses —
+    // the darkest anywhere else is neutral-900, which this same file already
+    // uses for its axis labels.
+    const PALETTE = new Set([
+      '#4F46E5', // indigo-600  — primary, matches the UI accent
+      '#111827', // neutral-900 — darkest neutral, was #000000
+      '#F3F4F6', // neutral-100 — grid lines
+      '#10B981', // emerald-500 — positive
+      '#F59E0B', // amber-500   — warning
+      '#EF4444', // red-500     — negative
+    ]);
+
+    const hits = tokensWithLines(read(file), /#[0-9a-fA-F]{6}\b/g)
+      .filter(h => !PALETTE.has(h.token.toUpperCase()));
+
+    expect(describeHits(file, hits)).toEqual([]);
   });
 
   it('keeps the card radius identical across tabs', () => {

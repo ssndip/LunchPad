@@ -130,7 +130,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
       )}
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm mb-8">
+      <div className="bg-white p-6 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label htmlFor="startDate" className="block text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5">
@@ -141,7 +141,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               type="date"
               value={filters.startDate}
               onChange={(e) => onFilterChange('startDate', e.target.value)}
-              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all text-sm focus:outline-none"
             />
           </div>
           <div>
@@ -153,7 +153,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               type="date"
               value={filters.endDate}
               onChange={(e) => onFilterChange('endDate', e.target.value)}
-              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all text-sm focus:outline-none"
             />
           </div>
           <div>
@@ -167,7 +167,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
               onChange={(e) => onFilterChange('rfid', e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onApplyFilters()}
               placeholder={t('filters.search_placeholder')}
-              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+              className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all text-sm focus:outline-none"
             />
           </div>
           <div className="flex items-end">
@@ -194,7 +194,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
       </div>
 
       {/* Results */}
-      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
+      <div className="bg-white rounded-[28px] md:rounded-[40px] shadow-sm border border-neutral-200 overflow-hidden">
         <DataList
           columns={columns}
           rows={rows}
