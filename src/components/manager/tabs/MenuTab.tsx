@@ -409,7 +409,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 step="0.1"
                 value={deliveryFee}
                 onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
-                className="w-16 touch-target-h bg-transparent border-none focus:ring-2 focus:ring-indigo-600 font-mono font-bold text-sm p-0 focus:outline-none"
+                className="w-16 touch-target-h bg-transparent border-none rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono font-bold text-sm p-0 focus:outline-none"
                 title={t('orders.delivery_fee')}
                 placeholder="0.00"
               />
@@ -431,7 +431,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 step="0.05"
                 value={packagingFee}
                 onChange={(e) => setPackagingFee(parseFloat(e.target.value) || 0)}
-                className="w-16 touch-target-h bg-transparent border-none focus:ring-2 focus:ring-indigo-600 font-mono font-bold text-sm p-0 focus:outline-none"
+                className="w-16 touch-target-h bg-transparent border-none rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono font-bold text-sm p-0 focus:outline-none"
                 title={t('menu.packaging_fee')}
                 placeholder="0.00"
               />
@@ -544,7 +544,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                              <select
                                value={selectedProfileId}
                                onChange={e => setSelectedProfileId(e.target.value)}
-                               className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-2 focus:ring-indigo-600 p-0 h-8 touch-target-h-phone"
+                               className="flex-1 bg-transparent border-none rounded-xl text-xs font-bold text-neutral-800 focus:ring-2 focus:ring-indigo-600 p-0 h-8 touch-target-h-phone"
                                title="Parser Profile"
                              >
                                <option value="none">{t('parser.active_profile') || 'Active Profile'}</option>
@@ -560,7 +560,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                             <select
                               value={selectedPresetId}
                               onChange={e => setSelectedPresetId(e.target.value)}
-                              className="flex-1 bg-transparent border-none text-xs font-bold text-neutral-800 focus:ring-2 focus:ring-indigo-600 p-0 h-8 touch-target-h-phone"
+                              className="flex-1 bg-transparent border-none rounded-xl text-xs font-bold text-neutral-800 focus:ring-2 focus:ring-indigo-600 p-0 h-8 touch-target-h-phone"
                               title="Format Preset"
                             >
                               <option value="none">{t('parser.no_preset')}</option>
@@ -888,7 +888,7 @@ const MenuNameCell: React.FC<MenuNameCellProps> = ({ item, onUpdateItem }) => {
       // viewport and 36px at 1024px, rendering "Пикантни парти бутчета..." as
       // "Пика". The floor gives the column something to ask for, and names are
       // the one field in this table nobody can identify a row without.
-      className="w-full min-w-[10rem] bg-transparent border-none focus:ring-2 focus:ring-indigo-600 font-bold text-neutral-900 p-0 touch-target-h focus:outline-none"
+      className="w-full min-w-[10rem] bg-transparent border-none rounded-xl focus:ring-2 focus:ring-indigo-600 font-bold text-neutral-900 p-0 touch-target-h focus:outline-none"
     />
   );
 };
@@ -928,7 +928,7 @@ const MenuPriceCell: React.FC<MenuPriceCellProps> = ({ item, onUpdateItem }) => 
       }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-20 bg-transparent border-none focus:ring-2 focus:ring-indigo-600 font-mono font-bold p-0 touch-target-h focus:outline-none"
+      className="w-20 bg-transparent border-none rounded-xl focus:ring-2 focus:ring-indigo-600 font-mono font-bold p-0 touch-target-h focus:outline-none"
     />
   );
 };
@@ -960,7 +960,7 @@ function menuRowCells({
         value={item.category ?? ''}
         aria-label={`Category for ${item.name ?? ''}`}
         onChange={(e) => onUpdateItem(item.id, 'category', e.target.value)}
-        className="w-full bg-transparent border-none focus:ring-2 focus:ring-indigo-600 text-neutral-400 text-xs uppercase tracking-widest p-0 touch-target-h focus:outline-none"
+        className="w-full bg-transparent border-none rounded-xl focus:ring-2 focus:ring-indigo-600 text-neutral-400 text-xs uppercase tracking-widest p-0 touch-target-h focus:outline-none"
       >
         {customCategories.map(c => (
           <option key={c.id} value={c.id}>
