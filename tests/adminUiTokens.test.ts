@@ -17,7 +17,7 @@ import path from 'path';
  * Adding a tab to TABS puts it under the same contract.
  */
 
-const TABS = ['SettingsTab.tsx', 'MenuTab.tsx'];
+const TABS = ['SettingsTab.tsx', 'MenuTab.tsx', 'CardsTab.tsx', 'OrdersTab.tsx'];
 
 const read = (file: string) => {
   const full = path.join(__dirname, '..', 'src', 'components', 'manager', 'tabs', file);

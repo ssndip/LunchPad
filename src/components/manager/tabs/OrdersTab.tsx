@@ -106,7 +106,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 placeholder={t('orders.fee_placeholder')}
                 value={dailyFees[summary.date] !== undefined ? dailyFees[summary.date] : globalDeliveryFee}
                 onChange={(e) => setDailyFees({ ...dailyFees, [summary.date]: e.target.value })}
-                className="w-full h-12 touch-target-h pl-4 pr-10 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                className="w-full h-12 touch-target-h pl-4 pr-10 bg-white border border-neutral-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-600 transition-all outline-none"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold text-xs">€</span>
             </div>
@@ -120,7 +120,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 handleDistributeFee(summary.date, fee);
               }}
               disabled={!!distributing || !!summary.feeDistributed}
-              className={`h-12 touch-target-h md:h-full w-full md:w-auto flex items-center justify-center gap-2 px-6 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg ${
+              className={`h-12 touch-target-h md:h-full w-full md:w-auto flex items-center justify-center gap-2 px-6 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg ${
                 summary.feeDistributed
                   ? 'bg-green-100 text-green-700 shadow-green-50 pointer-events-none'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 disabled:opacity-50'
@@ -139,14 +139,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onCopySummary(summary.date, Number(summary.totalSales) || 0); }}
-              className="h-12 touch-target-h md:h-full w-full md:w-auto flex items-center justify-center gap-2 px-6 bg-neutral-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 active:scale-95"
+              className="h-12 touch-target-h md:h-full w-full md:w-auto flex items-center justify-center gap-2 px-6 bg-neutral-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-100 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" /> {t('orders.copy_summary')}
             </button>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-xl">
+      <div className="bg-white rounded-[28px] md:rounded-[40px] border border-neutral-200 overflow-hidden shadow-xl">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="bg-neutral-50/50 border-b border-neutral-100">
@@ -164,7 +164,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                   <p className="font-bold text-neutral-900">{item.name ?? t('menu.unknown_item')}</p>
                 </td>
                 <td className="p-5 text-center">
-                  <span className="bg-neutral-100 px-3 py-1 rounded-lg font-mono font-black text-neutral-900">
+                  <span className="bg-neutral-100 px-3 py-1 rounded-full font-mono font-black text-neutral-900">
                     {Number(item.quantity) || 0}
                   </span>
                 </td>
@@ -197,7 +197,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     cells: {
       date: (
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
             expandedDate === summary.date ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-400'
           }`}>
             <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${
@@ -235,7 +235,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         subtitle={t('orders.performance_subtitle')}
       />
 
-      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
+      <div className="bg-white rounded-[28px] md:rounded-[40px] shadow-sm border border-neutral-200 overflow-hidden">
         <DataList
           columns={columns}
           rows={rows}

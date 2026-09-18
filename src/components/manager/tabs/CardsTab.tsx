@@ -260,7 +260,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             type="text"
             value={values.ownerName || ''}
             onChange={(e) => setEditValues({ ...values, ownerName: e.target.value })}
-            className="w-full bg-neutral-50 px-3 py-1.5 touch-target-h rounded-lg border border-neutral-200 focus:ring-2 focus:ring-neutral-900 text-xs font-bold outline-none"
+            className="w-full bg-neutral-50 px-3 py-1.5 touch-target-h rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 text-xs font-bold outline-none"
           />
         ) : (
           <span className="font-bold text-neutral-900">{card.ownerName ?? 'N/A'}</span>
@@ -278,7 +278,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               : 'No PIN set. Type six digits to add one.'}
             onFocus={() => !isEditing && startEditing(card)}
             onChange={(e) => setEditValues({ ...values, pin: e.target.value.replace(/\D/g, '') })}
-            className={`w-20 px-2 touch-target-h rounded-lg border font-mono text-center text-xs outline-none transition-all ${isEditing ? 'bg-white border-neutral-900 ring-1 ring-neutral-900' : 'bg-neutral-50 border-neutral-200'}`}
+            className={`w-20 px-2 touch-target-h rounded-xl border font-mono text-center text-xs outline-none transition-all ${isEditing ? 'bg-white border-neutral-900 ring-1 ring-neutral-900' : 'bg-neutral-50 border-neutral-200'}`}
           />
         ),
         isAdmin: (
@@ -299,7 +299,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 type="number"
                 value={values.balance || 0}
                 onChange={(e) => setEditValues({ ...values, balance: parseFloat(e.target.value) })}
-                className="w-16 bg-neutral-50 px-2 py-1 touch-target-h rounded-lg border border-neutral-200 focus:ring-2 focus:ring-neutral-900 text-xs font-mono font-bold text-right outline-none"
+                className="w-16 bg-neutral-50 px-2 py-1 touch-target-h rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 text-xs font-mono font-bold text-right outline-none"
               />
             ) : (
               <span className="font-mono font-bold text-sm">{(Number(card.balance) || 0).toFixed(2)}</span>
@@ -314,14 +314,14 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               <button
                 onClick={() => handleSave(card.rfid)}
                 disabled={isSaving}
-                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
                 title={t('modals.save')}
               >
                 {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <div className="flex items-center px-1"><Plus className="w-3.5 h-3.5 rotate-45" style={{transform:'rotate(0deg)'}} /><span className="text-[9px] font-black uppercase ml-0.5">OK</span></div>}
               </button>
               <button
                 onClick={handleCancel}
-                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors"
+                className="p-2 flex items-center justify-center touch-target-phone bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-xl transition-colors"
                 title={t('modals.cancel')}
               >
                 <Trash2 className="w-4 h-4" />
@@ -329,19 +329,19 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             </>
           ) : (
             <>
-              <button onClick={() => setNfcWriteCard(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
+              <button onClick={() => setNfcWriteCard(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-xl text-neutral-400 hover:text-indigo-600 transition-colors" title={t('cards.write_nfc')} aria-label={t('cards.write_nfc')}>
                 <Radio className="w-4 h-4" />
               </button>
-              <button onClick={() => onViewStats?.(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
+              <button onClick={() => onViewStats?.(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-xl text-neutral-400 hover:text-indigo-600 transition-colors" title="View Statistics" aria-label="View Statistics">
                 <BarChart2 className="w-4 h-4" />
               </button>
-              <button onClick={() => startEditing(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
+              <button onClick={() => startEditing(card)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-xl text-neutral-400 hover:text-neutral-900 transition-colors" title={t('modals.edit')} aria-label={t('modals.edit')}>
                 <Pencil className="w-4 h-4" />
               </button>
-              <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
+              <button onClick={() => onResetCardBalance(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-xl text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.clear_balance_tooltip')} aria-label={t('cards.clear_balance_tooltip')}>
                 <RotateCcw className="w-4 h-4" />
               </button>
-              <button onClick={() => onRemoveCard(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
+              <button onClick={() => onRemoveCard(card.rfid)} className="p-2 flex items-center justify-center touch-target-phone hover:bg-neutral-100 rounded-xl text-neutral-400 hover:text-red-600 transition-colors" title={t('cards.delete_card')} aria-label={t('cards.delete_card')}>
                 <Trash2 className="w-4 h-4" />
               </button>
             </>
@@ -390,7 +390,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             value={pasteCardsText}
             onChange={(e) => setPasteCardsText(e.target.value)}
             placeholder={t('cards.import_placeholder')}
-            className="w-full h-52 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none resize-none"
+            className="w-full h-52 p-4 bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all font-mono text-sm focus:outline-none resize-none"
           />
           <div className="flex justify-end gap-4">
             <button onClick={() => setIsPasteCardsModalOpen(false)} className="px-6 py-3 touch-target-h text-neutral-500 font-bold hover:bg-neutral-50 rounded-xl transition-all">
@@ -425,7 +425,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('filters.search_placeholder')}
-                className="w-full pl-10 pr-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-100 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/5 transition-all text-sm outline-none"
+                className="w-full pl-10 pr-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-100 focus:ring-2 focus:ring-indigo-600/5 transition-all text-sm outline-none"
               />
               <CreditCard className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -434,7 +434,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
+          <div className="bg-white rounded-[28px] md:rounded-[40px] shadow-sm border border-neutral-200 overflow-hidden">
             <DataList
               columns={columns}
               rows={rows}
@@ -446,7 +446,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
 
         {/* Add card form */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm">
+          <div className="bg-white p-6 rounded-[28px] md:rounded-[40px] border border-neutral-200 shadow-sm">
             <h3 className="text-lg font-bold mb-5">{t('cards.add_new_card')}</h3>
             <div className="space-y-4">
               <button
@@ -488,13 +488,13 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                       }
                     }}
                     placeholder={t('cards.rfid_placeholder')}
-                    className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none pr-10"
+                    className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all font-mono text-sm focus:outline-none pr-10"
                   />
                   {nfcSupported && (
                     <button
                       type="button"
                       onClick={() => initializeNfc()}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center touch-target-phone rounded-lg text-neutral-400 hover:text-indigo-600 transition-colors ${nfcScanning ? 'text-indigo-600 animate-pulse' : ''}`}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center touch-target-phone rounded-xl text-neutral-400 hover:text-indigo-600 transition-colors ${nfcScanning ? 'text-indigo-600 animate-pulse' : ''}`}
                       title={nfcError || (nfcScanning ? 'NFC Scanning Active' : 'Scan NFC tag to auto-fill RFID')}
                       aria-label="Scan NFC tag to auto-fill RFID"
                     >
@@ -513,7 +513,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   onChange={(e) => setNewCardOwner(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAddManualCard(); } }}
                   placeholder={t('cards.owner_placeholder')}
-                  className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all text-sm focus:outline-none"
+                  className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all text-sm focus:outline-none"
                 />
               </div>
 
@@ -526,7 +526,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   value={newCardPin}
                   onChange={(e) => setNewCardPin(e.target.value.replace(/\D/g, ''))}
                   placeholder="6 digits PIN"
-                  className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 transition-all font-mono text-sm focus:outline-none"
+                  className="w-full px-4 py-2.5 touch-target-h bg-neutral-50 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-indigo-600 transition-all font-mono text-sm focus:outline-none"
                 />
               </div>
 
